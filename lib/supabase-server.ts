@@ -71,3 +71,41 @@ export async function requireAdmin() {
 
   return { ok: true as const, user, supabase }
 }
+
+export async function requireDriver() {
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { ok: false as const, status: 401, error: 'Sessão não encontrada.' }
+  }
+
+  const { data: profile } = await supabase
+    .from('perfis')
+    .select('papel,ativo')
+    .eq('id', user.id)
+    .single<{ papel: string; ativo: boolean }>()
+
+  if (!profile || !profile.ativo || profile.papel !== 'motorista') {
+    return { ok: false as const, status: 403, error: 'Acesso permitido apenas para motoristas.' }
+  }
+
+  const { data: driver } = await supabase
+    .from('motoristas')
+    .select('id,status_profissional')
+    .eq('perfil_id', user.id)
+    .is('excluido_em', null)
+    .single<{ id: string; status_profissional: string }>()
+
+  if (!driver || driver.status_profissional !== 'ativo') {
+    return {
+      ok: false as const,
+      status: 403,
+      error: 'O cadastro profissional do motorista não está ativo.',
+    }
+  }
+
+  return { ok: true as const, user, driver, supabase }
+}
