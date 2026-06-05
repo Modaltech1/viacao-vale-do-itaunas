@@ -1,28 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { normalizeOptionalText } from '@/lib/driver-utils'
 import { getDriverDetails, listDriverVehicleOptions } from '@/lib/drivers-repository'
+import { managedUserErrorResponse, updateManagedUser } from '@/lib/managed-users'
 import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
 import type { DriverProfessionalStatus } from '@/types/driver'
 
 const professionalStatuses: DriverProfessionalStatus[] = ['ativo', 'inativo', 'afastado']
-
-function errorResponse(error: unknown, fallback: string, status = 400) {
-  const message = error instanceof Error ? error.message : fallback
-  const normalized = message.toLowerCase()
-
-  if (normalized.includes('invalid api key')) {
-    return NextResponse.json(
-      { error: 'A configuração server-side do Supabase está inválida.' },
-      { status: 500 },
-    )
-  }
-
-  if (normalized.includes('duplicate') || normalized.includes('already registered') || normalized.includes('already exists')) {
-    return NextResponse.json({ error: 'Já existe um usuário ou motorista com esses dados.' }, { status: 409 })
-  }
-
-  return NextResponse.json({ error: message || fallback }, { status })
-}
 
 export async function GET(
   _request: NextRequest,
@@ -45,7 +28,7 @@ export async function GET(
 
     return NextResponse.json({ driver, vehicles })
   } catch (error) {
-    return errorResponse(error, 'Não foi possível carregar o motorista.', 500)
+    return managedUserErrorResponse(error, 'motorista', 'Não foi possível carregar o motorista.', 500)
   }
 }
 
@@ -101,35 +84,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'Motorista não encontrado.' }, { status: 404 })
     }
 
-    const authPayload: {
-      email: string
-      password?: string
-      app_metadata: { papel: string }
-      user_metadata: { nome: string }
-    } = {
+    await updateManagedUser(service, auth.user.id, currentDriver.perfil_id, {
+      name,
       email,
-      app_metadata: { papel: 'motorista' },
-      user_metadata: { nome: name },
-    }
-
-    if (password) authPayload.password = password
-
-    const { error: authError } = await service.auth.admin.updateUserById(currentDriver.perfil_id, authPayload)
-    if (authError) throw authError
-
-    const { error: profileError } = await service
-      .from('perfis')
-      .update({
-        nome: name,
-        email,
-        telefone: phone || null,
-        papel: 'motorista',
-        ativo: accessActive,
-        atualizado_por: auth.user.id,
-      })
-      .eq('id', currentDriver.perfil_id)
-
-    if (profileError) throw profileError
+      password,
+      phone,
+      active: accessActive,
+      role: 'motorista',
+    })
 
     const { error: driverError } = await service
       .from('motoristas')
@@ -203,6 +165,6 @@ export async function PATCH(
 
     return NextResponse.json({ ok: true })
   } catch (error) {
-    return errorResponse(error, 'Não foi possível atualizar o motorista.')
+    return managedUserErrorResponse(error, 'motorista', 'Não foi possível atualizar o motorista.')
   }
 }

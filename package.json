@@ -10,7 +10,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@prodexy/ui": "git+https://github.com/Modaltech1/prodexy-ui.git",
+    "@prodexy/ui": "github:Modaltech1/prodexy-ui",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.107.0",
     "@tailwindcss/postcss": "^4.1.9",

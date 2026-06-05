@@ -2,6 +2,7 @@ import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getDriverLicenseStatus, toNumber } from '@/lib/driver-utils'
+import { queryRows, type DatabaseRow } from '@/lib/supabase-query'
 import type {
   DriverDetails,
   DriverExpense,
@@ -12,15 +13,7 @@ import type {
   DriverVehicleOption,
 } from '@/types/driver'
 
-type Row = Record<string, any>
-
-async function queryRows(query: PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>) {
-  const { data, error } = await query
-  if (error) throw new Error(error.message)
-  return (data ?? []) as Row[]
-}
-
-function vehicleLabel(vehicle?: Row) {
+function vehicleLabel(vehicle?: DatabaseRow) {
   return vehicle ? `${vehicle.placa} · ${vehicle.marca} ${vehicle.modelo}` : 'Veículo não encontrado'
 }
 

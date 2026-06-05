@@ -1,28 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { normalizeOptionalText } from '@/lib/driver-utils'
 import { listDrivers, listDriverVehicleOptions } from '@/lib/drivers-repository'
+import {
+  createManagedUser,
+  deleteManagedUser,
+  managedUserErrorResponse,
+} from '@/lib/managed-users'
 import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
 import type { DriverProfessionalStatus } from '@/types/driver'
 
 const professionalStatuses: DriverProfessionalStatus[] = ['ativo', 'inativo', 'afastado']
-
-function errorResponse(error: unknown, fallback: string, status = 400) {
-  const message = error instanceof Error ? error.message : fallback
-  const normalized = message.toLowerCase()
-
-  if (normalized.includes('invalid api key')) {
-    return NextResponse.json(
-      { error: 'A configuração server-side do Supabase está inválida.' },
-      { status: 500 },
-    )
-  }
-
-  if (normalized.includes('duplicate') || normalized.includes('already registered') || normalized.includes('already exists')) {
-    return NextResponse.json({ error: 'Já existe um usuário ou motorista com esses dados.' }, { status: 409 })
-  }
-
-  return NextResponse.json({ error: message || fallback }, { status })
-}
 
 async function insertVehicleAssignment(
   service: ReturnType<typeof createSupabaseServiceClient>,
@@ -66,7 +53,7 @@ export async function GET() {
 
     return NextResponse.json({ items, vehicles })
   } catch (error) {
-    return errorResponse(error, 'Não foi possível carregar os motoristas.', 500)
+    return managedUserErrorResponse(error, 'motorista', 'Não foi possível carregar os motoristas.', 500)
   }
 }
 
@@ -109,34 +96,14 @@ export async function POST(request: NextRequest) {
   let driverId: string | null = null
 
   try {
-    const { data: created, error: createError } = await service.auth.admin.createUser({
+    authUserId = await createManagedUser(service, auth.user.id, {
+      name,
       email,
       password,
-      email_confirm: true,
-      app_metadata: { papel: 'motorista' },
-      user_metadata: { nome: name },
+      phone,
+      active: accessActive,
+      role: 'motorista',
     })
-
-    if (createError || !created.user) {
-      throw createError ?? new Error('Não foi possível criar o usuário no Supabase Auth.')
-    }
-
-    authUserId = created.user.id
-
-    const { error: profileError } = await service
-      .from('perfis')
-      .update({
-        nome: name,
-        email,
-        telefone: phone || null,
-        papel: 'motorista',
-        ativo: accessActive,
-        criado_por: auth.user.id,
-        atualizado_por: auth.user.id,
-      })
-      .eq('id', authUserId)
-
-    if (profileError) throw profileError
 
     const { data: driver, error: driverError } = await service
       .from('motoristas')
@@ -168,10 +135,8 @@ export async function POST(request: NextRequest) {
     if (driverId) {
       await service.from('motoristas').delete().eq('id', driverId)
     }
-    if (authUserId) {
-      await service.auth.admin.deleteUser(authUserId)
-    }
+    await deleteManagedUser(service, authUserId)
 
-    return errorResponse(error, 'Não foi possível criar o motorista.')
+    return managedUserErrorResponse(error, 'motorista', 'Não foi possível criar o motorista.')
   }
 }

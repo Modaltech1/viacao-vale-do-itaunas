@@ -3,7 +3,6 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
 import {
   Button,
-  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -19,6 +18,7 @@ import {
   SelectValue,
   Textarea,
 } from '@prodexy/ui'
+import { ManagedUserFields } from '@/components/users/managed-user-fields'
 import type {
   DriverDetails,
   DriverFormValues,
@@ -137,67 +137,12 @@ export function DriverDialog({
         {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
 
         <form className="space-y-6" onSubmit={handleSubmit}>
-          <section className="space-y-4">
-            <div>
-              <h3 className="font-semibold">Acesso ao sistema</h3>
-              <p className="text-sm text-muted-foreground">Dados necessários do usuário.</p>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="driver-name">Nome completo</Label>
-                <Input id="driver-name" value={form.name} onChange={updateField('name')} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="driver-phone">Telefone</Label>
-                <Input
-                  id="driver-phone"
-                  placeholder="(27) 99999-9999"
-                  value={form.phone}
-                  onChange={updateField('phone')}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="driver-email">Email</Label>
-                <Input
-                  id="driver-email"
-                  type="email"
-                  autoComplete="off"
-                  value={form.email}
-                  onChange={updateField('email')}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="driver-password">{driver ? 'Nova senha (opcional)' : 'Senha'}</Label>
-                <Input
-                  id="driver-password"
-                  type="password"
-                  autoComplete="new-password"
-                  minLength={6}
-                  value={form.password}
-                  onChange={updateField('password')}
-                  required={!driver}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Checkbox
-                id="driver-access"
-                checked={form.accessActive}
-                onCheckedChange={(checked: boolean | 'indeterminate') => {
-                  setForm((current) => ({ ...current, accessActive: checked === true }))
-                }}
-              />
-              <Label htmlFor="driver-access" className="font-normal">
-                Permitir acesso ao sistema
-              </Label>
-            </div>
-          </section>
+          <ManagedUserFields
+            form={form}
+            editing={Boolean(driver)}
+            idPrefix="driver"
+            onChange={setForm}
+          />
 
           <section className="space-y-4 border-t pt-5">
             <div>

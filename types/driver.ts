@@ -1,3 +1,6 @@
+import type { VehicleStatus } from '@/types/fleet'
+import type { ManagedUserFormValues } from '@/types/managed-user'
+
 export type DriverProfessionalStatus = 'ativo' | 'inativo' | 'afastado'
 export type DriverLicenseStatus = 'em_dia' | 'proximo' | 'vencido'
 export type DriverTripStatus = 'em_andamento' | 'concluida' | 'cancelada'
@@ -78,11 +81,7 @@ export type DriverDetails = DriverListItem & {
   expenses: DriverExpense[]
 }
 
-export type DriverFormValues = {
-  name: string
-  email: string
-  password: string
-  phone: string
+export type DriverFormValues = ManagedUserFormValues & {
   cpf: string
   address: string
   licenseNumber: string
@@ -93,4 +92,3 @@ export type DriverFormValues = {
   notes: string
   vehicleId: string
 }
-import type { VehicleStatus } from '@/types/fleet'
