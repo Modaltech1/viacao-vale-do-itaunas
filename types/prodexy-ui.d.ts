@@ -26,6 +26,7 @@ declare module '@prodexy/ui' {
   export const DialogHeader: React.FC<AnyProps>
   export const DialogTitle: React.FC<AnyProps>
   export const DialogDescription: React.FC<AnyProps>
+  export const DialogFooter: React.FC<AnyProps>
   export const Sheet: React.FC<AnyProps>
   export const SheetContent: React.FC<AnyProps>
   export const SheetHeader: React.FC<AnyProps>
