@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { Button, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, cn } from '@prodexy/ui'
 import { brand } from '@/branding/brand'
+import { supabase } from '@/lib/supabase-client'
 
 type MenuItem = {
   label: string
@@ -104,6 +105,11 @@ function AppShell({
 }) {
   const pathname = usePathname() ?? ''
 
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }
+
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b bg-card px-4">
@@ -129,12 +135,10 @@ function AppShell({
               <Button
                 variant="ghost"
                 className="mt-4 justify-start gap-x-3 rounded-lg p-3 text-sm font-medium leading-6 text-muted-foreground hover:bg-muted hover:text-foreground"
-                asChild
+                onClick={handleLogout}
               >
-                <Link href="/">
-                  <LogOut className="size-5 shrink-0" />
-                  Sair
-                </Link>
+                <LogOut className="size-5 shrink-0" />
+                Sair
               </Button>
             </nav>
           </SheetContent>

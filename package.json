@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@prodexy/ui": "git+https://github.com/Modaltech1/prodexy-ui.git",
+    "@supabase/ssr": "^0.10.3",
+    "@supabase/supabase-js": "^2.107.0",
     "@tailwindcss/postcss": "^4.1.9",
     "lucide-react": "^0.468.0",
     "next": "^15.5.0",
