@@ -1,0 +1,114 @@
+import 'server-only'
+
+import { NextResponse } from 'next/server'
+import { normalizeOptionalText } from '@/lib/driver-utils'
+import type { MaintenanceType } from '@/types/fleet'
+import {
+  serviceCategories,
+  type ServiceCategory,
+  type ServicePeriodicityType,
+} from '@/types/service'
+
+const maintenanceTypes: MaintenanceType[] = ['preventiva', 'corretiva']
+const periodicityTypes: ServicePeriodicityType[] = ['km', 'tempo', 'nenhuma']
+
+export type ServicePayload = {
+  name: string
+  category: ServiceCategory
+  suggestedMaintenanceType: MaintenanceType
+  periodicityType: ServicePeriodicityType
+  periodicityKm: number | null
+  periodicityDays: number | null
+  description: string | null
+  active: boolean
+}
+
+export function parseServicePayload(body: Record<string, unknown>): ServicePayload {
+  const periodicityType = String(body.periodicityType ?? 'nenhuma') as ServicePeriodicityType
+  const periodicityValueText = String(body.periodicityValue ?? '').replace(',', '.').trim()
+  const periodicityValue = periodicityValueText ? Number(periodicityValueText) : null
+
+  const payload: ServicePayload = {
+    name: String(body.name ?? '').trim(),
+    category: String(body.category ?? '') as ServiceCategory,
+    suggestedMaintenanceType: String(
+      body.suggestedMaintenanceType ?? 'preventiva',
+    ) as MaintenanceType,
+    periodicityType,
+    periodicityKm: periodicityType === 'km' ? periodicityValue : null,
+    periodicityDays: periodicityType === 'tempo' ? periodicityValue : null,
+    description: normalizeOptionalText(body.description),
+    active: body.active !== false,
+  }
+
+  validateServicePayload(payload)
+  return payload
+}
+
+function validateServicePayload(payload: ServicePayload) {
+  if (!payload.name) throw new Error('O nome do serviço é obrigatório.')
+
+  if (!serviceCategories.includes(payload.category)) {
+    throw new Error('Categoria de serviço inválida.')
+  }
+
+  if (!maintenanceTypes.includes(payload.suggestedMaintenanceType)) {
+    throw new Error('Tipo de manutenção sugerido inválido.')
+  }
+
+  if (!periodicityTypes.includes(payload.periodicityType)) {
+    throw new Error('Tipo de periodicidade inválido.')
+  }
+
+  if (
+    payload.periodicityType === 'km'
+    && (payload.periodicityKm == null || !Number.isFinite(payload.periodicityKm) || payload.periodicityKm <= 0)
+  ) {
+    throw new Error('Informe uma periodicidade em KM maior que zero.')
+  }
+
+  if (
+    payload.periodicityType === 'tempo'
+    && (
+      payload.periodicityDays == null
+      || !Number.isInteger(payload.periodicityDays)
+      || payload.periodicityDays <= 0
+    )
+  ) {
+    throw new Error('Informe uma periodicidade em dias inteiros maior que zero.')
+  }
+}
+
+export function servicePayloadToDatabase(payload: ServicePayload) {
+  return {
+    nome: payload.name,
+    categoria: payload.category,
+    tipo_manutencao_sugerido: payload.suggestedMaintenanceType,
+    tipo_periodicidade: payload.periodicityType,
+    periodicidade_km: payload.periodicityKm,
+    periodicidade_dias: payload.periodicityDays,
+    descricao: payload.description,
+    ativo: payload.active,
+  }
+}
+
+export function serviceErrorResponse(error: unknown, fallback: string, status = 400) {
+  const message = error instanceof Error ? error.message : fallback
+  const normalized = message.toLowerCase()
+
+  if (normalized.includes('invalid api key')) {
+    return NextResponse.json(
+      { error: 'A configuração server-side do Supabase está inválida.' },
+      { status: 500 },
+    )
+  }
+
+  if (normalized.includes('violates check constraint')) {
+    return NextResponse.json(
+      { error: 'Os dados do serviço não respeitam as regras de categoria ou periodicidade.' },
+      { status: 400 },
+    )
+  }
+
+  return NextResponse.json({ error: message || fallback }, { status })
+}
