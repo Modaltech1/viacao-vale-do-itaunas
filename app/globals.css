@@ -1,0 +1,11 @@
+@import "@prodexy/ui/styles.css";
+@import "../branding/brand.css";
+
+@source "../app/**/*.{ts,tsx}";
+@source "../components/**/*.{ts,tsx}";
+@source "../node_modules/@prodexy/ui/dist/**/*.{js,mjs}";
+@source "../node_modules/@prodexy/ui/src/**/*.{ts,tsx}";
+
+body {
+  font-family: var(--font-body);
+}
