@@ -3,53 +3,19 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  AlertTriangle,
-  BarChart3,
-  Bus,
-  ClipboardList,
-  DollarSign,
-  Fuel,
   LayoutDashboard,
   LogOut,
   Menu,
-  Route,
-  Settings,
-  Users,
-  Wrench,
 } from 'lucide-react'
 import { Button, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, cn } from '@prodexy/ui'
 import { brand } from '@/branding/brand'
+import {
+  adminNavigation,
+  driverNavigation,
+  mechanicNavigation,
+  type NavigationItem,
+} from '@/components/layout/navigation-items'
 import { supabase } from '@/lib/supabase-client'
-
-type MenuItem = {
-  label: string
-  href: string
-  icon: typeof LayoutDashboard
-  exact?: boolean
-}
-
-const adminMenu: MenuItem[] = [
-  { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-  { label: 'Veículos', href: '/admin/veiculos', icon: Bus },
-  { label: 'Motoristas', href: '/admin/motoristas', icon: Users },
-  { label: 'Mecânicos', href: '/admin/mecanicos', icon: Wrench },
-  { label: 'Viagens', href: '/admin/viagens', icon: Route },
-  { label: 'Abastecimentos', href: '/admin/abastecimentos', icon: Fuel },
-  { label: 'Despesas', href: '/admin/despesas', icon: DollarSign },
-  { label: 'Manutenções', href: '/admin/manutencoes', icon: Settings },
-  { label: 'Serviços', href: '/admin/servicos', icon: ClipboardList },
-  { label: 'Pendências', href: '/admin/pendencias', icon: AlertTriangle },
-  { label: 'Relatórios', href: '/admin/relatorios', icon: BarChart3 },
-]
-
-const mechanicMenu: MenuItem[] = [
-  { label: 'Manutenções', href: '/mechanic', icon: Wrench, exact: true },
-  { label: 'Pendências', href: '/mechanic/pendencias', icon: AlertTriangle },
-  { label: 'Veículos', href: '/mechanic/veiculos', icon: Bus },
-  { label: 'Serviços', href: '/mechanic/servicos', icon: ClipboardList },
-]
-
-const driverMenu: MenuItem[] = []
 
 function BrandBlock({ compact = false, subtitle }: { compact?: boolean; subtitle: string }) {
   return (
@@ -65,7 +31,7 @@ function BrandBlock({ compact = false, subtitle }: { compact?: boolean; subtitle
   )
 }
 
-function NavItems({ pathname, items }: { pathname: string; items: MenuItem[] }) {
+function NavItems({ pathname, items }: { pathname: string; items: NavigationItem[] }) {
   return (
     <ul className="flex flex-1 flex-col gap-y-2">
       {items.map((item) => {
@@ -73,6 +39,9 @@ function NavItems({ pathname, items }: { pathname: string; items: MenuItem[] }) 
         const active =
           pathname === item.href
           || (!item.exact && pathname.startsWith(`${item.href}/`))
+          || item.activePrefixes?.some(
+            (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+          )
 
         return (
           <li key={item.href}>
@@ -102,7 +71,7 @@ function AppShell({
   subtitle,
 }: {
   children: React.ReactNode
-  items: MenuItem[]
+  items: NavigationItem[]
   mainClassName?: string
   subtitle: string
 }) {
@@ -156,13 +125,13 @@ function AppShell({
 }
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
-  return <AppShell items={adminMenu} subtitle="Painel administrativo">{children}</AppShell>
+  return <AppShell items={adminNavigation} subtitle="Painel administrativo">{children}</AppShell>
 }
 
 export function MechanicShell({ children }: { children: React.ReactNode }) {
-  return <AppShell items={mechanicMenu} subtitle="Painel do mecânico">{children}</AppShell>
+  return <AppShell items={mechanicNavigation} subtitle="Painel do mecânico">{children}</AppShell>
 }
 
 export function DriverShell({ children }: { children: React.ReactNode }) {
-  return <AppShell items={driverMenu} mainClassName="mx-auto max-w-md p-4" subtitle="Portal do motorista">{children}</AppShell>
+  return <AppShell items={driverNavigation} mainClassName="mx-auto max-w-md p-4" subtitle="Portal do motorista">{children}</AppShell>
 }
