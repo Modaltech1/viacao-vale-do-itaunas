@@ -32,5 +32,8 @@ Thumbs.db
 .codex-reference/
 next-dev*.log
 
-# pastas
-database/
+# database
+database/*
+!database/schema.sql
+!database/migrations/
+!database/migrations/*.sql

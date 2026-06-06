@@ -3,17 +3,8 @@ import type { Severity } from '@/types/fleet'
 export type PendingOrigin = 'calculada' | 'manual'
 export type PendingInteractionAction =
   | 'visualizada'
-  | 'reconhecida'
-  | 'comentario'
   | 'resolvida_manual'
   | 'ignorada'
-
-export type PendingInteraction = {
-  id: string
-  action: PendingInteractionAction
-  comment: string
-  createdAt: string
-}
 
 export type PendingListItem = {
   key: string
@@ -35,8 +26,6 @@ export type PendingListItem = {
   actionLabel: string
   contextLabel: string
   href: string
-  interactions: PendingInteraction[]
-  acknowledged: boolean
 }
 
 export type PendingOption = {

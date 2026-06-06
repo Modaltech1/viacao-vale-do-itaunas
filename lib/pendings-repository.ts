@@ -5,7 +5,6 @@ import { toNumber } from '@/lib/driver-utils'
 import { queryRows } from '@/lib/supabase-query'
 import type {
   PendingFormOptions,
-  PendingInteraction,
   PendingListItem,
 } from '@/types/pending'
 
@@ -45,31 +44,10 @@ export async function listPendings(
       .eq('status', 'aberta'),
   )
 
-  const keys = rows.map((row) => row.chave)
-  const interactions = keys.length
-    ? await queryRows(
-        client
-          .from('pendencia_interacoes')
-          .select('id,pendencia_chave,acao,comentario,criado_em')
-          .in('pendencia_chave', keys)
-          .order('criado_em', { ascending: false }),
-      )
-    : []
-
   const severityOrder = { critica: 0, atencao: 1, baixa: 2 }
 
   return rows
-    .map((row): PendingListItem => {
-      const itemInteractions: PendingInteraction[] = interactions
-        .filter((interaction) => interaction.pendencia_chave === row.chave)
-        .map((interaction) => ({
-          id: interaction.id,
-          action: interaction.acao,
-          comment: interaction.comentario ?? '',
-          createdAt: interaction.criado_em,
-        }))
-
-      return {
+    .map((row): PendingListItem => ({
         key: row.chave,
         manualId: row.origem === 'manual' ? String(row.chave).replace('manual:', '') : null,
         origin: row.origem,
@@ -89,10 +67,7 @@ export async function listPendings(
         actionLabel: row.acao_label,
         contextLabel: row.descricao ?? '',
         href: pendingHref(row, mode),
-        interactions: itemInteractions,
-        acknowledged: itemInteractions.some((interaction) => interaction.action === 'reconhecida'),
-      }
-    })
+      }))
     .sort((a, b) => (
       (severityOrder[a.severity] ?? 3) - (severityOrder[b.severity] ?? 3)
       || a.title.localeCompare(b.title, 'pt-BR')

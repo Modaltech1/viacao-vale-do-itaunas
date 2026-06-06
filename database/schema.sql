@@ -1,7 +1,7 @@
 
 -- Vale do Itaúnas — Schema Supabase/PostgreSQL
 -- Sistema ERP de gestão de frota
--- Gerado para evolução do protótipo mockado para dados reais.
+-- Esquema principal do sistema em produção.
 -- Convenções:
 -- - UUID como PK.
 -- - snake_case em português.
@@ -716,11 +716,11 @@ create table if not exists public.pendencia_interacoes (
   pendencia_chave text not null,
   pendencia_origem text not null,
   acao text not null,
-  comentario text,
+  observacao text,
   criado_em timestamptz not null default now(),
   criado_por uuid not null references public.perfis(id) on delete restrict,
   constraint pendencia_interacoes_origem_check check (pendencia_origem in ('calculada', 'manual')),
-  constraint pendencia_interacoes_acao_check check (acao in ('visualizada', 'reconhecida', 'comentario', 'resolvida_manual', 'ignorada'))
+  constraint pendencia_interacoes_acao_check check (acao in ('visualizada', 'resolvida_manual', 'ignorada'))
 );
 
 create table if not exists public.auditoria_eventos (

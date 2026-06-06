@@ -14,19 +14,9 @@ import {
 } from '@prodexy/ui'
 import type { PendingListItem } from '@/types/pending'
 
-export type PendingUiAction = 'reconhecida' | 'comentario' | 'resolvida_manual' | 'cancelada'
+export type PendingUiAction = 'resolvida_manual' | 'cancelada'
 
 const actionContent = {
-  reconhecida: {
-    title: 'Reconhecer pendência',
-    description: 'Registra que a equipe tomou ciência. A causa calculada continuará ativa até ser corrigida.',
-    confirm: 'Reconhecer',
-  },
-  comentario: {
-    title: 'Adicionar comentário',
-    description: 'Registre uma observação operacional no histórico da pendência.',
-    confirm: 'Adicionar comentário',
-  },
   resolvida_manual: {
     title: 'Resolver pendência',
     description: 'Encerra esta pendência manual preservando seu histórico.',
@@ -58,7 +48,6 @@ export function PendingActionDialog({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const content = actionContent[action]
-  const commentRequired = action !== 'reconhecida'
 
   useEffect(() => {
     if (!open) return
@@ -102,7 +91,7 @@ export function PendingActionDialog({
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <div className="space-y-2">
           <Label htmlFor="pending-action-comment">
-            {commentRequired ? 'Observação' : 'Observação opcional'}
+            Observação
           </Label>
           <Textarea
             id="pending-action-comment"
@@ -116,7 +105,7 @@ export function PendingActionDialog({
           <Button
             variant={action === 'cancelada' ? 'destructive' : 'default'}
             onClick={() => void submit()}
-            disabled={saving || (commentRequired && !comment.trim())}
+            disabled={saving || !comment.trim()}
           >
             {saving ? 'Salvando...' : content.confirm}
           </Button>

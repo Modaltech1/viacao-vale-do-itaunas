@@ -10,8 +10,6 @@ import {
 import {
   AlertTriangle,
   BellRing,
-  CheckCheck,
-  MessageSquare,
   Plus,
   TriangleAlert,
   XCircle,
@@ -57,7 +55,7 @@ export function PendingsPage({ mode }: { mode: PendingMode }) {
   const [type, setType] = useState('todos')
   const [createOpen, setCreateOpen] = useState(false)
   const [selected, setSelected] = useState<PendingListItem | null>(null)
-  const [action, setAction] = useState<PendingUiAction>('comentario')
+  const [action, setAction] = useState<PendingUiAction>('resolvida_manual')
   const [actionOpen, setActionOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -192,9 +190,6 @@ export function PendingsPage({ mode }: { mode: PendingMode }) {
                                 value={item.origin}
                                 label={item.origin === 'manual' ? 'Manual' : 'Calculada'}
                               />
-                              {item.acknowledged ? (
-                                <StatusBadge type="raw" value="ativo" label="Reconhecida" />
-                              ) : null}
                             </div>
                             <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
                             <p className="mt-2 text-xs text-muted-foreground">
@@ -202,23 +197,12 @@ export function PendingsPage({ mode }: { mode: PendingMode }) {
                               {item.dueDate ? ` · Data ${date(item.dueDate)}` : ''}
                               {item.dueKm != null ? ` · Vencimento ${number(item.dueKm)} km` : ''}
                               {item.currentKm != null ? ` · KM atual ${number(item.currentKm)}` : ''}
-                              {item.interactions.length ? ` · ${item.interactions.length} interação(ões)` : ''}
                             </p>
                           </div>
 
                           <div className="flex shrink-0 flex-wrap items-center gap-2">
                             <Button variant="outline" size="sm" asChild>
                               <Link href={item.href}>{item.actionLabel}</Link>
-                            </Button>
-                            {!item.acknowledged ? (
-                              <Button variant="outline" size="sm" className="gap-2" onClick={() => openAction(item, 'reconhecida')}>
-                                <CheckCheck className="size-4" />
-                                Reconhecer
-                              </Button>
-                            ) : null}
-                            <Button variant="outline" size="sm" className="gap-2" onClick={() => openAction(item, 'comentario')}>
-                              <MessageSquare className="size-4" />
-                              Comentar
                             </Button>
                             {item.origin === 'manual' ? (
                               <Button size="sm" onClick={() => openAction(item, 'resolvida_manual')}>

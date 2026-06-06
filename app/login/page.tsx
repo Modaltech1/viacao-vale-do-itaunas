@@ -118,10 +118,6 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Entrando...' : 'Entrar'}
             </Button>
-
-            <p className="text-center text-xs text-muted-foreground">
-              Todos usam o mesmo fluxo de autenticação.
-            </p>
           </form>
         </CardContent>
       </Card>

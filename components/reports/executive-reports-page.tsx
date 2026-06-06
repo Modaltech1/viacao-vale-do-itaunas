@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   Button,
@@ -21,7 +21,6 @@ import {
 } from '@prodexy/ui'
 import {
   Activity,
-  AlertTriangle,
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
@@ -55,12 +54,7 @@ import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { ProgressBar } from '@/components/shared/progress-bar'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { brl, number } from '@/lib/format'
-import type {
-  ReportCategoryValue,
-  ReportData,
-  ReportDelta,
-  ReportInsight,
-} from '@/types/report'
+import type { ReportData, ReportDelta, ReportInsight } from '@/types/report'
 
 const chartColors = ['#0ea5e9', '#f59e0b', '#10b981', '#ef4444', '#64748b']
 
@@ -744,4 +738,3 @@ function riskLabel(value: string) {
   }
   return labels[value] ?? value.replaceAll('_', ' ')
 }
-

@@ -12,8 +12,6 @@ import type {
 const severities: Severity[] = ['baixa', 'atencao', 'critica']
 const interactionActions: PendingInteractionAction[] = [
   'visualizada',
-  'reconhecida',
-  'comentario',
   'resolvida_manual',
   'ignorada',
 ]
@@ -113,7 +111,7 @@ async function addInteraction(
     pendencia_chave: key,
     pendencia_origem: origin,
     acao: action,
-    comentario: comment,
+    observacao: comment,
     criado_por: userId,
   })
   if (error) throw error
@@ -130,10 +128,6 @@ export async function interactWithPending(
   },
 ) {
   const comment = normalizeOptionalText(input.comment)
-
-  if (input.action === 'comentario' && !comment) {
-    throw new Error('Escreva um comentário antes de registrar.')
-  }
 
   if (input.action === 'resolvida_manual' || input.action === 'cancelada') {
     if (input.origin !== 'manual') {
@@ -190,14 +184,7 @@ export async function interactWithPending(
     return
   }
 
-  await addInteraction(
-    client,
-    input.key,
-    input.origin,
-    input.action,
-    comment,
-    input.userId,
-  )
+  throw new Error('Ação de pendência inválida.')
 }
 
 export function pendingErrorResponse(error: unknown, fallback: string, status = 400) {
