@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  parseRefuelingPayload,
-  refuelingErrorResponse,
-  refuelingPayloadToDatabase,
-} from '@/lib/refuelings-service'
+  expenseErrorResponse,
+  expensePayloadToDatabase,
+  parseExpensePayload,
+} from '@/lib/expenses-service'
 import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
 import { resolveTripRelation } from '@/lib/travel-operation-service'
 
@@ -15,39 +15,32 @@ export async function PATCH(
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   const { id } = await context.params
-
   let payload
   try {
-    payload = parseRefuelingPayload(await request.json())
+    payload = parseExpensePayload(await request.json())
   } catch (error) {
-    return refuelingErrorResponse(error, 'Dados do abastecimento inválidos.')
+    return expenseErrorResponse(error, 'Dados da despesa inválidos.')
   }
 
   const service = createSupabaseServiceClient()
 
   try {
     const { data: current, error: currentError } = await service
-      .from('abastecimentos')
-      .select('id,viagem_id,veiculo_id,motorista_id')
+      .from('despesas_viagem')
+      .select('id')
       .eq('id', id)
       .is('cancelado_em', null)
-      .single<{
-        id: string
-        viagem_id: string | null
-        veiculo_id: string
-        motorista_id: string | null
-      }>()
+      .single<{ id: string }>()
 
     if (currentError || !current) {
-      return NextResponse.json({ error: 'Abastecimento não encontrado.' }, { status: 404 })
+      return NextResponse.json({ error: 'Despesa não encontrada.' }, { status: 404 })
     }
 
     const relation = await resolveTripRelation(service, payload.tripId)
-
     const { error } = await service
-      .from('abastecimentos')
+      .from('despesas_viagem')
       .update({
-        ...refuelingPayloadToDatabase(payload, relation),
+        ...expensePayloadToDatabase(payload, relation),
         atualizado_por: auth.user.id,
       })
       .eq('id', id)
@@ -55,6 +48,6 @@ export async function PATCH(
     if (error) throw error
     return NextResponse.json({ ok: true })
   } catch (error) {
-    return refuelingErrorResponse(error, 'Não foi possível atualizar o abastecimento.')
+    return expenseErrorResponse(error, 'Não foi possível atualizar a despesa.')
   }
 }

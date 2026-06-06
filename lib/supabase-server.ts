@@ -109,3 +109,41 @@ export async function requireDriver() {
 
   return { ok: true as const, user, driver, supabase }
 }
+
+export async function requireMechanic() {
+  const supabase = await createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { ok: false as const, status: 401, error: 'Sessão não encontrada.' }
+  }
+
+  const { data: profile } = await supabase
+    .from('perfis')
+    .select('papel,ativo')
+    .eq('id', user.id)
+    .single<{ papel: string; ativo: boolean }>()
+
+  if (!profile || !profile.ativo || profile.papel !== 'mecanico') {
+    return { ok: false as const, status: 403, error: 'Acesso permitido apenas para mecânicos.' }
+  }
+
+  const { data: mechanic } = await supabase
+    .from('mecanicos')
+    .select('id,status_profissional')
+    .eq('perfil_id', user.id)
+    .is('excluido_em', null)
+    .single<{ id: string; status_profissional: string }>()
+
+  if (!mechanic || mechanic.status_profissional !== 'ativo') {
+    return {
+      ok: false as const,
+      status: 403,
+      error: 'O cadastro profissional do mecânico não está ativo.',
+    }
+  }
+
+  return { ok: true as const, user, mechanic, supabase }
+}

@@ -25,6 +25,7 @@ type MenuItem = {
   label: string
   href: string
   icon: typeof LayoutDashboard
+  exact?: boolean
 }
 
 const adminMenu: MenuItem[] = [
@@ -42,7 +43,7 @@ const adminMenu: MenuItem[] = [
 ]
 
 const mechanicMenu: MenuItem[] = [
-  { label: 'Manutenções', href: '/mechanic', icon: Wrench },
+  { label: 'Manutenções', href: '/mechanic', icon: Wrench, exact: true },
   { label: 'Pendências', href: '/mechanic/pendencias', icon: AlertTriangle },
   { label: 'Veículos', href: '/mechanic/veiculos', icon: Bus },
   { label: 'Serviços', href: '/mechanic/servicos', icon: ClipboardList },
@@ -69,7 +70,9 @@ function NavItems({ pathname, items }: { pathname: string; items: MenuItem[] }) 
     <ul className="flex flex-1 flex-col gap-y-2">
       {items.map((item) => {
         const Icon = item.icon
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+        const active =
+          pathname === item.href
+          || (!item.exact && pathname.startsWith(`${item.href}/`))
 
         return (
           <li key={item.href}>

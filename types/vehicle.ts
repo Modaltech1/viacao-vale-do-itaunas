@@ -65,6 +65,8 @@ export type VehicleListItem = {
   totalMaintenanceCost: number
   totalTravelExpenses: number
   totalOperationalCost: number
+  pendingCount: number
+  criticalPendingCount: number
 }
 
 export type VehicleTrip = {

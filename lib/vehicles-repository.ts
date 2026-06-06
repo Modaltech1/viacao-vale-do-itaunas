@@ -46,10 +46,11 @@ async function loadVehicleRelations(service: SupabaseClient, vehicleIds: string[
       drivers: [] as DatabaseRow[],
       profiles: [] as DatabaseRow[],
       documents: [] as DatabaseRow[],
+      pendings: [] as DatabaseRow[],
     }
   }
 
-  const [assignments, documents] = await Promise.all([
+  const [assignments, documents, pendings] = await Promise.all([
     queryRows(
       service
         .from('veiculo_motoristas')
@@ -65,6 +66,13 @@ async function loadVehicleRelations(service: SupabaseClient, vehicleIds: string[
         .select('id,veiculo_id,tipo_codigo,tipo_nome,numero,emitido_em,vencimento_em,status_calculado,severidade_calculada')
         .in('veiculo_id', vehicleIds),
     ),
+    queryRows(
+      service
+        .from('vw_pendencias_operacionais')
+        .select('veiculo_id,severidade,status')
+        .in('veiculo_id', vehicleIds)
+        .eq('status', 'aberta'),
+    ),
   ])
 
   const driverIds = [...new Set(assignments.map((assignment) => assignment.motorista_id))]
@@ -76,7 +84,7 @@ async function loadVehicleRelations(service: SupabaseClient, vehicleIds: string[
     ? await queryRows(service.from('perfis').select('id,nome,telefone').in('id', profileIds))
     : []
 
-  return { assignments, drivers, profiles, documents }
+  return { assignments, drivers, profiles, documents, pendings }
 }
 
 export async function listVehicles(service: SupabaseClient): Promise<VehicleListItem[]> {
@@ -90,7 +98,13 @@ export async function listVehicles(service: SupabaseClient): Promise<VehicleList
   if (!rows.length) return []
 
   const vehicleIds = rows.map((row) => row.id)
-  const { assignments, drivers, profiles, documents } = await loadVehicleRelations(service, vehicleIds)
+  const {
+    assignments,
+    drivers,
+    profiles,
+    documents,
+    pendings,
+  } = await loadVehicleRelations(service, vehicleIds)
   const driverById = new Map(drivers.map((driver) => [driver.id, driver]))
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]))
 
@@ -133,6 +147,10 @@ export async function listVehicles(service: SupabaseClient): Promise<VehicleList
       totalMaintenanceCost: toNumber(row.custo_manutencao_total),
       totalTravelExpenses: toNumber(row.custo_despesas_total),
       totalOperationalCost: toNumber(row.custo_total_operacional),
+      pendingCount: pendings.filter((pending) => pending.veiculo_id === row.id).length,
+      criticalPendingCount: pendings.filter(
+        (pending) => pending.veiculo_id === row.id && pending.severidade === 'critica',
+      ).length,
     }
   })
 }

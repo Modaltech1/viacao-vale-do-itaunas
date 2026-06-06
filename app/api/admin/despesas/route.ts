@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { listRefuelings } from '@/lib/refuelings-repository'
+import { listExpenses } from '@/lib/expenses-repository'
 import {
-  parseRefuelingPayload,
-  refuelingErrorResponse,
-  refuelingPayloadToDatabase,
-} from '@/lib/refuelings-service'
+  expenseErrorResponse,
+  expensePayloadToDatabase,
+  parseExpensePayload,
+} from '@/lib/expenses-service'
 import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
 import { resolveTripRelation } from '@/lib/travel-operation-service'
 
@@ -13,9 +13,9 @@ export async function GET() {
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   try {
-    return NextResponse.json(await listRefuelings(auth.supabase))
+    return NextResponse.json(await listExpenses(auth.supabase))
   } catch (error) {
-    return refuelingErrorResponse(error, 'Não foi possível carregar os abastecimentos.', 500)
+    return expenseErrorResponse(error, 'Não foi possível carregar as despesas.', 500)
   }
 }
 
@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
 
   let payload
   try {
-    payload = parseRefuelingPayload(await request.json())
+    payload = parseExpensePayload(await request.json())
   } catch (error) {
-    return refuelingErrorResponse(error, 'Dados do abastecimento inválidos.')
+    return expenseErrorResponse(error, 'Dados da despesa inválidos.')
   }
 
   const service = createSupabaseServiceClient()
@@ -35,18 +35,18 @@ export async function POST(request: NextRequest) {
   try {
     const relation = await resolveTripRelation(service, payload.tripId)
     const { data, error } = await service
-      .from('abastecimentos')
+      .from('despesas_viagem')
       .insert({
-        ...refuelingPayloadToDatabase(payload, relation),
+        ...expensePayloadToDatabase(payload, relation),
         criado_por: auth.user.id,
         atualizado_por: auth.user.id,
       })
       .select('id')
       .single<{ id: string }>()
 
-    if (error || !data) throw error ?? new Error('Não foi possível criar o abastecimento.')
+    if (error || !data) throw error ?? new Error('Não foi possível criar a despesa.')
     return NextResponse.json({ ok: true, id: data.id }, { status: 201 })
   } catch (error) {
-    return refuelingErrorResponse(error, 'Não foi possível criar o abastecimento.')
+    return expenseErrorResponse(error, 'Não foi possível criar a despesa.')
   }
 }
