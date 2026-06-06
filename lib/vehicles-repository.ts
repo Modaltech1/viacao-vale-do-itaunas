@@ -224,6 +224,7 @@ export async function listVehicleFormOptions(service: SupabaseClient): Promise<V
 export async function getVehicleDetails(
   service: SupabaseClient,
   vehicleId: string,
+  scope: 'admin' | 'mechanic' = 'admin',
 ): Promise<VehicleDetails | null> {
   const vehicles = await listVehicles(service)
   const vehicle = vehicles.find((item) => item.id === vehicleId)
@@ -237,21 +238,25 @@ export async function getVehicleDetails(
         .eq('id', vehicleId)
         .is('excluido_em', null),
     ),
-    queryRows(
-      service
-        .from('vw_viagens_detalhadas')
-        .select('id,motorista_nome,origem_snapshot,destino_snapshot,saiu_em,chegou_em,km_inicial,km_final,status')
-        .eq('veiculo_id', vehicleId)
-        .order('saiu_em', { ascending: false }),
-    ),
-    queryRows(
-      service
-        .from('abastecimentos')
-        .select('id,registrado_em,km_registrado,tipo_combustivel,litros,valor_total')
-        .eq('veiculo_id', vehicleId)
-        .is('cancelado_em', null)
-        .order('registrado_em', { ascending: false }),
-    ),
+    scope === 'admin'
+      ? queryRows(
+          service
+            .from('vw_viagens_detalhadas')
+            .select('id,motorista_nome,origem_snapshot,destino_snapshot,saiu_em,chegou_em,km_inicial,km_final,status')
+            .eq('veiculo_id', vehicleId)
+            .order('saiu_em', { ascending: false }),
+        )
+      : Promise.resolve([]),
+    scope === 'admin'
+      ? queryRows(
+          service
+            .from('abastecimentos')
+            .select('id,registrado_em,km_registrado,tipo_combustivel,litros,valor_total')
+            .eq('veiculo_id', vehicleId)
+            .is('cancelado_em', null)
+            .order('registrado_em', { ascending: false }),
+        )
+      : Promise.resolve([]),
     queryRows(
       service
         .from('vw_manutencoes_detalhadas')

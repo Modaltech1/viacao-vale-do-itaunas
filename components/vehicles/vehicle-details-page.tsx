@@ -19,13 +19,14 @@ import {
   TabsList,
   TabsTrigger,
 } from '@prodexy/ui'
-import { DollarSign, Edit3, Fuel, Gauge, TriangleAlert, Users } from 'lucide-react'
+import { CalendarClock, DollarSign, Edit3, Fuel, Gauge, TriangleAlert, Users } from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
 import { MetricCard } from '@/components/shared/metric-card'
 import { Section } from '@/components/shared/section'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { VehicleDialog, VehicleDriversDialog } from '@/components/vehicles/vehicle-dialog'
 import { brl, dateTime, number } from '@/lib/format'
+import { vehicleStatusLabel } from '@/lib/status'
 import type { VehicleDetails, VehicleFormOptions } from '@/types/vehicle'
 
 const emptyOptions: VehicleFormOptions = { routes: [], drivers: [] }
@@ -45,32 +46,39 @@ function EmptyTableRow({ columns, children }: { columns: number; children: React
   )
 }
 
-export function VehicleDetailsPage({ vehicleId }: { vehicleId: string }) {
+type VehicleDetailsPageProps = {
+  vehicleId: string
+  mode?: 'admin' | 'mechanic'
+}
+
+export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetailsPageProps) {
   const [vehicle, setVehicle] = useState<VehicleDetails | null>(null)
   const [options, setOptions] = useState<VehicleFormOptions>(emptyOptions)
   const [editOpen, setEditOpen] = useState(false)
   const [driversOpen, setDriversOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const isAdmin = mode === 'admin'
+  const basePath = isAdmin ? '/admin/veiculos' : '/mechanic/veiculos'
 
   const loadVehicle = useCallback(async () => {
     setLoading(true)
     setError('')
 
     try {
-      const response = await fetch(`/api/admin/veiculos/${vehicleId}`, { cache: 'no-store' })
+      const response = await fetch(`/api/${mode}/veiculos/${vehicleId}`, { cache: 'no-store' })
       const result = await response.json()
 
       if (!response.ok) throw new Error(result.error || 'Não foi possível carregar o veículo.')
 
       setVehicle(result.vehicle)
-      setOptions(result.options ?? emptyOptions)
+      if (isAdmin) setOptions(result.options ?? emptyOptions)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar o veículo.')
     } finally {
       setLoading(false)
     }
-  }, [vehicleId])
+  }, [isAdmin, mode, vehicleId])
 
   useEffect(() => {
     void loadVehicle()
@@ -92,7 +100,7 @@ export function VehicleDetailsPage({ vehicleId }: { vehicleId: string }) {
         <CardContent className="space-y-4 p-8 text-center">
           <p className="text-destructive">{error || 'Veículo não encontrado.'}</p>
           <Button variant="outline" asChild>
-            <Link href="/admin/veiculos">Voltar para veículos</Link>
+            <Link href={basePath}>Voltar para veículos</Link>
           </Button>
         </CardContent>
       </Card>
@@ -105,31 +113,54 @@ export function VehicleDetailsPage({ vehicleId }: { vehicleId: string }) {
     <>
       <PageHeader
         title={`${vehicle.plate} · ${vehicle.brand} ${vehicle.model}`}
-        description="Dados do ativo, vínculos, documentos e histórico operacional consolidado."
+        description={isAdmin
+          ? 'Dados do ativo, vínculos, documentos e histórico operacional consolidado.'
+          : 'Visão técnica consolidada do veículo, seus vencimentos, serviços e manutenções.'}
       >
-        <Button variant="outline" className="gap-2" onClick={() => setEditOpen(true)}>
-          <Edit3 className="size-4" />
-          Editar veículo
-        </Button>
-        <Button className="gap-2" onClick={() => setDriversOpen(true)}>
-          <Users className="size-4" />
-          Gerenciar motoristas
-        </Button>
+        {isAdmin ? (
+          <>
+            <Button variant="outline" className="gap-2" onClick={() => setEditOpen(true)}>
+              <Edit3 className="size-4" />
+              Editar veículo
+            </Button>
+            <Button className="gap-2" onClick={() => setDriversOpen(true)}>
+              <Users className="size-4" />
+              Gerenciar motoristas
+            </Button>
+          </>
+        ) : null}
       </PageHeader>
 
       <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard title="KM atual" value={number(vehicle.currentKm)} icon={Gauge} />
-        <MetricCard
-          title="Consumo médio"
-          value={vehicle.averageConsumption == null ? 'Sem dados' : `${number(vehicle.averageConsumption, 2)} km/L`}
-          icon={Fuel}
-        />
-        <MetricCard
-          title="Custo total"
-          value={brl(vehicle.totalOperationalCost)}
-          icon={DollarSign}
-          tone="danger"
-        />
+        {isAdmin ? (
+          <>
+            <MetricCard
+              title="Consumo médio"
+              value={vehicle.averageConsumption == null ? 'Sem dados' : `${number(vehicle.averageConsumption, 2)} km/L`}
+              icon={Fuel}
+            />
+            <MetricCard
+              title="Custo total"
+              value={brl(vehicle.totalOperationalCost)}
+              icon={DollarSign}
+              tone="danger"
+            />
+          </>
+        ) : (
+          <>
+            <MetricCard
+              title="Status"
+              value={vehicleStatusLabel[vehicle.status]}
+              tone={vehicle.status === 'ativo' ? 'success' : 'warning'}
+            />
+            <MetricCard
+              title="Serviços programados"
+              value={vehicle.serviceSchedules.length}
+              icon={CalendarClock}
+            />
+          </>
+        )}
         <MetricCard
           title="Pendências"
           value={vehicle.pendings.length}
@@ -142,8 +173,8 @@ export function VehicleDetailsPage({ vehicleId }: { vehicleId: string }) {
       <Tabs defaultValue="resumo" className="space-y-4">
         <TabsList className="flex h-auto flex-wrap">
           <TabsTrigger value="resumo">Resumo</TabsTrigger>
-          <TabsTrigger value="viagens">Viagens</TabsTrigger>
-          <TabsTrigger value="abastecimentos">Abastecimentos</TabsTrigger>
+          {isAdmin ? <TabsTrigger value="viagens">Viagens</TabsTrigger> : null}
+          {isAdmin ? <TabsTrigger value="abastecimentos">Abastecimentos</TabsTrigger> : null}
           <TabsTrigger value="manutencoes">Manutenções</TabsTrigger>
           <TabsTrigger value="servicos">Serviços e pneus</TabsTrigger>
           <TabsTrigger value="pendencias">Pendências</TabsTrigger>
@@ -163,25 +194,27 @@ export function VehicleDetailsPage({ vehicleId }: { vehicleId: string }) {
                   <b>Status:</b>
                   <StatusBadge type="vehicle" value={vehicle.status} />
                 </div>
-                <div className="border-t pt-3">
-                  <p className="mb-2 font-semibold">Motoristas vinculados</p>
-                  {vehicle.drivers.length ? (
-                    <div className="space-y-2">
-                      {vehicle.drivers.map((driver) => (
-                        <div key={driver.id} className="flex flex-wrap items-center justify-between gap-2">
-                          <Link className="text-primary" href={`/admin/motoristas/${driver.id}`}>
-                            {driver.name}
-                          </Link>
-                          {driver.principal
-                            ? <StatusBadge type="raw" value="ativo" label="Principal" />
-                            : null}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">Nenhum motorista vinculado.</p>
-                  )}
-                </div>
+                {isAdmin ? (
+                  <div className="border-t pt-3">
+                    <p className="mb-2 font-semibold">Motoristas vinculados</p>
+                    {vehicle.drivers.length ? (
+                      <div className="space-y-2">
+                        {vehicle.drivers.map((driver) => (
+                          <div key={driver.id} className="flex flex-wrap items-center justify-between gap-2">
+                            <Link className="text-primary" href={`/admin/motoristas/${driver.id}`}>
+                              {driver.name}
+                            </Link>
+                            {driver.principal
+                              ? <StatusBadge type="raw" value="ativo" label="Principal" />
+                              : null}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground">Nenhum motorista vinculado.</p>
+                    )}
+                  </div>
+                ) : null}
                 {vehicle.notes ? <p className="border-t pt-3"><b>Observações:</b> {vehicle.notes}</p> : null}
               </CardContent>
             </Card>
@@ -244,8 +277,9 @@ export function VehicleDetailsPage({ vehicleId }: { vehicleId: string }) {
           </div>
         </TabsContent>
 
-        <TabsContent value="viagens">
-          <Section title="Viagens do veículo">
+        {isAdmin ? (
+          <TabsContent value="viagens">
+            <Section title="Viagens do veículo">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -280,11 +314,13 @@ export function VehicleDetailsPage({ vehicleId }: { vehicleId: string }) {
                 )}
               </TableBody>
             </Table>
-          </Section>
-        </TabsContent>
+            </Section>
+          </TabsContent>
+        ) : null}
 
-        <TabsContent value="abastecimentos">
-          <Section title="Abastecimentos">
+        {isAdmin ? (
+          <TabsContent value="abastecimentos">
+            <Section title="Abastecimentos">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -311,8 +347,9 @@ export function VehicleDetailsPage({ vehicleId }: { vehicleId: string }) {
                 )}
               </TableBody>
             </Table>
-          </Section>
-        </TabsContent>
+            </Section>
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="manutencoes">
           <Section title="Manutenções">
@@ -326,7 +363,7 @@ export function VehicleDetailsPage({ vehicleId }: { vehicleId: string }) {
                   <TableHead>Mecânico</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead />
+                  {isAdmin ? <TableHead /> : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -341,14 +378,18 @@ export function VehicleDetailsPage({ vehicleId }: { vehicleId: string }) {
                     <TableCell>{maintenance.mechanicName}</TableCell>
                     <TableCell>{brl(maintenance.value)}</TableCell>
                     <TableCell><StatusBadge type="maintenance" value={maintenance.status} /></TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="link" asChild>
-                        <Link href={`/admin/manutencoes/${maintenance.id}`}>Detalhes →</Link>
-                      </Button>
-                    </TableCell>
+                    {isAdmin ? (
+                      <TableCell className="text-right">
+                        <Button variant="link" asChild>
+                          <Link href={`/admin/manutencoes/${maintenance.id}`}>Detalhes →</Link>
+                        </Button>
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 )) : (
-                  <EmptyTableRow columns={8}>Nenhuma manutenção registrada para este veículo.</EmptyTableRow>
+                  <EmptyTableRow columns={isAdmin ? 8 : 7}>
+                    Nenhuma manutenção registrada para este veículo.
+                  </EmptyTableRow>
                 )}
               </TableBody>
             </Table>
@@ -432,20 +473,24 @@ export function VehicleDetailsPage({ vehicleId }: { vehicleId: string }) {
         </TabsContent>
       </Tabs>
 
-      <VehicleDialog
-        open={editOpen}
-        onOpenChange={setEditOpen}
-        vehicle={vehicle}
-        options={options}
-        onSaved={loadVehicle}
-      />
-      <VehicleDriversDialog
-        open={driversOpen}
-        onOpenChange={setDriversOpen}
-        vehicle={vehicle}
-        drivers={options.drivers}
-        onSaved={loadVehicle}
-      />
+      {isAdmin ? (
+        <>
+          <VehicleDialog
+            open={editOpen}
+            onOpenChange={setEditOpen}
+            vehicle={vehicle}
+            options={options}
+            onSaved={loadVehicle}
+          />
+          <VehicleDriversDialog
+            open={driversOpen}
+            onOpenChange={setDriversOpen}
+            vehicle={vehicle}
+            drivers={options.drivers}
+            onSaved={loadVehicle}
+          />
+        </>
+      ) : null}
     </>
   )
 }
