@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   Button,
@@ -41,8 +41,10 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
   const [type, setType] = useState('todos')
   const [status, setStatus] = useState(mode === 'mechanic' ? 'ativas' : 'todos')
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [initialVehicleId, setInitialVehicleId] = useState<string | undefined>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const queryHandled = useRef(false)
 
   const isAdmin = mode === 'admin'
   const endpoint = `/api/${mode}/manutencoes`
@@ -67,6 +69,19 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
   useEffect(() => {
     void loadMaintenances()
   }, [loadMaintenances])
+
+  useEffect(() => {
+    if (queryHandled.current || !options.vehicles.length) return
+    queryHandled.current = true
+
+    const params = new URLSearchParams(window.location.search)
+    const vehicleId = params.get('vehicleId')
+    if (params.get('newMaintenance') !== '1' || !vehicleId) return
+    if (!options.vehicles.some((vehicle) => vehicle.id === vehicleId)) return
+
+    setInitialVehicleId(vehicleId)
+    setDialogOpen(true)
+  }, [options.vehicles])
 
   const filteredItems = useMemo(() => {
     const term = search.trim().toLocaleLowerCase('pt-BR')
@@ -208,9 +223,13 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
 
       <MaintenanceDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open)
+          if (!open) setInitialVehicleId(undefined)
+        }}
         mode={mode}
         options={options}
+        initialVehicleId={initialVehicleId}
         onSaved={loadMaintenances}
       />
     </>
