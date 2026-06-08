@@ -56,7 +56,7 @@ export async function createManagedUser(
   }
 
   const userId = created.user.id
-  const { error: profileError } = await service
+  const { data: profile, error: profileError } = await service
     .from('perfis')
     .update({
       nome: input.name,
@@ -68,10 +68,12 @@ export async function createManagedUser(
       atualizado_por: adminId,
     })
     .eq('id', userId)
+    .select('id')
+    .single<{ id: string }>()
 
-  if (profileError) {
+  if (profileError || !profile) {
     await service.auth.admin.deleteUser(userId)
-    throw profileError
+    throw profileError ?? new Error('O perfil do usuário não foi criado pelo banco de dados.')
   }
 
   return userId
@@ -83,6 +85,23 @@ export async function updateManagedUser(
   userId: string,
   input: ManagedUserInput,
 ) {
+  const { data: currentProfile, error: currentProfileError } = await service
+    .from('perfis')
+    .select('nome, email, telefone, papel, ativo, atualizado_por')
+    .eq('id', userId)
+    .single<{
+      nome: string
+      email: string
+      telefone: string | null
+      papel: UserRole
+      ativo: boolean
+      atualizado_por: string | null
+    }>()
+
+  if (currentProfileError || !currentProfile) {
+    throw currentProfileError ?? new Error('Perfil do usuário não encontrado.')
+  }
+
   const authPayload: {
     email: string
     password?: string
@@ -96,10 +115,7 @@ export async function updateManagedUser(
 
   if (input.password) authPayload.password = input.password
 
-  const { error: authError } = await service.auth.admin.updateUserById(userId, authPayload)
-  if (authError) throw authError
-
-  const { error: profileError } = await service
+  const { data: updatedProfile, error: profileError } = await service
     .from('perfis')
     .update({
       nome: input.name,
@@ -110,8 +126,29 @@ export async function updateManagedUser(
       atualizado_por: adminId,
     })
     .eq('id', userId)
+    .select('id')
+    .single<{ id: string }>()
 
-  if (profileError) throw profileError
+  if (profileError || !updatedProfile) {
+    throw profileError ?? new Error('Perfil do usuário não encontrado.')
+  }
+
+  const { error: authError } = await service.auth.admin.updateUserById(userId, authPayload)
+  if (!authError) return
+
+  const { error: rollbackError } = await service
+    .from('perfis')
+    .update(currentProfile)
+    .eq('id', userId)
+
+  if (rollbackError) {
+    throw new AggregateError(
+      [authError, rollbackError],
+      'Falha ao atualizar o Auth e ao restaurar o perfil do usuário.',
+    )
+  }
+
+  throw authError
 }
 
 export async function deleteManagedUser(service: SupabaseClient, userId: string | null) {

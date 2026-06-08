@@ -9,6 +9,7 @@ import {
   DollarSign,
   Fuel,
   Gauge,
+  PackageMinus,
   Route,
   Wrench,
 } from 'lucide-react'
@@ -212,6 +213,19 @@ export default function AdminDashboardPage() {
               subtitle={periodLabel}
               icon={DollarSign}
               tone="danger"
+            />
+            <MetricCard
+              title="Peças com estoque baixo"
+              value={metrics?.lowStockParts ?? 0}
+              subtitle="inclui itens sem estoque"
+              icon={PackageMinus}
+              tone="warning"
+            />
+            <MetricCard
+              title="Valor em estoque"
+              value={brl(metrics?.partsStockValue ?? 0)}
+              subtitle="peças ativas"
+              icon={DollarSign}
             />
           </div>
 

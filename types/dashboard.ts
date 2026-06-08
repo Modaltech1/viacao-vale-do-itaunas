@@ -10,8 +10,10 @@ export type DashboardMetrics = {
   averageConsumption: number | null
   refuelingCost: number
   maintenanceCost: number
-  travelExpenseCost: number
+  operatingExpenseCost: number
   totalCost: number
+  lowStockParts: number
+  partsStockValue: number
 }
 
 export type DashboardAlert = {

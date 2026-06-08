@@ -29,6 +29,8 @@ import {
   Download,
   Fuel,
   Gauge,
+  Package,
+  PackageMinus,
   Route,
   ShieldCheck,
   TrendingUp,
@@ -410,7 +412,7 @@ export function ExecutiveReportsPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Despesas por categoria</CardTitle>
-                    <p className="text-sm text-muted-foreground">Custos acessórios que pressionam a margem das viagens.</p>
+                    <p className="text-sm text-muted-foreground">Custos de viagens e lançamentos avulsos diretamente ligados aos veículos.</p>
                   </CardHeader>
                   <CardContent className="space-y-5">
                     {report.expenseCategories.map((item) => (
@@ -526,12 +528,57 @@ export function ExecutiveReportsPage() {
                 </Card>
               </div>
 
-              <div className="grid gap-5 xl:grid-cols-2">
+              <div className="grid gap-5 xl:grid-cols-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Estoque e consumo de peças</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Capital em estoque e itens consumidos nas manutenções do período.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <InventoryMetric
+                        label="Valor em estoque"
+                        value={brl(report.inventory.stockValue)}
+                        icon={Package}
+                      />
+                      <InventoryMetric
+                        label="Consumo no período"
+                        value={brl(report.inventory.consumedCost)}
+                        icon={Wrench}
+                      />
+                      <InventoryMetric
+                        label="Estoque baixo"
+                        value={number(report.inventory.lowStockCount)}
+                        icon={PackageMinus}
+                      />
+                      <InventoryMetric
+                        label="Sem estoque"
+                        value={number(report.inventory.outOfStockCount)}
+                        icon={PackageMinus}
+                      />
+                    </div>
+                    <div className="space-y-3 border-t pt-4">
+                      {report.inventory.topParts.slice(0, 5).map((part) => (
+                        <div key={part.name} className="flex items-center justify-between gap-3 text-sm">
+                          <div>
+                            <p className="font-medium">{part.name}</p>
+                            <p className="text-xs text-muted-foreground">{part.count} uso(s)</p>
+                          </div>
+                          <span className="font-semibold">{brl(part.value)}</span>
+                        </div>
+                      ))}
+                      {!report.inventory.topParts.length ? <EmptyMessage /> : null}
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader>
                     <CardTitle>Serviços de manutenção por categoria</CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      Frequência e valor aplicado por sistema do veículo.
+                      Frequência de execução por sistema do veículo.
                     </p>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -541,7 +588,7 @@ export function ExecutiveReportsPage() {
                           <p className="font-medium">{item.name}</p>
                           <p className="text-xs text-muted-foreground">{item.count} execução(ões)</p>
                         </div>
-                        <span className="font-semibold">{brl(item.value)}</span>
+                        <span className="font-semibold">{item.count} execução(ões)</span>
                       </div>
                     ))}
                     {!report.maintenance.categories.length ? <EmptyMessage /> : null}
@@ -673,6 +720,26 @@ function RatioCard({
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+function InventoryMetric({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string
+  value: string
+  icon: typeof Package
+}) {
+  return (
+    <div className="border p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <Icon className="size-4 text-muted-foreground" />
+      </div>
+      <p className="font-semibold">{value}</p>
+    </div>
   )
 }
 

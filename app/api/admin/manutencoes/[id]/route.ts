@@ -8,10 +8,7 @@ import {
   parseMaintenancePayload,
   updateMaintenance,
 } from '@/lib/maintenances-service'
-import {
-  createSupabaseServiceClient,
-  requireAdmin,
-} from '@/lib/supabase-server'
+import { requireAdmin } from '@/lib/supabase-server'
 
 export async function GET(
   _request: NextRequest,
@@ -45,7 +42,7 @@ export async function PATCH(
 
   try {
     const payload = parseMaintenancePayload(await request.json())
-    await updateMaintenance(createSupabaseServiceClient(), id, payload, auth.user.id)
+    await updateMaintenance(auth.supabase, id, payload)
     return NextResponse.json({ ok: true })
   } catch (error) {
     return maintenanceErrorResponse(error, 'Não foi possível atualizar a manutenção.')

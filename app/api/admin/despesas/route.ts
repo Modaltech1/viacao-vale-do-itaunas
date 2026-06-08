@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { listExpenses } from '@/lib/expenses-repository'
 import {
   expenseErrorResponse,
-  expensePayloadToDatabase,
   parseExpensePayload,
+  saveExpense,
 } from '@/lib/expenses-service'
-import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
-import { resolveTripRelation } from '@/lib/travel-operation-service'
+import { requireAdmin } from '@/lib/supabase-server'
 
 export async function GET() {
   const auth = await requireAdmin()
@@ -30,22 +29,9 @@ export async function POST(request: NextRequest) {
     return expenseErrorResponse(error, 'Dados da despesa inválidos.')
   }
 
-  const service = createSupabaseServiceClient()
-
   try {
-    const relation = await resolveTripRelation(service, payload.tripId)
-    const { data, error } = await service
-      .from('despesas_viagem')
-      .insert({
-        ...expensePayloadToDatabase(payload, relation),
-        criado_por: auth.user.id,
-        atualizado_por: auth.user.id,
-      })
-      .select('id')
-      .single<{ id: string }>()
-
-    if (error || !data) throw error ?? new Error('Não foi possível criar a despesa.')
-    return NextResponse.json({ ok: true, id: data.id }, { status: 201 })
+    const id = await saveExpense(auth.supabase, null, payload)
+    return NextResponse.json({ ok: true, id }, { status: 201 })
   } catch (error) {
     return expenseErrorResponse(error, 'Não foi possível criar a despesa.')
   }

@@ -18,6 +18,7 @@ import {
   SelectValue,
   Textarea,
 } from '@prodexy/ui'
+import { PartUsageEditor } from '@/components/parts/part-usage-editor'
 import {
   expenseCategories,
   type ExpenseFormValues,
@@ -49,6 +50,7 @@ function emptyForm(): ExpenseFormValues {
     registeredAt: localDateTime(),
     notes: '',
     receiptPath: '',
+    parts: [],
   }
 }
 
@@ -64,6 +66,13 @@ function formFromExpense(expense?: ExpenseListItem | null): ExpenseFormValues {
     registeredAt: localDateTime(expense.registeredAt),
     notes: expense.notes,
     receiptPath: expense.receiptPath,
+    parts: expense.parts
+      .filter((part) => !part.returnedAt)
+      .map((part) => ({
+        partId: part.partId,
+        quantity: part.quantity.toString(),
+        unitValue: part.unitValue.toString(),
+      })),
   }
 }
 
@@ -264,7 +273,12 @@ export function ExpenseDialog({
                 <Select
                   value={form.category}
                   onValueChange={(category: ExpenseFormValues['category']) => {
-                    setForm((current) => ({ ...current, category }))
+                    setForm((current) => ({
+                      ...current,
+                      category,
+                      value: category === 'Peças' ? '' : current.value,
+                      parts: category === 'Peças' ? current.parts : [],
+                    }))
                   }}
                 >
                   <SelectTrigger className="w-full">
@@ -278,18 +292,27 @@ export function ExpenseDialog({
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="expense-admin-value">Valor</Label>
-                <Input
-                  id="expense-admin-value"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={form.value}
-                  onChange={updateField('value')}
-                  required
-                />
-              </div>
+              {form.category === 'Peças' ? (
+                <div className="space-y-2">
+                  <Label>Valor</Label>
+                  <div className="flex h-10 items-center text-sm text-muted-foreground">
+                    Calculado pelas peças utilizadas
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="expense-admin-value">Valor</Label>
+                  <Input
+                    id="expense-admin-value"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={form.value}
+                    onChange={updateField('value')}
+                    required
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -323,6 +346,17 @@ export function ExpenseDialog({
               />
             </div>
           </section>
+
+          {form.category === 'Peças' ? (
+            <PartUsageEditor
+              options={lookups.parts}
+              value={form.parts}
+              onChange={(parts) => setForm((current) => ({ ...current, parts }))}
+              description="Selecione itens do estoque usados diretamente no veículo. O preço pode ser ajustado neste lançamento e o saldo será debitado ao salvar."
+              emptyMessage="Nenhuma peça adicionada a esta despesa."
+              totalLabel="Valor total da despesa"
+            />
+          ) : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>

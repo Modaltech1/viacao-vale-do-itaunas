@@ -4,6 +4,12 @@ export const brl = (value: number) =>
 export const number = (value: number, digits = 0) =>
   new Intl.NumberFormat('pt-BR', { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value)
 
+export const quantity = (value: number, unit?: string) =>
+  new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: unit === 'litro' || unit === 'metro' ? 3 : 0,
+  }).format(value)
+
 export const date = (value?: string) => {
   if (!value) return '—'
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(value))

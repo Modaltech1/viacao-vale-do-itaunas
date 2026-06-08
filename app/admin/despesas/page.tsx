@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import {
   Button,
   Card,
@@ -25,20 +26,24 @@ import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { brl, dateTime } from '@/lib/format'
+import { StatusBadge } from '@/components/shared/status-badge'
 import {
   expenseCategories,
   type ExpenseListItem,
   type ExpenseLookups,
+  type MaintenanceExpenseItem,
 } from '@/types/expense'
 
 const emptyLookups: ExpenseLookups = {
   vehicles: [],
   drivers: [],
   trips: [],
+  parts: [],
 }
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<ExpenseListItem[]>([])
+  const [maintenanceExpenses, setMaintenanceExpenses] = useState<MaintenanceExpenseItem[]>([])
   const [lookups, setLookups] = useState<ExpenseLookups>(emptyLookups)
   const [selectedExpense, setSelectedExpense] = useState<ExpenseListItem | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -59,6 +64,7 @@ export default function ExpensesPage() {
       if (!response.ok) throw new Error(result.error || 'Não foi possível carregar as despesas.')
 
       setExpenses(result.items ?? [])
+      setMaintenanceExpenses(result.maintenanceItems ?? [])
       setLookups(result.lookups ?? emptyLookups)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar as despesas.')
@@ -94,7 +100,9 @@ export default function ExpensesPage() {
   }, [category, endDate, expenses, search, startDate])
 
   const metrics = useMemo(() => ({
-    total: expenses.reduce((sum, expense) => sum + expense.value, 0),
+    total: expenses.reduce((sum, expense) => sum + expense.value, 0)
+      + maintenanceExpenses.reduce((sum, expense) => sum + expense.value, 0),
+    maintenance: maintenanceExpenses.reduce((sum, expense) => sum + expense.value, 0),
     toll: expenses
       .filter((expense) => expense.category === 'Pedágio')
       .reduce((sum, expense) => sum + expense.value, 0),
@@ -102,7 +110,7 @@ export default function ExpensesPage() {
       .filter((expense) => expense.category === 'Alimentação')
       .reduce((sum, expense) => sum + expense.value, 0),
     categories: new Set(expenses.map((expense) => expense.category)).size,
-  }), [expenses])
+  }), [expenses, maintenanceExpenses])
 
   function openNewExpense() {
     setSelectedExpense(null)
@@ -118,7 +126,7 @@ export default function ExpensesPage() {
     <>
       <PageHeader
         title="Despesas"
-        description="Pedágio, alimentação, hospedagem, descarga e demais custos operacionais das viagens."
+        description="Custos operacionais de viagens e consumo de peças vinculado às manutenções."
       >
         <Button className="gap-2" onClick={openNewExpense}>
           <Plus className="size-4" />
@@ -128,7 +136,7 @@ export default function ExpensesPage() {
 
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard title="Total" value={brl(metrics.total)} icon={CircleDollarSign} />
-        <MetricCard title="Pedágio" value={brl(metrics.toll)} icon={ReceiptText} />
+        <MetricCard title="Manutenções" value={brl(metrics.maintenance)} icon={ReceiptText} />
         <MetricCard title="Alimentação" value={brl(metrics.food)} icon={Utensils} />
         <MetricCard title="Categorias utilizadas" value={metrics.categories} icon={Tags} />
       </div>
@@ -203,6 +211,13 @@ export default function ExpensesPage() {
                       <TableCell className="font-medium">{brl(expense.value)}</TableCell>
                       <TableCell className="max-w-[280px]">
                         <p className="truncate">{expense.notes || '—'}</p>
+                        {expense.parts.length ? (
+                          <p className="truncate text-xs text-muted-foreground">
+                            {expense.parts.length} peça(s) · {expense.parts
+                              .map((part) => `${part.name} (${part.quantity} ${part.unit})`)
+                              .join(', ')}
+                          </p>
+                        ) : null}
                         {expense.receiptPath ? (
                           <p className="truncate text-xs text-muted-foreground">
                             Comprovante: {expense.receiptPath}
@@ -232,6 +247,61 @@ export default function ExpensesPage() {
               </TableBody>
             </Table>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-5">
+        <CardContent className="space-y-4 p-4">
+          <div>
+            <h2 className="font-semibold">Custos de manutenção</h2>
+            <p className="text-sm text-muted-foreground">
+              Valores calculados pelas peças usadas. A composição é editada dentro da manutenção.
+            </p>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data</TableHead>
+                <TableHead>Veículo</TableHead>
+                <TableHead>Manutenção</TableHead>
+                <TableHead>Peças</TableHead>
+                <TableHead>Valor</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    Carregando custos de manutenção...
+                  </TableCell>
+                </TableRow>
+              ) : maintenanceExpenses.length ? maintenanceExpenses.map((expense) => (
+                <TableRow key={expense.id}>
+                  <TableCell className="whitespace-nowrap">{dateTime(expense.registeredAt)}</TableCell>
+                  <TableCell className="font-semibold">{expense.vehicleLabel}</TableCell>
+                  <TableCell>{expense.cause || 'Sem descrição'}</TableCell>
+                  <TableCell>{expense.partsCount}</TableCell>
+                  <TableCell className="font-medium">{brl(expense.value)}</TableCell>
+                  <TableCell>
+                    <StatusBadge type="maintenance" value={expense.status} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="link" asChild>
+                      <Link href={`/admin/manutencoes/${expense.id}`}>Detalhes →</Link>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    Nenhum custo de manutenção registrado.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 

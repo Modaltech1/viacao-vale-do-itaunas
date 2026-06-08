@@ -31,6 +31,7 @@ const emptyOptions: MaintenanceFormOptions = {
   vehicles: [],
   mechanics: [],
   services: [],
+  parts: [],
   currentMechanicId: null,
 }
 
@@ -93,6 +94,7 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
         || item.vehicleLabel.toLocaleLowerCase('pt-BR').includes(term)
         || item.cause.toLocaleLowerCase('pt-BR').includes(term)
         || item.services.some((service) => service.name.toLocaleLowerCase('pt-BR').includes(term))
+        || item.parts.some((part) => part.name.toLocaleLowerCase('pt-BR').includes(term))
       const matchesType = type === 'todos' || item.maintenanceType === type
       const matchesStatus = status === 'todos'
         || (status === 'ativas'
@@ -112,8 +114,8 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
       <PageHeader
         title="Manutenções"
         description={isAdmin
-          ? 'Controle das intervenções preventivas e corretivas, responsáveis, serviços e custos.'
-          : 'Execução operacional das intervenções, serviços e liberações da frota.'}
+          ? 'Controle das intervenções, responsáveis, serviços, peças utilizadas e custos.'
+          : 'Execução operacional das intervenções, peças, serviços e liberações da frota.'}
       >
         <Button className="gap-2" onClick={() => setDialogOpen(true)}>
           <Plus className="size-4" />
@@ -126,7 +128,7 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
         <MetricCard title="Em andamento" value={items.filter((item) => item.status === 'em_andamento').length} icon={Wrench} tone="blue" />
         <MetricCard title="Concluídas" value={items.filter((item) => item.status === 'concluida').length} icon={CircleCheckBig} tone="success" />
         {isAdmin ? (
-          <MetricCard title="Custo registrado" value={brl(items.filter((item) => item.status !== 'cancelada').reduce((total, item) => total + item.totalValue, 0))} />
+          <MetricCard title="Custo em peças" value={brl(items.filter((item) => item.status !== 'cancelada').reduce((total, item) => total + item.totalValue, 0))} />
         ) : (
           <MetricCard title="Veículos monitorados" value={monitoredVehicles} icon={ClipboardList} />
         )}
@@ -136,7 +138,7 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
         <CardContent className="space-y-4 p-4">
           <div className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_minmax(190px,0.45fr)_minmax(210px,0.5fr)]">
             <FilterInput
-              placeholder="Buscar por placa, veículo, causa ou serviço..."
+              placeholder="Buscar por placa, veículo, causa, serviço ou peça..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -169,6 +171,7 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
                   <TableHead>Veículo</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Serviços</TableHead>
+                  <TableHead>Peças</TableHead>
                   <TableHead>Abertura</TableHead>
                   <TableHead>KM</TableHead>
                   <TableHead>Responsável</TableHead>
@@ -180,7 +183,7 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 9 : 8} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={isAdmin ? 10 : 9} className="h-24 text-center text-muted-foreground">
                       Carregando manutenções...
                     </TableCell>
                   </TableRow>
@@ -196,6 +199,11 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
                         <p className="truncate">{item.services.map((service) => service.name).join(', ') || 'Sem serviços'}</p>
                         <p className="truncate text-xs text-muted-foreground">{item.cause}</p>
                       </TableCell>
+                      <TableCell>
+                        {item.parts.length
+                          ? `${item.parts.length} item(ns)`
+                          : 'Sem peças'}
+                      </TableCell>
                       <TableCell>{dateTime(item.openedAt)}</TableCell>
                       <TableCell>{item.vehicleKm == null ? '—' : number(item.vehicleKm)}</TableCell>
                       <TableCell>{item.responsibleMechanicName}</TableCell>
@@ -210,7 +218,7 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 9 : 8} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={isAdmin ? 10 : 9} className="h-24 text-center text-muted-foreground">
                       Nenhuma manutenção encontrada.
                     </TableCell>
                   </TableRow>

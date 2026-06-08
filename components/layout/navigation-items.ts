@@ -6,6 +6,7 @@ import {
   DollarSign,
   Fuel,
   LayoutDashboard,
+  Package,
   Route,
   Users,
   Wrench,
@@ -29,6 +30,7 @@ const navigationCatalog = {
   expenses: { label: 'Despesas', icon: DollarSign },
   maintenances: { label: 'Manutenções', icon: Wrench },
   services: { label: 'Serviços', icon: ClipboardList },
+  parts: { label: 'Peças', icon: Package },
   pendings: { label: 'Pendências', icon: AlertTriangle },
   reports: { label: 'Relatórios', icon: BarChart3 },
 } as const
@@ -51,6 +53,7 @@ export const adminNavigation: NavigationItem[] = [
   item('expenses', '/admin/despesas'),
   item('maintenances', '/admin/manutencoes'),
   item('services', '/admin/servicos'),
+  item('parts', '/admin/pecas'),
   item('pendings', '/admin/pendencias'),
   item('reports', '/admin/relatorios'),
 ]
@@ -63,6 +66,7 @@ export const mechanicNavigation: NavigationItem[] = [
   item('pendings', '/mechanic/pendencias'),
   item('vehicles', '/mechanic/veiculos'),
   item('services', '/mechanic/servicos'),
+  item('parts', '/mechanic/pecas'),
 ]
 
 export const driverNavigation: NavigationItem[] = []

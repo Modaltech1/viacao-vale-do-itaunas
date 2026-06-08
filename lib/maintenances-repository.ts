@@ -25,6 +25,19 @@ function normalizeMaintenance(row: DatabaseRow): MaintenanceListItem {
   const services = Array.isArray(row.servicos)
     ? row.servicos.filter(Boolean).map(normalizeService)
     : []
+  const parts = Array.isArray(row.pecas)
+    ? row.pecas.filter(Boolean).map((part: DatabaseRow) => ({
+        id: part.id,
+        partId: part.pecaId,
+        code: part.codigo,
+        name: part.nome,
+        unit: part.unidade,
+        quantity: toNumber(part.quantidade),
+        unitValue: toNumber(part.valorUnitario),
+        totalValue: toNumber(part.valorTotal),
+        returnedAt: part.estoqueDevolvidoEm ?? null,
+      }))
+    : []
 
   return {
     id: row.id,
@@ -44,6 +57,7 @@ function normalizeMaintenance(row: DatabaseRow): MaintenanceListItem {
     notes: row.observacoes ?? '',
     cancellationReason: row.motivo_cancelamento ?? '',
     services,
+    parts,
   }
 }
 
@@ -78,7 +92,7 @@ export async function listMaintenanceFormOptions(
   client: SupabaseClient,
   currentMechanicId: string | null = null,
 ): Promise<MaintenanceFormOptions> {
-  const [vehicles, services, mechanics] = await Promise.all([
+  const [vehicles, services, mechanics, parts] = await Promise.all([
     queryRows(
       client
         .from('veiculos')
@@ -99,7 +113,15 @@ export async function listMaintenanceFormOptions(
         .from('mecanicos')
         .select('id,perfil_id,status_profissional')
         .eq('status_profissional', 'ativo')
-        .is('excluido_em', null),
+        .is('excluido_em', null)
+    ),
+    queryRows(
+      client
+        .from('pecas')
+        .select('id,codigo,nome,unidade_medida,quantidade_estoque,valor_unitario')
+        .eq('ativo', true)
+        .is('excluido_em', null)
+        .order('nome', { ascending: true }),
     ),
   ])
 
@@ -127,6 +149,14 @@ export async function listMaintenanceFormOptions(
       name: service.nome,
       category: service.categoria,
       suggestedMaintenanceType: service.tipo_manutencao_sugerido,
+    })),
+    parts: parts.map((part) => ({
+      id: part.id,
+      code: part.codigo,
+      name: part.nome,
+      unit: part.unidade_medida,
+      stockQuantity: toNumber(part.quantidade_estoque),
+      unitValue: toNumber(part.valor_unitario),
     })),
     mechanics: mechanics.flatMap((mechanic) => {
       const profile = profileById.get(mechanic.perfil_id)

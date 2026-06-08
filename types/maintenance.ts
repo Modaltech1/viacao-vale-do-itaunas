@@ -1,6 +1,11 @@
 import type { MaintenanceStatus, MaintenanceType } from '@/types/fleet'
 import type { ServiceCategory } from '@/types/service'
 import type { VehicleStatus } from '@/types/fleet'
+import type {
+  PartUsageFormValue,
+  PartUsageItem,
+  PartUsageOption,
+} from '@/types/part'
 
 export type MaintenanceServiceItem = {
   id: string
@@ -10,6 +15,8 @@ export type MaintenanceServiceItem = {
   value: number | null
   notes: string
 }
+
+export type MaintenancePartItem = PartUsageItem
 
 export type MaintenanceListItem = {
   id: string
@@ -29,6 +36,7 @@ export type MaintenanceListItem = {
   notes: string
   cancellationReason: string
   services: MaintenanceServiceItem[]
+  parts: MaintenancePartItem[]
 }
 
 export type MaintenanceDetails = MaintenanceListItem
@@ -52,12 +60,17 @@ export type MaintenanceServiceOption = {
   suggestedMaintenanceType: MaintenanceType
 }
 
+export type MaintenancePartOption = PartUsageOption
+
 export type MaintenanceFormOptions = {
   vehicles: MaintenanceVehicleOption[]
   mechanics: MaintenanceMechanicOption[]
   services: MaintenanceServiceOption[]
+  parts: MaintenancePartOption[]
   currentMechanicId: string | null
 }
+
+export type MaintenancePartFormValue = PartUsageFormValue
 
 export type MaintenanceFormValues = {
   vehicleId: string
@@ -67,7 +80,7 @@ export type MaintenanceFormValues = {
   vehicleKm: string
   responsibleMechanicId: string
   status: 'aberta' | 'em_andamento'
-  totalValue: string
   notes: string
   serviceIds: string[]
+  parts: MaintenancePartFormValue[]
 }

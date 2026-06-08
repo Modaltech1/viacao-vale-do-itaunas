@@ -8,10 +8,7 @@ import {
   maintenanceErrorResponse,
   parseMaintenancePayload,
 } from '@/lib/maintenances-service'
-import {
-  createSupabaseServiceClient,
-  requireMechanic,
-} from '@/lib/supabase-server'
+import { requireMechanic } from '@/lib/supabase-server'
 
 export async function GET() {
   const auth = await requireMechanic()
@@ -34,11 +31,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const payload = parseMaintenancePayload(await request.json(), auth.mechanic.id)
-    const id = await createMaintenance(
-      createSupabaseServiceClient(),
-      payload,
-      auth.user.id,
-    )
+    const id = await createMaintenance(auth.supabase, payload)
     return NextResponse.json({ ok: true, id }, { status: 201 })
   } catch (error) {
     return maintenanceErrorResponse(error, 'Não foi possível criar a manutenção.')

@@ -4,10 +4,7 @@ import {
   concludeMaintenance,
   maintenanceErrorResponse,
 } from '@/lib/maintenances-service'
-import {
-  createSupabaseServiceClient,
-  requireMechanic,
-} from '@/lib/supabase-server'
+import { requireMechanic } from '@/lib/supabase-server'
 
 export async function POST(
   request: NextRequest,
@@ -23,10 +20,9 @@ export async function POST(
       await concludeMaintenance(auth.supabase, id)
     } else if (body.action === 'cancel') {
       await cancelMaintenance(
-        createSupabaseServiceClient(),
+        auth.supabase,
         id,
         String(body.reason ?? ''),
-        auth.user.id,
       )
     } else {
       return NextResponse.json({ error: 'Ação inválida.' }, { status: 400 })

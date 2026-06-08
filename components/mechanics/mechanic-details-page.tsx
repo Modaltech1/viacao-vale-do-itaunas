@@ -91,7 +91,7 @@ export function MechanicDetailsPage({ mechanicId }: { mechanicId: string }) {
         <MetricCard title="Manutenções" value={mechanic.maintenancesCount} />
         <MetricCard title="Abertas" value={mechanic.openMaintenancesCount} tone="warning" />
         <MetricCard title="Concluídas" value={mechanic.completedMaintenancesCount} tone="success" />
-        <MetricCard title="Valor lançado" value={brl(mechanic.totalValue)} />
+        <MetricCard title="Custo em peças" value={brl(mechanic.totalValue)} />
       </div>
 
       <div className="mb-5 grid gap-4 lg:grid-cols-2">
@@ -124,7 +124,7 @@ export function MechanicDetailsPage({ mechanicId }: { mechanicId: string }) {
             <p><b>Responsável ou apoio em:</b> {mechanic.maintenancesCount} manutenções</p>
             <p><b>Em execução:</b> {mechanic.openMaintenancesCount}</p>
             <p><b>Finalizadas:</b> {mechanic.completedMaintenancesCount}</p>
-            <p><b>Valor acumulado:</b> {brl(mechanic.totalValue)}</p>
+            <p><b>Custo acumulado em peças:</b> {brl(mechanic.totalValue)}</p>
           </CardContent>
         </Card>
       </div>

@@ -17,7 +17,7 @@ import {
   Label,
   Textarea,
 } from '@prodexy/ui'
-import { Ban, CircleCheckBig, Edit3, Gauge, Wrench } from 'lucide-react'
+import { Ban, CircleCheckBig, Edit3, Gauge, Package, Wrench } from 'lucide-react'
 import { MaintenanceDialog } from '@/components/maintenances/maintenance-dialog'
 import { PageHeader } from '@/components/layout/page-header'
 import { MetricCard } from '@/components/shared/metric-card'
@@ -34,6 +34,7 @@ const emptyOptions: MaintenanceFormOptions = {
   vehicles: [],
   mechanics: [],
   services: [],
+  parts: [],
   currentMechanicId: null,
 }
 
@@ -156,7 +157,7 @@ export function MaintenanceDetailsPage({
         />
         <MetricCard title="KM registrado" value={maintenance.vehicleKm == null ? '—' : number(maintenance.vehicleKm)} icon={Gauge} />
         <MetricCard title="Serviços" value={maintenance.services.length} />
-        <MetricCard title="Valor total" value={brl(maintenance.totalValue)} />
+        <MetricCard title="Custo em peças" value={brl(maintenance.totalValue)} icon={Package} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
@@ -205,12 +206,38 @@ export function MaintenanceDetailsPage({
                   <p className="font-semibold">{service.name}</p>
                   <p className="text-sm text-muted-foreground">{service.category}</p>
                 </div>
-                <span className="text-sm font-medium">
-                  {service.value == null ? 'Incluso no valor total' : brl(service.value)}
-                </span>
+                <span className="text-sm text-muted-foreground">Executado</span>
               </div>
             )) : (
               <p className="py-8 text-center text-sm text-muted-foreground">Nenhum serviço registrado.</p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="xl:col-span-2">
+          <CardHeader><CardTitle>Peças utilizadas</CardTitle></CardHeader>
+          <CardContent className="divide-y">
+            {maintenance.parts.length ? maintenance.parts.map((part) => (
+              <div
+                key={part.id}
+                className="grid gap-2 py-4 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto_auto] sm:items-center"
+              >
+                <div>
+                  <p className="font-semibold">{part.name}</p>
+                  <p className="text-sm text-muted-foreground">{part.code}</p>
+                </div>
+                <div className="text-sm sm:text-right">
+                  <p>{number(part.quantity, 3)} {part.unit} × {brl(part.unitValue)}</p>
+                  {part.returnedAt ? (
+                    <p className="text-xs text-muted-foreground">Estoque devolvido</p>
+                  ) : null}
+                </div>
+                <span className="font-semibold">{brl(part.totalValue)}</span>
+              </div>
+            )) : (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                Nenhuma peça registrada.
+              </p>
             )}
           </CardContent>
         </Card>

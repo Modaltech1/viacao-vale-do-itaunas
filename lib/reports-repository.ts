@@ -239,6 +239,8 @@ export async function getReportData(
     expenseRows,
     maintenanceRows,
     pendingRows,
+    partRows,
+    expensePartRows,
   ] = await Promise.all([
     queryRows(
       client
@@ -288,7 +290,7 @@ export async function getReportData(
     queryRows(
       client
         .from('vw_manutencoes_detalhadas')
-        .select('id,veiculo_id,tipo_manutencao,aberto_em,iniciado_em,concluido_em,status,valor_total_realizado,servicos')
+        .select('id,veiculo_id,tipo_manutencao,aberto_em,iniciado_em,concluido_em,status,valor_total_realizado,servicos,pecas')
         .gte('aberto_em', totalPeriod.start.toISOString())
         .lt('aberto_em', totalPeriod.endExclusive.toISOString())
         .neq('status', 'cancelada'),
@@ -298,6 +300,17 @@ export async function getReportData(
         .from('vw_pendencias_operacionais')
         .select('chave,severidade,tipo,veiculo_id,motorista_id,servico_id,status')
         .eq('status', 'aberta'),
+    ),
+    queryRows(
+      client
+        .from('pecas')
+        .select('id,nome,unidade_medida,quantidade_estoque,estoque_minimo,valor_unitario,ativo')
+        .is('excluido_em', null),
+    ),
+    queryRows(
+      client
+        .from('despesa_pecas')
+        .select('despesa_id,peca_id,nome_snapshot,quantidade,valor_total,estoque_devolvido_em'),
     ),
   ])
 
@@ -490,6 +503,58 @@ export async function getReportData(
     categories: normalizeCategories(maintenanceCategoryMap),
   }
 
+  const partConsumptionMap = new Map<string, { value: number; count: number }>()
+  let consumedQuantity = 0
+  currentMaintenances.forEach((item) => {
+    const parts = Array.isArray(item.pecas) ? item.pecas : []
+    parts.forEach((part: DatabaseRow) => {
+      if (part.estoqueDevolvidoEm) return
+      const quantity = toNumber(part.quantidade)
+      const totalValue = toNumber(part.valorTotal)
+      const currentPart = partConsumptionMap.get(part.nome) ?? { value: 0, count: 0 }
+      currentPart.value += totalValue
+      currentPart.count += 1
+      consumedQuantity += quantity
+      partConsumptionMap.set(part.nome, currentPart)
+    })
+  })
+  const currentExpenseIds = new Set(currentExpenses.map((expense) => expense.id))
+  expensePartRows
+    .filter((item) => currentExpenseIds.has(item.despesa_id) && !item.estoque_devolvido_em)
+    .forEach((part) => {
+      const quantity = toNumber(part.quantidade)
+      const totalValue = toNumber(part.valor_total)
+      const currentPart = partConsumptionMap.get(part.nome_snapshot) ?? { value: 0, count: 0 }
+      currentPart.value += totalValue
+      currentPart.count += 1
+      consumedQuantity += quantity
+      partConsumptionMap.set(part.nome_snapshot, currentPart)
+    })
+  const activeParts = partRows.filter((part) => part.ativo)
+  const inventory = {
+    stockValue: activeParts.reduce(
+      (total, part) => (
+        total + toNumber(part.quantidade_estoque) * toNumber(part.valor_unitario)
+      ),
+      0,
+    ),
+    lowStockCount: activeParts.filter(
+      (part) => (
+        toNumber(part.quantidade_estoque) > 0
+        && toNumber(part.quantidade_estoque) <= toNumber(part.estoque_minimo)
+      ),
+    ).length,
+    outOfStockCount: activeParts.filter(
+      (part) => toNumber(part.quantidade_estoque) === 0,
+    ).length,
+    consumedCost: [...partConsumptionMap.values()].reduce(
+      (total, item) => total + item.value,
+      0,
+    ),
+    consumedQuantity,
+    topParts: normalizeCategories(partConsumptionMap).slice(0, 8),
+  }
+
   const riskSeverityMap = new Map<string, { value: number; count: number }>()
   const riskTypeMap = new Map<string, { value: number; count: number }>()
   currentPendings.forEach((pending) => {
@@ -527,7 +592,7 @@ export async function getReportData(
   const costBreakdown: ReportCategoryValue[] = [
     { name: 'Combustível', value: currentRefuelings.reduce((total, item) => total + toNumber(item.valor_total), 0) },
     { name: 'Manutenção', value: currentMaintenances.reduce((total, item) => total + maintenanceValue(item), 0) },
-    { name: 'Despesas de viagem', value: currentExpenses.reduce((total, item) => total + toNumber(item.valor), 0) },
+    { name: 'Despesas operacionais', value: currentExpenses.reduce((total, item) => total + toNumber(item.valor), 0) },
   ]
 
   return {
@@ -545,6 +610,7 @@ export async function getReportData(
     expenseCategories,
     routes,
     maintenance,
+    inventory,
     risks: {
       bySeverity: normalizeCategories(riskSeverityMap),
       byType: normalizeCategories(riskTypeMap),

@@ -7,7 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node --experimental-strip-types --experimental-test-isolation=none --loader ./tests/loader.mjs --test tests/*.test.mjs",
+    "test:coverage": "node --experimental-strip-types --experimental-test-isolation=none --experimental-test-coverage --loader ./tests/loader.mjs --test tests/*.test.mjs"
   },
   "dependencies": {
     "@prodexy/ui": "github:Modaltech1/prodexy-ui",

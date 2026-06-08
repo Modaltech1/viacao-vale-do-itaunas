@@ -145,7 +145,7 @@ export default function MechanicsPage() {
                   <TableHead>Telefone</TableHead>
                   <TableHead>Especialidade</TableHead>
                   <TableHead>Manutenções</TableHead>
-                  <TableHead>Valor lançado</TableHead>
+                  <TableHead>Custo em peças</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead />
                 </TableRow>

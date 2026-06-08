@@ -93,6 +93,15 @@ export type ReportRiskSummary = {
   byType: ReportCategoryValue[]
 }
 
+export type ReportInventorySummary = {
+  stockValue: number
+  lowStockCount: number
+  outOfStockCount: number
+  consumedCost: number
+  consumedQuantity: number
+  topParts: ReportCategoryValue[]
+}
+
 export type ReportInsight = {
   title: string
   description: string
@@ -120,6 +129,7 @@ export type ReportData = {
   routes: ReportRouteRow[]
   maintenance: ReportMaintenanceSummary
   risks: ReportRiskSummary
+  inventory: ReportInventorySummary
   insights: ReportInsight[]
   options: {
     vehicles: ReportOption[]

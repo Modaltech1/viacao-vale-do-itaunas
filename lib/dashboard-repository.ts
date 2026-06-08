@@ -126,8 +126,10 @@ export async function getDashboardData(
         : toNumber(metrics.consumo_medio),
       refuelingCost: toNumber(metrics.gasto_abastecimento),
       maintenanceCost: toNumber(metrics.gasto_manutencao),
-      travelExpenseCost: toNumber(metrics.gasto_despesas),
+      operatingExpenseCost: toNumber(metrics.gasto_despesas),
       totalCost: toNumber(metrics.gasto_total),
+      lowStockParts: toNumber(metrics.pecas_estoque_baixo),
+      partsStockValue: toNumber(metrics.valor_estoque_pecas),
     },
     alerts,
     vehicles: vehicleRows

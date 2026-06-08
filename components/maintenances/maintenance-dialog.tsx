@@ -19,6 +19,7 @@ import {
   SelectValue,
   Textarea,
 } from '@prodexy/ui'
+import { PartUsageEditor } from '@/components/parts/part-usage-editor'
 import type {
   MaintenanceFormOptions,
   MaintenanceFormValues,
@@ -57,9 +58,9 @@ function emptyForm(
     vehicleKm: vehicle?.currentKm.toString() ?? '',
     responsibleMechanicId: options.currentMechanicId ?? '',
     status: 'aberta',
-    totalValue: '',
     notes: '',
     serviceIds: [],
+    parts: [],
   }
 }
 
@@ -76,9 +77,15 @@ function formFromMaintenance(
     responsibleMechanicId:
       maintenance.responsibleMechanicId ?? options.currentMechanicId ?? '',
     status: maintenance.status === 'em_andamento' ? 'em_andamento' : 'aberta',
-    totalValue: maintenance.totalValue ? maintenance.totalValue.toString() : '',
     notes: maintenance.notes,
     serviceIds: maintenance.services.map((service) => service.serviceId),
+    parts: maintenance.parts
+      .filter((part) => !part.returnedAt)
+      .map((part) => ({
+        partId: part.partId,
+        quantity: part.quantity.toString(),
+        unitValue: part.unitValue.toString(),
+      })),
   }
 }
 
@@ -115,7 +122,7 @@ export function MaintenanceDialog({
     return [...groups.entries()]
   }, [form.maintenanceType, options.services])
 
-  function updateField(field: 'cause' | 'openedAt' | 'vehicleKm' | 'totalValue' | 'notes') {
+  function updateField(field: 'cause' | 'openedAt' | 'vehicleKm' | 'notes') {
     return (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setForm((current) => ({ ...current, [field]: event.target.value }))
     }
@@ -275,7 +282,16 @@ export function MaintenanceDialog({
             </div>
           </section>
 
-          <section className="space-y-4 border-t pt-5">
+          <PartUsageEditor
+            options={options.parts}
+            value={form.parts}
+            onChange={(parts) => setForm((current) => ({ ...current, parts }))}
+            description="O preço padrão vem do estoque e pode ser ajustado nesta manutenção. O saldo é debitado ao salvar."
+            emptyMessage="Nenhuma peça adicionada a esta manutenção."
+            totalLabel="Valor total da manutenção"
+          />
+
+          <section className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               {mode === 'admin' ? (
                 <div className="space-y-2">
@@ -312,18 +328,6 @@ export function MaintenanceDialog({
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="maintenance-total-value">Valor total</Label>
-                <Input
-                  id="maintenance-total-value"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.totalValue}
-                  onChange={updateField('totalValue')}
-                  placeholder="Opcional"
-                />
-              </div>
             </div>
 
             <div className="space-y-2">
