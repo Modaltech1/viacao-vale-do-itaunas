@@ -117,7 +117,9 @@ export function MaintenanceDetailsPage({
     )
   }
 
-  const editable = maintenance.status === 'aberta' || maintenance.status === 'em_andamento'
+  const operationallyEditable =
+    maintenance.status === 'aberta' || maintenance.status === 'em_andamento'
+  const editable = operationallyEditable || (isAdmin && maintenance.status === 'concluida')
 
   return (
     <>
@@ -129,16 +131,20 @@ export function MaintenanceDetailsPage({
           <>
             <Button variant="outline" className="gap-2" onClick={() => setEditOpen(true)}>
               <Edit3 className="size-4" />
-              Editar
+              Editar manutenção
             </Button>
-            <Button variant="outline" className="gap-2" onClick={() => setAction('cancel')}>
-              <Ban className="size-4" />
-              Cancelar
-            </Button>
-            <Button className="gap-2" onClick={() => setAction('conclude')}>
-              <CircleCheckBig className="size-4" />
-              Concluir manutenção
-            </Button>
+            {operationallyEditable ? (
+              <>
+                <Button variant="outline" className="gap-2" onClick={() => setAction('cancel')}>
+                  <Ban className="size-4" />
+                  Cancelar
+                </Button>
+                <Button className="gap-2" onClick={() => setAction('conclude')}>
+                  <CircleCheckBig className="size-4" />
+                  Concluir manutenção
+                </Button>
+              </>
+            ) : null}
           </>
         ) : null}
       </PageHeader>

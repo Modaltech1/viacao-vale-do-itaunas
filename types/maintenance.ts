@@ -79,7 +79,7 @@ export type MaintenanceFormValues = {
   openedAt: string
   vehicleKm: string
   responsibleMechanicId: string
-  status: 'aberta' | 'em_andamento'
+  status: 'aberta' | 'em_andamento' | 'concluida'
   notes: string
   serviceIds: string[]
   parts: MaintenancePartFormValue[]

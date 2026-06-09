@@ -4,6 +4,7 @@ import test from 'node:test'
 import {
   cancelMaintenance,
   createMaintenance,
+  updateMaintenance,
 } from '@/lib/maintenances-service'
 import {
   createManagedUser,
@@ -331,6 +332,19 @@ test('peças, despesas e manutenções usam RPCs transacionais', async () => {
     parts: [{ partId: 'part-1', quantity: 2, unitValue: 45 }],
   }), 'maintenance-1')
 
+  await updateMaintenance(service, 'maintenance-1', {
+    vehicleId: 'vehicle-1',
+    maintenanceType: 'preventiva',
+    cause: 'Revisão concluída corrigida',
+    openedAt: '2026-06-08T10:00:00.000Z',
+    vehicleKm: 25000,
+    responsibleMechanicId: 'mechanic-1',
+    status: 'concluida',
+    notes: null,
+    serviceIds: ['service-1'],
+    parts: [{ partId: 'part-1', quantity: 2, unitValue: 45 }],
+  })
+
   await cancelMaintenance(service, 'maintenance-1', 'Registro aberto por engano')
 
   assert.equal(calls[0][0], 'fn_salvar_peca')
@@ -342,5 +356,7 @@ test('peças, despesas e manutenções usam RPCs transacionais', async () => {
   assert.deepEqual(calls[2][1].p_pecas, [
     { partId: 'part-1', quantity: 2, unitValue: 45 },
   ])
-  assert.equal(calls[3][0], 'fn_cancelar_manutencao')
+  assert.equal(calls[3][0], 'fn_editar_manutencao_concluida')
+  assert.equal(calls[3][1].p_status, 'concluida')
+  assert.equal(calls[4][0], 'fn_cancelar_manutencao')
 })

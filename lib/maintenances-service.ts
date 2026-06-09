@@ -6,7 +6,7 @@ import { normalizeOptionalText } from '@/lib/driver-utils'
 import type { MaintenanceStatus, MaintenanceType } from '@/types/fleet'
 
 const maintenanceTypes: MaintenanceType[] = ['preventiva', 'corretiva']
-const editableStatuses = ['aberta', 'em_andamento'] as const
+const editableStatuses = ['aberta', 'em_andamento', 'concluida'] as const
 
 export type MaintenancePartPayload = {
   partId: string
@@ -96,7 +96,10 @@ async function saveMaintenance(
   maintenanceId: string | null,
   payload: MaintenancePayload,
 ) {
-  const { data, error } = await client.rpc('fn_salvar_manutencao', {
+  const functionName = payload.status === 'concluida'
+    ? 'fn_editar_manutencao_concluida'
+    : 'fn_salvar_manutencao'
+  const { data, error } = await client.rpc(functionName, {
     p_manutencao_id: maintenanceId,
     p_veiculo_id: payload.vehicleId,
     p_tipo_manutencao: payload.maintenanceType,
@@ -117,6 +120,9 @@ export function createMaintenance(
   client: SupabaseClient,
   payload: MaintenancePayload,
 ) {
+  if (payload.status === 'concluida') {
+    throw new Error('Uma nova manutenção deve ser criada aberta ou em andamento.')
+  }
   return saveMaintenance(client, null, payload)
 }
 
@@ -167,5 +173,5 @@ export function maintenanceErrorResponse(error: unknown, fallback: string, statu
 }
 
 export function isMaintenanceEditable(status: MaintenanceStatus) {
-  return editableStatuses.includes(status as (typeof editableStatuses)[number])
+  return status === 'aberta' || status === 'em_andamento'
 }

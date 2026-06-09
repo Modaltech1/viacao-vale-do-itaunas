@@ -68,6 +68,7 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'fn_salvar_peca',
     'fn_salvar_despesa',
     'fn_salvar_manutencao',
+    'fn_editar_manutencao_concluida',
     'fn_cancelar_manutencao',
     'validar_quantidade_peca_discreta',
     'Estoque insuficiente para a peça',

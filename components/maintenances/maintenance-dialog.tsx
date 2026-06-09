@@ -76,7 +76,11 @@ function formFromMaintenance(
     vehicleKm: maintenance.vehicleKm?.toString() ?? '',
     responsibleMechanicId:
       maintenance.responsibleMechanicId ?? options.currentMechanicId ?? '',
-    status: maintenance.status === 'em_andamento' ? 'em_andamento' : 'aberta',
+    status: maintenance.status === 'concluida'
+      ? 'concluida'
+      : maintenance.status === 'em_andamento'
+        ? 'em_andamento'
+        : 'aberta',
     notes: maintenance.notes,
     serviceIds: maintenance.services.map((service) => service.serviceId),
     parts: maintenance.parts
@@ -101,6 +105,7 @@ export function MaintenanceDialog({
   const [form, setForm] = useState<MaintenanceFormValues>(() => emptyForm(options, initialVehicleId))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const isCompleted = maintenance?.status === 'concluida'
 
   useEffect(() => {
     if (!open) return
@@ -188,7 +193,7 @@ export function MaintenanceDialog({
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Veículo</Label>
-                <Select value={form.vehicleId} onValueChange={selectVehicle}>
+                <Select value={form.vehicleId} onValueChange={selectVehicle} disabled={isCompleted}>
                   <SelectTrigger className="w-full"><SelectValue placeholder="Selecione o veículo" /></SelectTrigger>
                   <SelectContent>
                     {options.vehicles.map((vehicle) => (
@@ -316,6 +321,7 @@ export function MaintenanceDialog({
                 <Label>Status</Label>
                 <Select
                   value={form.status}
+                  disabled={isCompleted}
                   onValueChange={(status: MaintenanceFormValues['status']) => {
                     setForm((current) => ({ ...current, status }))
                   }}
@@ -324,6 +330,7 @@ export function MaintenanceDialog({
                   <SelectContent>
                     <SelectItem value="aberta">Aberta</SelectItem>
                     <SelectItem value="em_andamento">Em andamento</SelectItem>
+                    {isCompleted ? <SelectItem value="concluida">Concluída</SelectItem> : null}
                   </SelectContent>
                 </Select>
               </div>
