@@ -128,7 +128,7 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
         <MetricCard title="Em andamento" value={items.filter((item) => item.status === 'em_andamento').length} icon={Wrench} tone="blue" />
         <MetricCard title="Concluídas" value={items.filter((item) => item.status === 'concluida').length} icon={CircleCheckBig} tone="success" />
         {isAdmin ? (
-          <MetricCard title="Custo em peças" value={brl(items.filter((item) => item.status !== 'cancelada').reduce((total, item) => total + item.totalValue, 0))} />
+          <MetricCard title="Custo total" value={brl(items.filter((item) => item.status !== 'cancelada').reduce((total, item) => total + item.totalValue, 0))} />
         ) : (
           <MetricCard title="Veículos monitorados" value={monitoredVehicles} icon={ClipboardList} />
         )}

@@ -33,6 +33,8 @@ export type MaintenanceListItem = {
   responsibleMechanicName: string
   status: MaintenanceStatus
   totalValue: number
+  servicesValue: number
+  partsValue: number
   notes: string
   cancellationReason: string
   services: MaintenanceServiceItem[]
@@ -58,6 +60,12 @@ export type MaintenanceServiceOption = {
   name: string
   category: ServiceCategory
   suggestedMaintenanceType: MaintenanceType
+  defaultValue: number
+}
+
+export type MaintenanceServiceFormValue = {
+  serviceId: string
+  appliedValue: string
 }
 
 export type MaintenancePartOption = PartUsageOption
@@ -81,6 +89,6 @@ export type MaintenanceFormValues = {
   responsibleMechanicId: string
   status: 'aberta' | 'em_andamento' | 'concluida'
   notes: string
-  serviceIds: string[]
+  services: MaintenanceServiceFormValue[]
   parts: MaintenancePartFormValue[]
 }

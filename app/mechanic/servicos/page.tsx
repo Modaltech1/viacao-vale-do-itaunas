@@ -16,7 +16,7 @@ import { ClipboardList, Repeat, Wrench } from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
-import { number } from '@/lib/format'
+import { brl, number } from '@/lib/format'
 import {
   serviceCategories,
   type ServiceListItem,
@@ -146,6 +146,7 @@ export default function MechanicServicesPage() {
                   <TableHead>Categoria</TableHead>
                   <TableHead>Tipo sugerido</TableHead>
                   <TableHead>Periodicidade</TableHead>
+                  <TableHead>Valor padrão</TableHead>
                   <TableHead>Veículos vinculados</TableHead>
                   <TableHead>Execuções</TableHead>
                 </TableRow>
@@ -153,7 +154,7 @@ export default function MechanicServicesPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                       Carregando serviços...
                     </TableCell>
                   </TableRow>
@@ -173,13 +174,14 @@ export default function MechanicServicesPage() {
                           : 'Corretiva'}
                       </TableCell>
                       <TableCell>{periodicityLabel(service)}</TableCell>
+                      <TableCell>{brl(service.defaultValue)}</TableCell>
                       <TableCell>{service.linkedVehiclesCount}</TableCell>
                       <TableCell>{service.maintenanceUsesCount}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                       Nenhum serviço encontrado.
                     </TableCell>
                   </TableRow>

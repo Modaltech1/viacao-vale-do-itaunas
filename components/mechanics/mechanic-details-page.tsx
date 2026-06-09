@@ -80,6 +80,8 @@ export function MechanicDetailsPage({ mechanicId }: { mechanicId: string }) {
       <PageHeader
         title={mechanic.name}
         description="Detalhes do acesso, cadastro profissional e histórico de manutenções."
+        backHref="/admin/mecanicos"
+        backLabel="Voltar para mecânicos"
       >
         <Button variant="outline" className="gap-2" onClick={() => setEditOpen(true)}>
           <Edit3 className="size-4" />

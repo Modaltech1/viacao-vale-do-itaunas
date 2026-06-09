@@ -17,7 +17,7 @@ import {
   Label,
   Textarea,
 } from '@prodexy/ui'
-import { Ban, CircleCheckBig, Edit3, Gauge, Package, Wrench } from 'lucide-react'
+import { Ban, CircleCheckBig, ClipboardList, Edit3, Gauge, Package, Wrench } from 'lucide-react'
 import { MaintenanceDialog } from '@/components/maintenances/maintenance-dialog'
 import { PageHeader } from '@/components/layout/page-header'
 import { MetricCard } from '@/components/shared/metric-card'
@@ -126,6 +126,8 @@ export function MaintenanceDetailsPage({
       <PageHeader
         title={`Manutenção · ${maintenance.vehiclePlate}`}
         description={`${maintenance.vehicleLabel} · ${maintenance.maintenanceType === 'preventiva' ? 'Preventiva' : 'Corretiva'}`}
+        backHref={listPath}
+        backLabel="Voltar para manutenções"
       >
         {editable ? (
           <>
@@ -149,7 +151,7 @@ export function MaintenanceDetailsPage({
         ) : null}
       </PageHeader>
 
-      <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <MetricCard
           title="Status"
           value={maintenance.status === 'em_andamento'
@@ -162,8 +164,9 @@ export function MaintenanceDetailsPage({
           icon={Wrench}
         />
         <MetricCard title="KM registrado" value={maintenance.vehicleKm == null ? '—' : number(maintenance.vehicleKm)} icon={Gauge} />
-        <MetricCard title="Serviços" value={maintenance.services.length} />
-        <MetricCard title="Custo em peças" value={brl(maintenance.totalValue)} icon={Package} />
+        <MetricCard title="Serviços" value={brl(maintenance.servicesValue)} icon={ClipboardList} />
+        <MetricCard title="Peças" value={brl(maintenance.partsValue)} icon={Package} />
+        <MetricCard title="Custo total" value={brl(maintenance.totalValue)} icon={Wrench} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
@@ -212,7 +215,7 @@ export function MaintenanceDetailsPage({
                   <p className="font-semibold">{service.name}</p>
                   <p className="text-sm text-muted-foreground">{service.category}</p>
                 </div>
-                <span className="text-sm text-muted-foreground">Executado</span>
+                <span className="font-semibold">{brl(service.value ?? 0)}</span>
               </div>
             )) : (
               <p className="py-8 text-center text-sm text-muted-foreground">Nenhum serviço registrado.</p>

@@ -82,6 +82,8 @@ export type ReportMaintenanceSummary = {
   correctiveCount: number
   preventiveCost: number
   correctiveCost: number
+  servicesCost: number
+  partsCost: number
   completedCount: number
   openCount: number
   averageResolutionHours: number | null

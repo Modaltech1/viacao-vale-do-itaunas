@@ -393,7 +393,7 @@ export function ExecutiveReportsPage() {
             </TabsContent>
 
             <TabsContent value="custos" className="space-y-5">
-              <div className="grid gap-5 xl:grid-cols-2">
+              <div className="grid gap-5 xl:grid-cols-3">
                 <ChartCard title="Custo comparativo por veículo" description="Os ativos mais caros do período, separados por origem.">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={report.vehicles.slice(0, 7)} layout="vertical" margin={{ left: 12, right: 12 }}>
@@ -405,6 +405,21 @@ export function ExecutiveReportsPage() {
                       <Bar dataKey="fuelCost" name="Combustível" stackId="cost" fill="#0ea5e9" />
                       <Bar dataKey="maintenanceCost" name="Manutenção" stackId="cost" fill="#f59e0b" />
                       <Bar dataKey="expenseCost" name="Despesas" stackId="cost" fill="#64748b" radius={[0, 3, 3, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+
+                <ChartCard title="Composição da manutenção" description="Participação de serviços e peças no custo das intervenções.">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={[
+                      { name: 'Serviços', custo: report.maintenance.servicesCost },
+                      { name: 'Peças', custo: report.maintenance.partsCost },
+                    ]}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" tickLine={false} axisLine={false} />
+                      <YAxis tickFormatter={compactMoney} fontSize={12} />
+                      <Tooltip formatter={(value) => brl(Number(value))} />
+                      <Bar dataKey="custo" name="Custo" fill="#0891b2" radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartCard>

@@ -40,6 +40,7 @@ const emptyForm: ServiceFormValues = {
   suggestedMaintenanceType: 'preventiva',
   periodicityType: 'nenhuma',
   periodicityValue: '',
+  defaultValue: '',
   description: '',
   active: true,
 }
@@ -58,6 +59,7 @@ function formFromService(service?: ServiceListItem | null): ServiceFormValues {
         : service.periodicityType === 'tempo'
           ? service.periodicityDays?.toString() ?? ''
           : '',
+    defaultValue: service.defaultValue.toString(),
     description: service.description,
     active: service.active,
   }
@@ -79,7 +81,7 @@ export function ServiceDialog({
     setError('')
   }, [open, service])
 
-  function updateField(field: 'name' | 'periodicityValue' | 'description') {
+  function updateField(field: 'name' | 'periodicityValue' | 'defaultValue' | 'description') {
     return (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setForm((current) => ({ ...current, [field]: event.target.value }))
     }
@@ -198,6 +200,23 @@ export function ServiceDialog({
                 value={form.description}
                 onChange={updateField('description')}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="service-default-value">Valor padrão</Label>
+              <Input
+                id="service-default-value"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0,00"
+                value={form.defaultValue}
+                onChange={updateField('defaultValue')}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Será sugerido na manutenção e poderá ser ajustado no lançamento.
+              </p>
             </div>
           </section>
 

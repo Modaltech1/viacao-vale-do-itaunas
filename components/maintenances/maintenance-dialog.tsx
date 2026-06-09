@@ -1,9 +1,8 @@
 'use client'
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from 'react'
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
 import {
   Button,
-  Checkbox,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -19,7 +18,9 @@ import {
   SelectValue,
   Textarea,
 } from '@prodexy/ui'
+import { ServiceUsageEditor } from '@/components/maintenances/service-usage-editor'
 import { PartUsageEditor } from '@/components/parts/part-usage-editor'
+import { brl } from '@/lib/format'
 import type {
   MaintenanceFormOptions,
   MaintenanceFormValues,
@@ -59,7 +60,7 @@ function emptyForm(
     responsibleMechanicId: options.currentMechanicId ?? '',
     status: 'aberta',
     notes: '',
-    serviceIds: [],
+    services: [],
     parts: [],
   }
 }
@@ -82,7 +83,10 @@ function formFromMaintenance(
         ? 'em_andamento'
         : 'aberta',
     notes: maintenance.notes,
-    serviceIds: maintenance.services.map((service) => service.serviceId),
+    services: maintenance.services.map((service) => ({
+      serviceId: service.serviceId,
+      appliedValue: (service.value ?? 0).toString(),
+    })),
     parts: maintenance.parts
       .filter((part) => !part.returnedAt)
       .map((part) => ({
@@ -117,15 +121,19 @@ export function MaintenanceDialog({
     setError('')
   }, [initialVehicleId, maintenance, open, options])
 
-  const groupedServices = useMemo(() => {
-    const groups = new Map<string, typeof options.services>()
-    options.services
-      .filter((service) => service.suggestedMaintenanceType === form.maintenanceType)
-      .forEach((service) => {
-        groups.set(service.category, [...(groups.get(service.category) ?? []), service])
-      })
-    return [...groups.entries()]
-  }, [form.maintenanceType, options.services])
+  const servicesTotal = form.services.reduce((total, service) => {
+    const value = Number(service.appliedValue.replace(',', '.'))
+    return total + (Number.isFinite(value) ? value : 0)
+  }, 0)
+  const partsTotal = form.parts.reduce((total, part) => {
+    const quantity = Number(part.quantity.replace(',', '.'))
+    const unitValue = Number(part.unitValue.replace(',', '.'))
+    return total + (
+      Number.isFinite(quantity) && Number.isFinite(unitValue)
+        ? quantity * unitValue
+        : 0
+    )
+  }, 0)
 
   function updateField(field: 'cause' | 'openedAt' | 'vehicleKm' | 'notes') {
     return (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -210,7 +218,7 @@ export function MaintenanceDialog({
                 <Select
                   value={form.maintenanceType}
                   onValueChange={(maintenanceType: MaintenanceFormValues['maintenanceType']) => {
-                    setForm((current) => ({ ...current, maintenanceType, serviceIds: [] }))
+                    setForm((current) => ({ ...current, maintenanceType, services: [] }))
                   }}
                 >
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
@@ -253,39 +261,12 @@ export function MaintenanceDialog({
             </div>
           </section>
 
-          <section className="space-y-4 border-t pt-5">
-            <div>
-              <h3 className="font-semibold">Serviços</h3>
-              <p className="text-sm text-muted-foreground">
-                A conclusão atualiza automaticamente a programação futura dos serviços recorrentes.
-              </p>
-            </div>
-            <div className="max-h-64 space-y-4 overflow-y-auto border-y py-3">
-              {groupedServices.map(([category, services]) => (
-                <div key={category}>
-                  <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{category}</p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {services.map((service) => (
-                      <label key={service.id} className="flex items-center gap-2 text-sm">
-                        <Checkbox
-                          checked={form.serviceIds.includes(service.id)}
-                          onCheckedChange={(checked: boolean) => {
-                            setForm((current) => ({
-                              ...current,
-                              serviceIds: checked
-                                ? [...current.serviceIds, service.id]
-                                : current.serviceIds.filter((id) => id !== service.id),
-                            }))
-                          }}
-                        />
-                        {service.name}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+          <ServiceUsageEditor
+            options={options.services}
+            maintenanceType={form.maintenanceType}
+            value={form.services}
+            onChange={(services) => setForm((current) => ({ ...current, services }))}
+          />
 
           <PartUsageEditor
             options={options.parts}
@@ -293,8 +274,16 @@ export function MaintenanceDialog({
             onChange={(parts) => setForm((current) => ({ ...current, parts }))}
             description="O preço padrão vem do estoque e pode ser ajustado nesta manutenção. O saldo é debitado ao salvar."
             emptyMessage="Nenhuma peça adicionada a esta manutenção."
-            totalLabel="Valor total da manutenção"
+            totalLabel="Total em peças"
           />
+
+          <div className="flex items-center justify-between border-y py-4">
+            <div>
+              <p className="font-semibold">Valor total da manutenção</p>
+              <p className="text-sm text-muted-foreground">Serviços e peças utilizados</p>
+            </div>
+            <span className="text-xl font-semibold">{brl(servicesTotal + partsTotal)}</span>
+          </div>
 
           <section className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">

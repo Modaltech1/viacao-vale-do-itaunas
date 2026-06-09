@@ -116,6 +116,8 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
         description={isAdmin
           ? 'Dados do ativo, vínculos, documentos e histórico operacional consolidado.'
           : 'Visão técnica consolidada do veículo, seus vencimentos, serviços e manutenções.'}
+        backHref={basePath}
+        backLabel="Voltar para veículos"
       >
         {isAdmin ? (
           <>

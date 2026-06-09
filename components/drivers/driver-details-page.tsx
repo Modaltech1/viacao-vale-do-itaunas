@@ -102,6 +102,8 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
       <PageHeader
         title={driver.name}
         description="Detalhes do acesso, cadastro profissional, veículos vinculados e histórico operacional."
+        backHref="/admin/motoristas"
+        backLabel="Voltar para motoristas"
       >
         <Button variant="outline" className="gap-2" onClick={() => setEditOpen(true)}>
           <Edit3 className="size-4" />

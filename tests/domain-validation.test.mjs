@@ -99,11 +99,14 @@ test('serviço converte periodicidade para o formato persistido', () => {
     suggestedMaintenanceType: 'preventiva',
     periodicityType: 'km',
     periodicityValue: '10000',
+    defaultValue: '180.50',
     active: true,
   })
 
   assert.equal(payload.periodicityKm, 10000)
   assert.equal(payload.periodicityDays, null)
+  assert.equal(payload.defaultValue, 180.5)
+  assert.equal(servicePayloadToDatabase(payload).valor_padrao, 180.5)
   assert.equal(servicePayloadToDatabase(payload).tipo_periodicidade, 'km')
   throwsMessage(() => parseServicePayload({
     name: 'Inspeção',
@@ -111,6 +114,7 @@ test('serviço converte periodicidade para o formato persistido', () => {
     suggestedMaintenanceType: 'preventiva',
     periodicityType: 'tempo',
     periodicityValue: '1.5',
+    defaultValue: '50',
   }), 'dias inteiros')
 })
 
@@ -123,7 +127,10 @@ test('manutenção exige relações e valores operacionais válidos', () => {
     vehicleKm: '25000',
     responsibleMechanicId: 'mechanic-1',
     status: 'aberta',
-    serviceIds: ['service-1', 'service-1'],
+    services: [
+      { serviceId: 'service-1', appliedValue: '150' },
+      { serviceId: 'service-2', appliedValue: '75.50' },
+    ],
     parts: [{
       partId: 'part-1',
       quantity: '2',
@@ -131,7 +138,10 @@ test('manutenção exige relações e valores operacionais válidos', () => {
     }],
   })
 
-  assert.deepEqual(payload.serviceIds, ['service-1'])
+  assert.deepEqual(payload.services, [
+    { serviceId: 'service-1', appliedValue: 150 },
+    { serviceId: 'service-2', appliedValue: 75.5 },
+  ])
   assert.deepEqual(payload.parts, [{
     partId: 'part-1',
     quantity: 2,
@@ -141,8 +151,15 @@ test('manutenção exige relações e valores operacionais válidos', () => {
   assert.equal(isMaintenanceEditable('concluida'), false)
   throwsMessage(() => parseMaintenancePayload({
     ...payload,
-    serviceIds: [],
+    services: [],
   }), 'pelo menos um serviço')
+  throwsMessage(() => parseMaintenancePayload({
+    ...payload,
+    services: [
+      { serviceId: 'service-1', appliedValue: 10 },
+      { serviceId: 'service-1', appliedValue: 20 },
+    ],
+  }), 'mesmo serviço')
   throwsMessage(() => parseMaintenancePayload({
     ...payload,
     parts: [

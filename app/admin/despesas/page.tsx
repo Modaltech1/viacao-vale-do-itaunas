@@ -255,7 +255,7 @@ export default function ExpensesPage() {
           <div>
             <h2 className="font-semibold">Custos de manutenção</h2>
             <p className="text-sm text-muted-foreground">
-              Valores calculados pelas peças usadas. A composição é editada dentro da manutenção.
+              Valores calculados pelos serviços e peças. A composição é editada dentro da manutenção.
             </p>
           </div>
           <Table>

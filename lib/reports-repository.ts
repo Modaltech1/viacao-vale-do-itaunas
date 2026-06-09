@@ -290,7 +290,7 @@ export async function getReportData(
     queryRows(
       client
         .from('vw_manutencoes_detalhadas')
-        .select('id,veiculo_id,tipo_manutencao,aberto_em,iniciado_em,concluido_em,status,valor_total_realizado,servicos,pecas')
+        .select('id,veiculo_id,tipo_manutencao,aberto_em,iniciado_em,concluido_em,status,valor_servicos,valor_pecas,valor_total_realizado,servicos,pecas')
         .gte('aberto_em', totalPeriod.start.toISOString())
         .lt('aberto_em', totalPeriod.endExclusive.toISOString())
         .neq('status', 'cancelada'),
@@ -495,6 +495,8 @@ export async function getReportData(
     correctiveCost: currentMaintenances
       .filter((item) => item.tipo_manutencao === 'corretiva')
       .reduce((total, item) => total + maintenanceValue(item), 0),
+    servicesCost: sum(currentMaintenances, 'valor_servicos'),
+    partsCost: sum(currentMaintenances, 'valor_pecas'),
     completedCount: resolvedMaintenances.length,
     openCount: current.openMaintenances,
     averageResolutionHours: resolutionHours.length

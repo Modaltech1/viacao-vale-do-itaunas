@@ -92,6 +92,8 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
       <PageHeader
         title={`${trip.origin} → ${trip.destination}`}
         description="Detalhes operacionais e financeiros preservados no histórico da viagem."
+        backHref="/admin/viagens"
+        backLabel="Voltar para viagens"
       >
         <Button variant="outline" className="gap-2" onClick={() => setEditOpen(true)}>
           <Edit3 className="size-4" />

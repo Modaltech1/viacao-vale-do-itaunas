@@ -54,6 +54,8 @@ function normalizeMaintenance(row: DatabaseRow): MaintenanceListItem {
     responsibleMechanicName: row.mecanico_responsavel_nome ?? 'Não definido',
     status: row.status,
     totalValue: toNumber(row.valor_total_realizado),
+    servicesValue: toNumber(row.valor_servicos),
+    partsValue: toNumber(row.valor_pecas),
     notes: row.observacoes ?? '',
     cancellationReason: row.motivo_cancelamento ?? '',
     services,
@@ -103,7 +105,7 @@ export async function listMaintenanceFormOptions(
     queryRows(
       client
         .from('servicos')
-        .select('id,nome,categoria,tipo_manutencao_sugerido')
+        .select('id,nome,categoria,tipo_manutencao_sugerido,valor_padrao')
         .eq('ativo', true)
         .is('excluido_em', null)
         .order('nome', { ascending: true }),
@@ -149,6 +151,7 @@ export async function listMaintenanceFormOptions(
       name: service.nome,
       category: service.categoria,
       suggestedMaintenanceType: service.tipo_manutencao_sugerido,
+      defaultValue: toNumber(service.valor_padrao),
     })),
     parts: parts.map((part) => ({
       id: part.id,

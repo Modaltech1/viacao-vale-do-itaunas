@@ -24,6 +24,7 @@ export type ServiceListItem = {
   periodicityType: ServicePeriodicityType
   periodicityKm: number | null
   periodicityDays: number | null
+  defaultValue: number
   description: string
   active: boolean
   linkedVehiclesCount: number
@@ -36,6 +37,7 @@ export type ServiceFormValues = {
   suggestedMaintenanceType: MaintenanceType
   periodicityType: ServicePeriodicityType
   periodicityValue: string
+  defaultValue: string
   description: string
   active: boolean
 }

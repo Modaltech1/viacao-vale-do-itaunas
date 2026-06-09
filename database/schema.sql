@@ -395,6 +395,7 @@ create table if not exists public.servicos (
   tipo_periodicidade text not null default 'nenhuma',
   periodicidade_km numeric(14,2),
   periodicidade_dias integer,
+  valor_padrao numeric(12,2) not null default 0,
   descricao text,
   ativo boolean not null default true,
   excluido_em timestamptz,
@@ -405,6 +406,7 @@ create table if not exists public.servicos (
   constraint servicos_categoria_check check (categoria in ('Óleo', 'Pneus', 'Freios', 'Motor', 'Câmbio', 'Elétrica', 'Suspensão', 'Documentação', 'Revisão geral', 'Outros')),
   constraint servicos_tipo_manutencao_sugerido_check check (tipo_manutencao_sugerido in ('preventiva', 'corretiva')),
   constraint servicos_tipo_periodicidade_check check (tipo_periodicidade in ('km', 'tempo', 'nenhuma')),
+  constraint servicos_valor_padrao_check check (valor_padrao >= 0),
   constraint servicos_periodicidade_check check (
     (tipo_periodicidade = 'km' and periodicidade_km is not null and periodicidade_km > 0 and periodicidade_dias is null) or
     (tipo_periodicidade = 'tempo' and periodicidade_dias is not null and periodicidade_dias > 0 and periodicidade_km is null) or
@@ -972,8 +974,16 @@ left join lateral (
   where a.veiculo_id = v.id and a.cancelado_em is null
 ) abast on true
 left join lateral (
-  select sum(coalesce(itens.valor_pecas, m.valor_total_informado, 0)) as custo_manutencao_total
+  select sum(
+    coalesce(servicos.valor_servicos, 0)
+    + coalesce(itens.valor_pecas, 0)
+  ) as custo_manutencao_total
   from public.manutencoes m
+  left join lateral (
+    select sum(ms.valor_aplicado) as valor_servicos
+    from public.manutencao_servicos ms
+    where ms.manutencao_id = m.id
+  ) servicos on true
   left join lateral (
     select sum(mp.valor_total) as valor_pecas
     from public.manutencao_pecas mp
@@ -1015,20 +1025,24 @@ select
   v.marca as veiculo_marca,
   v.modelo as veiculo_modelo,
   pm.nome as mecanico_responsavel_nome,
-  coalesce(pecas.valor_pecas, m.valor_total_informado, 0) as valor_total_realizado,
+  coalesce(servicos.valor_servicos, 0) + coalesce(pecas.valor_pecas, 0) as valor_total_realizado,
   servicos.servicos,
-  pecas.pecas
+  pecas.pecas,
+  coalesce(servicos.valor_servicos, 0) as valor_servicos,
+  coalesce(pecas.valor_pecas, 0) as valor_pecas
 from public.manutencoes m
 join public.veiculos v on v.id = m.veiculo_id
 left join public.mecanicos mec on mec.id = m.mecanico_responsavel_id
 left join public.perfis pm on pm.id = mec.perfil_id
 left join lateral (
-  select jsonb_agg(
+  select
+    sum(ms.valor_aplicado) as valor_servicos,
+    jsonb_agg(
     jsonb_build_object(
       'id', ms.servico_id,
       'nome', ms.nome_servico_snapshot,
       'categoria', ms.categoria_snapshot,
-      'valor', null
+      'valor', ms.valor_aplicado
     ) order by ms.criado_em
   ) as servicos
   from public.manutencao_servicos ms
@@ -1767,7 +1781,7 @@ create or replace function public.fn_salvar_manutencao(
   p_mecanico_responsavel_id uuid,
   p_status text,
   p_observacoes text,
-  p_servico_ids uuid[],
+  p_servicos jsonb,
   p_pecas jsonb
 )
 returns uuid
@@ -1787,6 +1801,9 @@ declare
   v_quantidade numeric;
   v_valor_unitario numeric;
   v_saldo_anterior numeric;
+  v_servico_item jsonb;
+  v_servico_id uuid;
+  v_servico_valor numeric;
 begin
   if not (public.eh_admin() or public.eh_mecanico()) then
     raise exception 'Sem permissão para salvar manutenção';
@@ -1799,8 +1816,15 @@ begin
   end if;
   if nullif(trim(p_causa), '') is null then raise exception 'Informe a causa da manutenção'; end if;
   if p_km_veiculo < 0 then raise exception 'KM da manutenção inválido'; end if;
-  if coalesce(array_length(p_servico_ids, 1), 0) = 0 then
+  if jsonb_typeof(coalesce(p_servicos, '[]'::jsonb)) <> 'array'
+    or jsonb_array_length(coalesce(p_servicos, '[]'::jsonb)) = 0 then
     raise exception 'Selecione pelo menos um serviço';
+  end if;
+  if exists (
+    select 1 from jsonb_array_elements(coalesce(p_servicos, '[]'::jsonb)) item
+    group by item->>'serviceId' having count(*) > 1
+  ) then
+    raise exception 'O mesmo serviço não pode ser informado mais de uma vez';
   end if;
   if jsonb_typeof(coalesce(p_pecas, '[]'::jsonb)) <> 'array' then
     raise exception 'Lista de peças inválida';
@@ -1841,8 +1865,11 @@ begin
   end if;
   if (
     select count(*) from public.servicos
-    where id = any(p_servico_ids) and ativo = true and excluido_em is null
-  ) <> cardinality(p_servico_ids) then
+    where id in (
+      select (item->>'serviceId')::uuid
+      from jsonb_array_elements(p_servicos) item
+    ) and ativo = true and excluido_em is null
+  ) <> jsonb_array_length(p_servicos) then
     raise exception 'Um ou mais serviços não estão disponíveis';
   end if;
 
@@ -1912,13 +1939,22 @@ begin
   end if;
 
   delete from public.manutencao_servicos where manutencao_id = v_id;
-  insert into public.manutencao_servicos (
-    manutencao_id, servico_id, nome_servico_snapshot, categoria_snapshot,
-    criado_por, atualizado_por
-  )
-  select v_id, s.id, s.nome, s.categoria, auth.uid(), auth.uid()
-  from public.servicos s
-  where s.id = any(p_servico_ids);
+  for v_servico_item in select value from jsonb_array_elements(p_servicos)
+  loop
+    begin
+      v_servico_id := (v_servico_item->>'serviceId')::uuid;
+      v_servico_valor := (v_servico_item->>'appliedValue')::numeric;
+    exception when others then
+      raise exception 'Dados de serviço inválidos';
+    end;
+    if v_servico_valor < 0 then raise exception 'Valor do serviço inválido'; end if;
+    insert into public.manutencao_servicos (
+      manutencao_id, servico_id, nome_servico_snapshot, categoria_snapshot,
+      valor_aplicado, criado_por, atualizado_por
+    )
+    select v_id, s.id, s.nome, s.categoria, v_servico_valor, auth.uid(), auth.uid()
+    from public.servicos s where s.id = v_servico_id;
+  end loop;
 
   delete from public.manutencao_mecanicos
   where manutencao_id = v_id and papel = 'responsavel';
@@ -2003,7 +2039,7 @@ create or replace function public.fn_editar_manutencao_concluida(
   p_mecanico_responsavel_id uuid,
   p_status text,
   p_observacoes text,
-  p_servico_ids uuid[],
+  p_servicos jsonb,
   p_pecas jsonb
 )
 returns uuid
@@ -2025,6 +2061,8 @@ declare
   v_saldo_anterior numeric;
   v_servicos_anteriores uuid[];
   v_servicos_afetados uuid[];
+  v_servico_item jsonb;
+  v_servico_valor numeric;
 begin
   if not public.eh_admin() then
     raise exception 'Somente administradores podem editar uma manutenção concluída';
@@ -2037,8 +2075,15 @@ begin
   end if;
   if nullif(trim(p_causa), '') is null then raise exception 'Informe a causa da manutenção'; end if;
   if p_km_veiculo < 0 then raise exception 'KM da manutenção inválido'; end if;
-  if coalesce(array_length(p_servico_ids, 1), 0) = 0 then
+  if jsonb_typeof(coalesce(p_servicos, '[]'::jsonb)) <> 'array'
+    or jsonb_array_length(coalesce(p_servicos, '[]'::jsonb)) = 0 then
     raise exception 'Selecione pelo menos um serviço';
+  end if;
+  if exists (
+    select 1 from jsonb_array_elements(coalesce(p_servicos, '[]'::jsonb)) item
+    group by item->>'serviceId' having count(*) > 1
+  ) then
+    raise exception 'O mesmo serviço não pode ser informado mais de uma vez';
   end if;
   if jsonb_typeof(coalesce(p_pecas, '[]'::jsonb)) <> 'array' then
     raise exception 'Lista de peças inválida';
@@ -2070,8 +2115,11 @@ begin
   end if;
   if (
     select count(*) from public.servicos
-    where id = any(p_servico_ids) and ativo = true and excluido_em is null
-  ) <> cardinality(p_servico_ids) then
+    where id in (
+      select (item->>'serviceId')::uuid
+      from jsonb_array_elements(p_servicos) item
+    ) and ativo = true and excluido_em is null
+  ) <> jsonb_array_length(p_servicos) then
     raise exception 'Um ou mais serviços não estão disponíveis';
   end if;
 
@@ -2115,12 +2163,23 @@ begin
   where id = p_manutencao_id;
 
   delete from public.manutencao_servicos where manutencao_id = p_manutencao_id;
-  insert into public.manutencao_servicos (
-    manutencao_id, servico_id, nome_servico_snapshot, categoria_snapshot,
-    criado_por, atualizado_por
-  )
-  select p_manutencao_id, s.id, s.nome, s.categoria, auth.uid(), auth.uid()
-  from public.servicos s where s.id = any(p_servico_ids);
+  for v_servico_item in select value from jsonb_array_elements(p_servicos)
+  loop
+    begin
+      v_servico_id := (v_servico_item->>'serviceId')::uuid;
+      v_servico_valor := (v_servico_item->>'appliedValue')::numeric;
+    exception when others then
+      raise exception 'Dados de serviço inválidos';
+    end;
+    if v_servico_valor < 0 then raise exception 'Valor do serviço inválido'; end if;
+    insert into public.manutencao_servicos (
+      manutencao_id, servico_id, nome_servico_snapshot, categoria_snapshot,
+      valor_aplicado, criado_por, atualizado_por
+    )
+    select p_manutencao_id, s.id, s.nome, s.categoria, v_servico_valor,
+      auth.uid(), auth.uid()
+    from public.servicos s where s.id = v_servico_id;
+  end loop;
 
   delete from public.manutencao_mecanicos
   where manutencao_id = p_manutencao_id and papel = 'responsavel';
@@ -2184,7 +2243,11 @@ begin
 
   select array_agg(distinct servico_id)
   into v_servicos_afetados
-  from unnest(v_servicos_anteriores || p_servico_ids) as servico_id;
+  from unnest(
+    v_servicos_anteriores || array(
+      select (item->>'serviceId')::uuid from jsonb_array_elements(p_servicos) item
+    )
+  ) as servico_id;
 
   foreach v_servico_id in array coalesce(v_servicos_afetados, '{}'::uuid[])
   loop
@@ -2459,8 +2522,15 @@ begin
       and (p_veiculo_id is null or d.veiculo_id = p_veiculo_id)
       and (p_motorista_id is null or d.motorista_id = p_motorista_id)
   ), manutencoes_filtradas as (
-    select m.*, coalesce(itens.valor_pecas, m.valor_total_informado, 0) as valor_realizado
+    select m.*,
+      coalesce(servicos.valor_servicos, 0)
+      + coalesce(itens.valor_pecas, 0) as valor_realizado
     from public.manutencoes m
+    left join lateral (
+      select sum(ms.valor_aplicado) as valor_servicos
+      from public.manutencao_servicos ms
+      where ms.manutencao_id = m.id
+    ) servicos on true
     left join lateral (
       select sum(mp.valor_total) as valor_pecas
       from public.manutencao_pecas mp
@@ -2841,8 +2911,8 @@ revoke execute on function public.fn_registrar_despesa_viagem(uuid, text, numeri
 revoke execute on function public.fn_concluir_manutencao(uuid) from public, anon;
 revoke execute on function public.fn_salvar_peca(uuid,text,text,text,text,numeric,numeric,numeric,text,boolean) from public, anon;
 revoke execute on function public.fn_salvar_despesa(uuid,uuid,uuid,uuid,text,numeric,timestamptz,text,text,jsonb) from public, anon;
-revoke execute on function public.fn_salvar_manutencao(uuid,uuid,text,text,timestamptz,numeric,uuid,text,text,uuid[],jsonb) from public, anon;
-revoke execute on function public.fn_editar_manutencao_concluida(uuid,uuid,text,text,timestamptz,numeric,uuid,text,text,uuid[],jsonb) from public, anon;
+revoke execute on function public.fn_salvar_manutencao(uuid,uuid,text,text,timestamptz,numeric,uuid,text,text,jsonb,jsonb) from public, anon;
+revoke execute on function public.fn_editar_manutencao_concluida(uuid,uuid,text,text,timestamptz,numeric,uuid,text,text,jsonb,jsonb) from public, anon;
 revoke execute on function public.fn_cancelar_manutencao(uuid,text) from public, anon;
 revoke execute on function public.fn_renovar_documento_veiculo(uuid, text, date, date, text, text) from public, anon;
 revoke execute on function public.fn_dashboard_admin(date, date, uuid, uuid) from public, anon;
@@ -2854,8 +2924,8 @@ grant execute on function public.fn_registrar_despesa_viagem(uuid, text, numeric
 grant execute on function public.fn_concluir_manutencao(uuid) to authenticated;
 grant execute on function public.fn_salvar_peca(uuid,text,text,text,text,numeric,numeric,numeric,text,boolean) to authenticated;
 grant execute on function public.fn_salvar_despesa(uuid,uuid,uuid,uuid,text,numeric,timestamptz,text,text,jsonb) to authenticated;
-grant execute on function public.fn_salvar_manutencao(uuid,uuid,text,text,timestamptz,numeric,uuid,text,text,uuid[],jsonb) to authenticated;
-grant execute on function public.fn_editar_manutencao_concluida(uuid,uuid,text,text,timestamptz,numeric,uuid,text,text,uuid[],jsonb) to authenticated;
+grant execute on function public.fn_salvar_manutencao(uuid,uuid,text,text,timestamptz,numeric,uuid,text,text,jsonb,jsonb) to authenticated;
+grant execute on function public.fn_editar_manutencao_concluida(uuid,uuid,text,text,timestamptz,numeric,uuid,text,text,jsonb,jsonb) to authenticated;
 grant execute on function public.fn_cancelar_manutencao(uuid,text) to authenticated;
 grant execute on function public.fn_renovar_documento_veiculo(uuid, text, date, date, text, text) to authenticated;
 grant execute on function public.fn_dashboard_admin(date, date, uuid, uuid) to authenticated;

@@ -19,6 +19,7 @@ export type ServicePayload = {
   periodicityType: ServicePeriodicityType
   periodicityKm: number | null
   periodicityDays: number | null
+  defaultValue: number
   description: string | null
   active: boolean
 }
@@ -27,6 +28,7 @@ export function parseServicePayload(body: Record<string, unknown>): ServicePaylo
   const periodicityType = String(body.periodicityType ?? 'nenhuma') as ServicePeriodicityType
   const periodicityValueText = String(body.periodicityValue ?? '').replace(',', '.').trim()
   const periodicityValue = periodicityValueText ? Number(periodicityValueText) : null
+  const defaultValueText = String(body.defaultValue ?? '').replace(',', '.').trim()
 
   const payload: ServicePayload = {
     name: String(body.name ?? '').trim(),
@@ -37,6 +39,7 @@ export function parseServicePayload(body: Record<string, unknown>): ServicePaylo
     periodicityType,
     periodicityKm: periodicityType === 'km' ? periodicityValue : null,
     periodicityDays: periodicityType === 'tempo' ? periodicityValue : null,
+    defaultValue: Number(defaultValueText),
     description: normalizeOptionalText(body.description),
     active: body.active !== false,
   }
@@ -58,6 +61,10 @@ function validateServicePayload(payload: ServicePayload) {
 
   if (!periodicityTypes.includes(payload.periodicityType)) {
     throw new Error('Tipo de periodicidade inválido.')
+  }
+
+  if (!Number.isFinite(payload.defaultValue) || payload.defaultValue < 0) {
+    throw new Error('Informe um valor padrão válido para o serviço.')
   }
 
   if (
@@ -87,6 +94,7 @@ export function servicePayloadToDatabase(payload: ServicePayload) {
     tipo_periodicidade: payload.periodicityType,
     periodicidade_km: payload.periodicityKm,
     periodicidade_dias: payload.periodicityDays,
+    valor_padrao: payload.defaultValue,
     descricao: payload.description,
     ativo: payload.active,
   }

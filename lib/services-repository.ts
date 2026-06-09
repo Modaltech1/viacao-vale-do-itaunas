@@ -9,7 +9,7 @@ export async function listServices(service: SupabaseClient): Promise<ServiceList
   const services = await queryRows(
     service
       .from('servicos')
-      .select('id,nome,categoria,tipo_manutencao_sugerido,tipo_periodicidade,periodicidade_km,periodicidade_dias,descricao,ativo')
+      .select('id,nome,categoria,tipo_manutencao_sugerido,tipo_periodicidade,periodicidade_km,periodicidade_dias,valor_padrao,descricao,ativo')
       .is('excluido_em', null)
       .order('nome', { ascending: true }),
   )
@@ -42,6 +42,7 @@ export async function listServices(service: SupabaseClient): Promise<ServiceList
     periodicityType: item.tipo_periodicidade,
     periodicityKm: item.periodicidade_km == null ? null : toNumber(item.periodicidade_km),
     periodicityDays: item.periodicidade_dias == null ? null : Number(item.periodicidade_dias),
+    defaultValue: toNumber(item.valor_padrao),
     description: item.descricao ?? '',
     active: Boolean(item.ativo),
     linkedVehiclesCount: new Set(

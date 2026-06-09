@@ -48,6 +48,22 @@ test('nenhum módulo de aplicação referencia mocks ou IDs fictícios', async (
   }
 })
 
+test('todas as páginas de detalhe oferecem navegação contextual de retorno', async () => {
+  const detailComponents = [
+    'components/drivers/driver-details-page.tsx',
+    'components/mechanics/mechanic-details-page.tsx',
+    'components/vehicles/vehicle-details-page.tsx',
+    'components/trips/trip-details-page.tsx',
+    'components/maintenances/maintenance-details-page.tsx',
+  ]
+
+  for (const file of detailComponents) {
+    const source = await readFile(path.join(root, file), 'utf8')
+    assert.match(source, /\bbackHref=/, `${file} sem navegação de retorno`)
+    assert.match(source, /\bbackLabel=/, `${file} sem rótulo contextual de retorno`)
+  }
+})
+
 test('schema contém as invariantes centrais dos fluxos operacionais', async () => {
   const schema = await readFile(path.join(root, 'database', 'schema.sql'), 'utf8')
   const requiredFragments = [
@@ -69,6 +85,9 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'fn_salvar_despesa',
     'fn_salvar_manutencao',
     'fn_editar_manutencao_concluida',
+    'valor_padrao numeric(12,2)',
+    'valor_aplicado numeric(12,2)',
+    'p_servicos jsonb',
     'fn_cancelar_manutencao',
     'validar_quantidade_peca_discreta',
     'Estoque insuficiente para a peça',
@@ -77,6 +96,6 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
   ]
 
   for (const fragment of requiredFragments) {
-    assert.match(schema, new RegExp(fragment), `Invariante ausente: ${fragment}`)
+    assert.ok(schema.includes(fragment), `Invariante ausente: ${fragment}`)
   }
 })

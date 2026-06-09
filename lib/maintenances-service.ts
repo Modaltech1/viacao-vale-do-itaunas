@@ -14,6 +14,11 @@ export type MaintenancePartPayload = {
   unitValue: number
 }
 
+export type MaintenanceServicePayload = {
+  serviceId: string
+  appliedValue: number
+}
+
 export type MaintenancePayload = {
   vehicleId: string
   maintenanceType: MaintenanceType
@@ -23,7 +28,7 @@ export type MaintenancePayload = {
   responsibleMechanicId: string
   status: (typeof editableStatuses)[number]
   notes: string | null
-  serviceIds: string[]
+  services: MaintenanceServicePayload[]
   parts: MaintenancePartPayload[]
 }
 
@@ -42,6 +47,15 @@ export function parseMaintenancePayload(
         }
       })
     : []
+  const services = Array.isArray(body.services)
+    ? body.services.map((item) => {
+        const row = item as Record<string, unknown>
+        return {
+          serviceId: String(row.serviceId ?? '').trim(),
+          appliedValue: Number(String(row.appliedValue ?? '').replace(',', '.')),
+        }
+      })
+    : []
 
   const payload: MaintenancePayload = {
     vehicleId: String(body.vehicleId ?? '').trim(),
@@ -52,9 +66,7 @@ export function parseMaintenancePayload(
     responsibleMechanicId: forcedMechanicId ?? String(body.responsibleMechanicId ?? '').trim(),
     status: String(body.status ?? 'aberta') as MaintenancePayload['status'],
     notes: normalizeOptionalText(body.notes),
-    serviceIds: Array.isArray(body.serviceIds)
-      ? [...new Set(body.serviceIds.map((id) => String(id).trim()).filter(Boolean))]
-      : [],
+    services,
     parts,
   }
 
@@ -76,7 +88,17 @@ function validateMaintenancePayload(payload: MaintenancePayload) {
   }
   if (!payload.responsibleMechanicId) throw new Error('Selecione o mecânico responsável.')
   if (!editableStatuses.includes(payload.status)) throw new Error('Status de manutenção inválido.')
-  if (!payload.serviceIds.length) throw new Error('Selecione pelo menos um serviço.')
+  if (!payload.services.length) throw new Error('Selecione pelo menos um serviço.')
+  if (new Set(payload.services.map((service) => service.serviceId)).size !== payload.services.length) {
+    throw new Error('O mesmo serviço não pode ser adicionado mais de uma vez.')
+  }
+  if (payload.services.some((service) => (
+    !service.serviceId
+    || !Number.isFinite(service.appliedValue)
+    || service.appliedValue < 0
+  ))) {
+    throw new Error('Informe serviços com valores válidos.')
+  }
   if (new Set(payload.parts.map((part) => part.partId)).size !== payload.parts.length) {
     throw new Error('A mesma peça não pode ser adicionada mais de uma vez.')
   }
@@ -109,7 +131,7 @@ async function saveMaintenance(
     p_mecanico_responsavel_id: payload.responsibleMechanicId,
     p_status: payload.status,
     p_observacoes: payload.notes,
-    p_servico_ids: payload.serviceIds,
+    p_servicos: payload.services,
     p_pecas: payload.parts,
   })
   if (error) throw error

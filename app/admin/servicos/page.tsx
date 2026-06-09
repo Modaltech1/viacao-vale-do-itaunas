@@ -18,7 +18,7 @@ import { ServiceDialog } from '@/components/services/service-dialog'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
-import { number } from '@/lib/format'
+import { brl, number } from '@/lib/format'
 import { serviceCategories, type ServiceListItem } from '@/types/service'
 
 function periodicityLabel(service: ServiceListItem) {
@@ -166,6 +166,7 @@ export default function ServicesPage() {
                   <TableHead>Categoria</TableHead>
                   <TableHead>Tipo sugerido</TableHead>
                   <TableHead>Periodicidade</TableHead>
+                  <TableHead>Valor padrão</TableHead>
                   <TableHead>Veículos vinculados</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead />
@@ -174,7 +175,7 @@ export default function ServicesPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                       Carregando serviços...
                     </TableCell>
                   </TableRow>
@@ -194,6 +195,7 @@ export default function ServicesPage() {
                           : 'Corretiva'}
                       </TableCell>
                       <TableCell>{periodicityLabel(service)}</TableCell>
+                      <TableCell>{brl(service.defaultValue)}</TableCell>
                       <TableCell>
                         {service.linkedVehiclesCount}
                         {service.maintenanceUsesCount ? (
@@ -224,7 +226,7 @@ export default function ServicesPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                       Nenhum serviço encontrado.
                     </TableCell>
                   </TableRow>
