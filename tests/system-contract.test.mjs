@@ -116,6 +116,7 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'fn_salvar_peca',
     'fn_salvar_despesa',
     'fn_salvar_manutencao',
+    'fn_criar_manutencao_concluida',
     'fn_editar_manutencao_concluida',
     'p_concluido_em timestamptz',
     'concluido_em = p_concluido_em',

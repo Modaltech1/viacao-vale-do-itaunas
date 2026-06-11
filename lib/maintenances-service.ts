@@ -92,6 +92,9 @@ function validateMaintenancePayload(payload: MaintenancePayload) {
     if (new Date(payload.completedAt).getTime() < new Date(payload.openedAt).getTime()) {
       throw new Error('A data de conclusão não pode ser anterior à abertura.')
     }
+    if (new Date(payload.completedAt).getTime() > Date.now()) {
+      throw new Error('A data de conclusão não pode estar no futuro.')
+    }
   } else if (payload.completedAt) {
     throw new Error('A data de conclusão só pode ser informada em uma manutenção concluída.')
   }
@@ -130,11 +133,7 @@ async function saveMaintenance(
   maintenanceId: string | null,
   payload: MaintenancePayload,
 ) {
-  const functionName = payload.status === 'concluida'
-    ? 'fn_editar_manutencao_concluida'
-    : 'fn_salvar_manutencao'
   const parameters = {
-    p_manutencao_id: maintenanceId,
     p_veiculo_id: payload.vehicleId,
     p_tipo_manutencao: payload.maintenanceType,
     p_causa: payload.cause,
@@ -146,11 +145,20 @@ async function saveMaintenance(
     p_servicos: payload.services,
     p_pecas: payload.parts,
   }
+  const functionName = payload.status === 'concluida'
+    ? maintenanceId
+      ? 'fn_editar_manutencao_concluida'
+      : 'fn_criar_manutencao_concluida'
+    : 'fn_salvar_manutencao'
   const { data, error } = await client.rpc(
     functionName,
     payload.status === 'concluida'
-      ? { ...parameters, p_concluido_em: payload.completedAt }
-      : parameters,
+      ? {
+          ...parameters,
+          ...(maintenanceId ? { p_manutencao_id: maintenanceId } : {}),
+          p_concluido_em: payload.completedAt,
+        }
+      : { ...parameters, p_manutencao_id: maintenanceId },
   )
   if (error) throw error
   return String(data)
@@ -160,9 +168,6 @@ export function createMaintenance(
   client: SupabaseClient,
   payload: MaintenancePayload,
 ) {
-  if (payload.status === 'concluida') {
-    throw new Error('Uma nova manutenção deve ser criada aberta ou em andamento.')
-  }
   return saveMaintenance(client, null, payload)
 }
 

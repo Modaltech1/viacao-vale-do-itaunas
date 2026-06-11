@@ -177,6 +177,11 @@ test('manutenção exige relações e valores operacionais válidos', () => {
     status: 'concluida',
     completedAt: '2026-06-06T09:00',
   }), 'anterior à abertura')
+  throwsMessage(() => parseMaintenancePayload({
+    ...payload,
+    status: 'concluida',
+    completedAt: '2999-06-06T11:00',
+  }), 'futuro')
 })
 
 test('peça valida catálogo, estoque mínimo e valor padrão', () => {

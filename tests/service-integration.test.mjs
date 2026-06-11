@@ -333,6 +333,20 @@ test('peças, despesas e manutenções usam RPCs transacionais', async () => {
     parts: [{ partId: 'part-1', quantity: 2, unitValue: 45 }],
   }), 'maintenance-1')
 
+  assert.equal(await createMaintenance(service, {
+    vehicleId: 'vehicle-1',
+    maintenanceType: 'corretiva',
+    cause: 'Reparo histórico',
+    openedAt: '2026-06-07T10:00:00.000Z',
+    completedAt: '2026-06-07T15:00:00.000Z',
+    vehicleKm: 24000,
+    responsibleMechanicId: 'mechanic-1',
+    status: 'concluida',
+    notes: 'Lançamento posterior',
+    services: [{ serviceId: 'service-1', appliedValue: 180 }],
+    parts: [],
+  }), 'maintenance-1')
+
   await updateMaintenance(service, 'maintenance-1', {
     vehicleId: 'vehicle-1',
     maintenanceType: 'preventiva',
@@ -361,11 +375,15 @@ test('peças, despesas e manutenções usam RPCs transacionais', async () => {
   assert.deepEqual(calls[2][1].p_pecas, [
     { partId: 'part-1', quantity: 2, unitValue: 45 },
   ])
-  assert.equal(calls[3][0], 'fn_editar_manutencao_concluida')
+  assert.equal(calls[3][0], 'fn_criar_manutencao_concluida')
   assert.equal(calls[3][1].p_status, 'concluida')
-  assert.equal(calls[3][1].p_concluido_em, '2026-06-08T18:00:00.000Z')
-  assert.deepEqual(calls[3][1].p_servicos, [
+  assert.equal(calls[3][1].p_concluido_em, '2026-06-07T15:00:00.000Z')
+  assert.equal('p_manutencao_id' in calls[3][1], false)
+  assert.equal(calls[4][0], 'fn_editar_manutencao_concluida')
+  assert.equal(calls[4][1].p_status, 'concluida')
+  assert.equal(calls[4][1].p_concluido_em, '2026-06-08T18:00:00.000Z')
+  assert.deepEqual(calls[4][1].p_servicos, [
     { serviceId: 'service-1', appliedValue: 135 },
   ])
-  assert.equal(calls[4][0], 'fn_cancelar_manutencao')
+  assert.equal(calls[5][0], 'fn_cancelar_manutencao')
 })

@@ -112,6 +112,7 @@ export function MaintenanceDialog({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const isCompleted = maintenance?.status === 'concluida'
+  const isHistoricalCreation = mode === 'admin' && !maintenance && Boolean(form.completedAt)
 
   useEffect(() => {
     if (!open) return
@@ -143,6 +144,21 @@ export function MaintenanceDialog({
     }
   }
 
+  function updateCompletedAt(event: ChangeEvent<HTMLInputElement>) {
+    const completedAt = event.target.value
+    setForm((current) => ({
+      ...current,
+      completedAt,
+      status: maintenance
+        ? current.status
+        : completedAt
+          ? 'concluida'
+          : current.status === 'concluida'
+            ? 'aberta'
+            : current.status,
+    }))
+  }
+
   function selectVehicle(vehicleId: string) {
     const vehicle = options.vehicles.find((item) => item.id === vehicleId)
     setForm((current) => ({
@@ -164,6 +180,9 @@ export function MaintenanceDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...form,
+          status: mode === 'admin' && !maintenance && form.completedAt
+            ? 'concluida'
+            : form.status,
           openedAt: new Date(form.openedAt).toISOString(),
           completedAt: form.completedAt ? new Date(form.completedAt).toISOString() : null,
         }),
@@ -197,7 +216,8 @@ export function MaintenanceDialog({
             <div>
               <h3 className="font-semibold">Identificação</h3>
               <p className="text-sm text-muted-foreground">
-                A abertura coloca o veículo em manutenção até a conclusão ou o cancelamento.
+                Informe a abertura. No cadastro administrativo, uma conclusão preenchida registra
+                uma manutenção histórica já finalizada.
               </p>
             </div>
 
@@ -249,17 +269,25 @@ export function MaintenanceDialog({
                   required
                 />
               </div>
-              {mode === 'admin' && isCompleted ? (
+              {mode === 'admin' && (!maintenance || isCompleted) ? (
                 <div className="space-y-2">
-                  <Label htmlFor="maintenance-completed-at">Data e hora de conclusão</Label>
+                  <Label htmlFor="maintenance-completed-at">
+                    Data e hora de conclusão{maintenance ? '' : ' (opcional)'}
+                  </Label>
                   <Input
                     id="maintenance-completed-at"
                     type="datetime-local"
                     min={form.openedAt}
+                    max={localDateTime()}
                     value={form.completedAt}
-                    onChange={updateField('completedAt')}
-                    required
+                    onChange={updateCompletedAt}
+                    required={isCompleted}
                   />
+                  {!maintenance ? (
+                    <p className="text-xs text-muted-foreground">
+                      Ao informar esta data, a manutenção será cadastrada como concluída.
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
               <div className="space-y-2">
@@ -326,7 +354,7 @@ export function MaintenanceDialog({
                 <Label>Status</Label>
                 <Select
                   value={form.status}
-                  disabled={isCompleted}
+                  disabled={isCompleted || isHistoricalCreation}
                   onValueChange={(status: MaintenanceFormValues['status']) => {
                     setForm((current) => ({ ...current, status }))
                   }}
@@ -335,7 +363,9 @@ export function MaintenanceDialog({
                   <SelectContent>
                     <SelectItem value="aberta">Aberta</SelectItem>
                     <SelectItem value="em_andamento">Em andamento</SelectItem>
-                    {isCompleted ? <SelectItem value="concluida">Concluída</SelectItem> : null}
+                    {isCompleted || isHistoricalCreation
+                      ? <SelectItem value="concluida">Concluída</SelectItem>
+                      : null}
                   </SelectContent>
                 </Select>
               </div>
