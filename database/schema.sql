@@ -2035,6 +2035,7 @@ create or replace function public.fn_editar_manutencao_concluida(
   p_tipo_manutencao text,
   p_causa text,
   p_aberto_em timestamptz,
+  p_concluido_em timestamptz,
   p_km_veiculo numeric,
   p_mecanico_responsavel_id uuid,
   p_status text,
@@ -2074,6 +2075,8 @@ begin
     raise exception 'Tipo de manutenção inválido';
   end if;
   if nullif(trim(p_causa), '') is null then raise exception 'Informe a causa da manutenção'; end if;
+  if p_aberto_em is null then raise exception 'Informe a data de abertura'; end if;
+  if p_concluido_em is null then raise exception 'Informe a data de conclusão'; end if;
   if p_km_veiculo < 0 then raise exception 'KM da manutenção inválido'; end if;
   if jsonb_typeof(coalesce(p_servicos, '[]'::jsonb)) <> 'array'
     or jsonb_array_length(coalesce(p_servicos, '[]'::jsonb)) = 0 then
@@ -2105,6 +2108,13 @@ begin
   end if;
   if v_manutencao.veiculo_id <> p_veiculo_id then
     raise exception 'O veículo de uma manutenção concluída não pode ser alterado';
+  end if;
+  if v_manutencao.iniciado_em is not null
+    and p_aberto_em > v_manutencao.iniciado_em then
+    raise exception 'A abertura não pode ser posterior ao início da manutenção';
+  end if;
+  if p_concluido_em < coalesce(v_manutencao.iniciado_em, p_aberto_em) then
+    raise exception 'A conclusão não pode ser anterior ao início ou à abertura da manutenção';
   end if;
   if not exists (
     select 1 from public.mecanicos
@@ -2155,6 +2165,7 @@ begin
   set tipo_manutencao = p_tipo_manutencao,
       causa = trim(p_causa),
       aberto_em = p_aberto_em,
+      concluido_em = p_concluido_em,
       km_veiculo = p_km_veiculo,
       mecanico_responsavel_id = p_mecanico_responsavel_id,
       observacoes = nullif(trim(p_observacoes), ''),
@@ -2912,7 +2923,7 @@ revoke execute on function public.fn_concluir_manutencao(uuid) from public, anon
 revoke execute on function public.fn_salvar_peca(uuid,text,text,text,text,numeric,numeric,numeric,text,boolean) from public, anon;
 revoke execute on function public.fn_salvar_despesa(uuid,uuid,uuid,uuid,text,numeric,timestamptz,text,text,jsonb) from public, anon;
 revoke execute on function public.fn_salvar_manutencao(uuid,uuid,text,text,timestamptz,numeric,uuid,text,text,jsonb,jsonb) from public, anon;
-revoke execute on function public.fn_editar_manutencao_concluida(uuid,uuid,text,text,timestamptz,numeric,uuid,text,text,jsonb,jsonb) from public, anon;
+revoke execute on function public.fn_editar_manutencao_concluida(uuid,uuid,text,text,timestamptz,timestamptz,numeric,uuid,text,text,jsonb,jsonb) from public, anon;
 revoke execute on function public.fn_cancelar_manutencao(uuid,text) from public, anon;
 revoke execute on function public.fn_renovar_documento_veiculo(uuid, text, date, date, text, text) from public, anon;
 revoke execute on function public.fn_dashboard_admin(date, date, uuid, uuid) from public, anon;
@@ -2925,7 +2936,7 @@ grant execute on function public.fn_concluir_manutencao(uuid) to authenticated;
 grant execute on function public.fn_salvar_peca(uuid,text,text,text,text,numeric,numeric,numeric,text,boolean) to authenticated;
 grant execute on function public.fn_salvar_despesa(uuid,uuid,uuid,uuid,text,numeric,timestamptz,text,text,jsonb) to authenticated;
 grant execute on function public.fn_salvar_manutencao(uuid,uuid,text,text,timestamptz,numeric,uuid,text,text,jsonb,jsonb) to authenticated;
-grant execute on function public.fn_editar_manutencao_concluida(uuid,uuid,text,text,timestamptz,numeric,uuid,text,text,jsonb,jsonb) to authenticated;
+grant execute on function public.fn_editar_manutencao_concluida(uuid,uuid,text,text,timestamptz,timestamptz,numeric,uuid,text,text,jsonb,jsonb) to authenticated;
 grant execute on function public.fn_cancelar_manutencao(uuid,text) to authenticated;
 grant execute on function public.fn_renovar_documento_veiculo(uuid, text, date, date, text, text) to authenticated;
 grant execute on function public.fn_dashboard_admin(date, date, uuid, uuid) to authenticated;

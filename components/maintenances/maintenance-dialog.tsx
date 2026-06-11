@@ -56,6 +56,7 @@ function emptyForm(
     maintenanceType: 'preventiva',
     cause: '',
     openedAt: localDateTime(),
+    completedAt: '',
     vehicleKm: vehicle?.currentKm.toString() ?? '',
     responsibleMechanicId: options.currentMechanicId ?? '',
     status: 'aberta',
@@ -74,6 +75,7 @@ function formFromMaintenance(
     maintenanceType: maintenance.maintenanceType,
     cause: maintenance.cause,
     openedAt: localDateTime(maintenance.openedAt),
+    completedAt: maintenance.completedAt ? localDateTime(maintenance.completedAt) : '',
     vehicleKm: maintenance.vehicleKm?.toString() ?? '',
     responsibleMechanicId:
       maintenance.responsibleMechanicId ?? options.currentMechanicId ?? '',
@@ -135,7 +137,7 @@ export function MaintenanceDialog({
     )
   }, 0)
 
-  function updateField(field: 'cause' | 'openedAt' | 'vehicleKm' | 'notes') {
+  function updateField(field: 'cause' | 'openedAt' | 'completedAt' | 'vehicleKm' | 'notes') {
     return (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setForm((current) => ({ ...current, [field]: event.target.value }))
     }
@@ -163,6 +165,7 @@ export function MaintenanceDialog({
         body: JSON.stringify({
           ...form,
           openedAt: new Date(form.openedAt).toISOString(),
+          completedAt: form.completedAt ? new Date(form.completedAt).toISOString() : null,
         }),
       })
       const result = await response.json()
@@ -246,6 +249,19 @@ export function MaintenanceDialog({
                   required
                 />
               </div>
+              {mode === 'admin' && isCompleted ? (
+                <div className="space-y-2">
+                  <Label htmlFor="maintenance-completed-at">Data e hora de conclusão</Label>
+                  <Input
+                    id="maintenance-completed-at"
+                    type="datetime-local"
+                    min={form.openedAt}
+                    value={form.completedAt}
+                    onChange={updateField('completedAt')}
+                    required
+                  />
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <Label htmlFor="maintenance-km">KM do veículo</Label>
                 <Input

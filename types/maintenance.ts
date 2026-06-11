@@ -85,6 +85,7 @@ export type MaintenanceFormValues = {
   maintenanceType: MaintenanceType
   cause: string
   openedAt: string
+  completedAt: string
   vehicleKm: string
   responsibleMechanicId: string
   status: 'aberta' | 'em_andamento' | 'concluida'

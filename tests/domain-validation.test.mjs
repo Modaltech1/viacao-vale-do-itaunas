@@ -147,6 +147,7 @@ test('manutenção exige relações e valores operacionais válidos', () => {
     quantity: 2,
     unitValue: 49.9,
   }])
+  assert.equal(payload.completedAt, null)
   assert.equal(isMaintenanceEditable('aberta'), true)
   assert.equal(isMaintenanceEditable('concluida'), false)
   throwsMessage(() => parseMaintenancePayload({
@@ -167,6 +168,15 @@ test('manutenção exige relações e valores operacionais válidos', () => {
       { partId: 'part-1', quantity: 1, unitValue: 10 },
     ],
   }), 'mesma peça')
+  throwsMessage(() => parseMaintenancePayload({
+    ...payload,
+    status: 'concluida',
+  }), 'data de conclusão')
+  throwsMessage(() => parseMaintenancePayload({
+    ...payload,
+    status: 'concluida',
+    completedAt: '2026-06-06T09:00',
+  }), 'anterior à abertura')
 })
 
 test('peça valida catálogo, estoque mínimo e valor padrão', () => {

@@ -324,6 +324,7 @@ test('peças, despesas e manutenções usam RPCs transacionais', async () => {
     maintenanceType: 'preventiva',
     cause: 'Revisão',
     openedAt: '2026-06-08T10:00:00.000Z',
+    completedAt: null,
     vehicleKm: 25000,
     responsibleMechanicId: 'mechanic-1',
     status: 'aberta',
@@ -337,6 +338,7 @@ test('peças, despesas e manutenções usam RPCs transacionais', async () => {
     maintenanceType: 'preventiva',
     cause: 'Revisão concluída corrigida',
     openedAt: '2026-06-08T10:00:00.000Z',
+    completedAt: '2026-06-08T18:00:00.000Z',
     vehicleKm: 25000,
     responsibleMechanicId: 'mechanic-1',
     status: 'concluida',
@@ -361,6 +363,7 @@ test('peças, despesas e manutenções usam RPCs transacionais', async () => {
   ])
   assert.equal(calls[3][0], 'fn_editar_manutencao_concluida')
   assert.equal(calls[3][1].p_status, 'concluida')
+  assert.equal(calls[3][1].p_concluido_em, '2026-06-08T18:00:00.000Z')
   assert.deepEqual(calls[3][1].p_servicos, [
     { serviceId: 'service-1', appliedValue: 135 },
   ])

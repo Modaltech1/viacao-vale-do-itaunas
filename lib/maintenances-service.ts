@@ -24,6 +24,7 @@ export type MaintenancePayload = {
   maintenanceType: MaintenanceType
   cause: string
   openedAt: string
+  completedAt: string | null
   vehicleKm: number
   responsibleMechanicId: string
   status: (typeof editableStatuses)[number]
@@ -62,6 +63,7 @@ export function parseMaintenancePayload(
     maintenanceType: String(body.maintenanceType ?? 'preventiva') as MaintenanceType,
     cause: String(body.cause ?? '').trim(),
     openedAt: String(body.openedAt ?? '').trim(),
+    completedAt: normalizeOptionalText(body.completedAt),
     vehicleKm: Number(vehicleKmText),
     responsibleMechanicId: forcedMechanicId ?? String(body.responsibleMechanicId ?? '').trim(),
     status: String(body.status ?? 'aberta') as MaintenancePayload['status'],
@@ -82,6 +84,16 @@ function validateMaintenancePayload(payload: MaintenancePayload) {
   if (!payload.cause) throw new Error('Informe a causa ou descrição da manutenção.')
   if (!payload.openedAt || Number.isNaN(new Date(payload.openedAt).getTime())) {
     throw new Error('Informe uma data de abertura válida.')
+  }
+  if (payload.status === 'concluida') {
+    if (!payload.completedAt || Number.isNaN(new Date(payload.completedAt).getTime())) {
+      throw new Error('Informe uma data de conclusão válida.')
+    }
+    if (new Date(payload.completedAt).getTime() < new Date(payload.openedAt).getTime()) {
+      throw new Error('A data de conclusão não pode ser anterior à abertura.')
+    }
+  } else if (payload.completedAt) {
+    throw new Error('A data de conclusão só pode ser informada em uma manutenção concluída.')
   }
   if (!Number.isFinite(payload.vehicleKm) || payload.vehicleKm < 0) {
     throw new Error('Informe uma quilometragem válida.')
@@ -121,7 +133,7 @@ async function saveMaintenance(
   const functionName = payload.status === 'concluida'
     ? 'fn_editar_manutencao_concluida'
     : 'fn_salvar_manutencao'
-  const { data, error } = await client.rpc(functionName, {
+  const parameters = {
     p_manutencao_id: maintenanceId,
     p_veiculo_id: payload.vehicleId,
     p_tipo_manutencao: payload.maintenanceType,
@@ -133,7 +145,13 @@ async function saveMaintenance(
     p_observacoes: payload.notes,
     p_servicos: payload.services,
     p_pecas: payload.parts,
-  })
+  }
+  const { data, error } = await client.rpc(
+    functionName,
+    payload.status === 'concluida'
+      ? { ...parameters, p_concluido_em: payload.completedAt }
+      : parameters,
+  )
   if (error) throw error
   return String(data)
 }

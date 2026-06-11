@@ -85,6 +85,8 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'fn_salvar_despesa',
     'fn_salvar_manutencao',
     'fn_editar_manutencao_concluida',
+    'p_concluido_em timestamptz',
+    'concluido_em = p_concluido_em',
     'valor_padrao numeric(12,2)',
     'valor_aplicado numeric(12,2)',
     'p_servicos jsonb',
