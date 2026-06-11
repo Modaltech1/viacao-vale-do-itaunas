@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFile, readdir } from 'node:fs/promises'
+import { access, readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 import test from 'node:test'
 
@@ -34,6 +34,38 @@ test('todas as APIs privadas usam o guard do respectivo perfil', async () => {
 test('middleware não converte erros JSON das APIs em redirect HTML', async () => {
   const middleware = await readFile(path.join(root, 'middleware.ts'), 'utf8')
   assert.match(middleware, /\(\?!api\|/, 'O matcher deve deixar autenticação das APIs para os guards.')
+})
+
+test('PWA mantém instalação global sem armazenar dados privados', async () => {
+  const [manifest, layout, serviceWorker, nextConfig] = await Promise.all([
+    readFile(path.join(root, 'app', 'manifest.ts'), 'utf8'),
+    readFile(path.join(root, 'app', 'layout.tsx'), 'utf8'),
+    readFile(path.join(root, 'public', 'sw.js'), 'utf8'),
+    readFile(path.join(root, 'next.config.ts'), 'utf8'),
+  ])
+
+  assert.match(manifest, /start_url:\s*['"]\/['"]/)
+  assert.match(manifest, /display:\s*['"]standalone['"]/)
+  assert.match(manifest, /purpose:\s*['"]maskable['"]/)
+  assert.match(layout, /<ServiceWorkerRegister\s*\/>/)
+  assert.match(serviceWorker, /request\.method !== ['"]GET['"]/)
+  assert.match(serviceWorker, /INSTALL_ASSETS\.includes\(url\.pathname\)/)
+  assert.doesNotMatch(serviceWorker, /\/api\//)
+  assert.match(nextConfig, /Service-Worker-Allowed/)
+
+  const requiredIcons = [
+    'apple-touch-icon.png',
+    'icon-192.png',
+    'icon-512.png',
+    'icon-maskable-512.png',
+  ]
+
+  for (const icon of requiredIcons) {
+    await assert.doesNotReject(
+      access(path.join(root, 'public', 'pwa', icon)),
+      `Ícone PWA ausente: ${icon}`,
+    )
+  }
 })
 
 test('nenhum módulo de aplicação referencia mocks ou IDs fictícios', async () => {
