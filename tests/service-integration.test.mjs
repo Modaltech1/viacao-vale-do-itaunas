@@ -174,121 +174,48 @@ test('administrador global não pode restringir o próprio acesso', async () => 
   )
 })
 
-function transferService({ linkedOwnerId = null } = {}) {
+function transferRpcService({ error = null } = {}) {
   const calls = []
 
   return {
     calls,
-    from(table) {
-      if (table === 'perfis') {
-        return {
-          select() {
-            return {
-              eq() {
-                return {
-                  eq() {
-                    return {
-                      eq() {
-                        return {
-                          async maybeSingle() {
-                            return { data: { id: 'admin-b' }, error: null }
-                          },
-                        }
-                      },
-                    }
-                  },
-                }
-              },
-            }
-          },
-        }
+    async rpc(name, payload) {
+      calls.push([name, payload])
+      return {
+        data: error ? null : { vehicles: 2, drivers: 3 },
+        error,
       }
-
-      if (table === 'veiculo_motoristas') {
-        return {
-          select() {
-            return {
-              eq() {
-                return {
-                  eq() {
-                    return {
-                      async is() {
-                        return {
-                          data: linkedOwnerId
-                            ? [{
-                                motorista_id: 'driver-1',
-                                motoristas: { admin_responsavel_id: linkedOwnerId },
-                              }]
-                            : [],
-                          error: null,
-                        }
-                      },
-                    }
-                  },
-                }
-              },
-            }
-          },
-        }
-      }
-
-      if (table === 'veiculos') {
-        return {
-          update(payload) {
-            calls.push(['vehicle.update', payload])
-            return {
-              eq() {
-                return {
-                  is() {
-                    return {
-                      select() {
-                        return {
-                          async single() {
-                            return { data: { id: 'vehicle-1' }, error: null }
-                          },
-                        }
-                      },
-                    }
-                  },
-                }
-              },
-            }
-          },
-        }
-      }
-
-      throw new Error(`Tabela inesperada: ${table}`)
     },
   }
 }
 
-test('transferência de veículo preserva consistência com motoristas ativos', async () => {
-  const service = transferService()
-  await transferAdminResource(
+test('transferência administrativa usa RPC transacional para todo o grafo ativo', async () => {
+  const service = transferRpcService()
+  const result = await transferAdminResource(
     service,
-    'admin-global',
     'vehicle',
     'vehicle-1',
     'admin-b',
   )
 
-  assert.deepEqual(service.calls[0], [
-    'vehicle.update',
+  assert.deepEqual(result, { vehicles: 2, drivers: 3 })
+  assert.deepEqual(service.calls, [[
+    'fn_transferir_responsabilidade_admin',
     {
-      admin_responsavel_id: 'admin-b',
-      atualizado_por: 'admin-global',
+      p_tipo: 'vehicle',
+      p_recurso_id: 'vehicle-1',
+      p_admin_responsavel_id: 'admin-b',
     },
-  ])
+  ]])
 
   await assert.rejects(
     transferAdminResource(
-      transferService({ linkedOwnerId: 'admin-a' }),
-      'admin-global',
-      'vehicle',
-      'vehicle-1',
+      transferRpcService({ error: new Error('rpc failed') }),
+      'driver',
+      'driver-1',
       'admin-b',
     ),
-    /Transfira primeiro os motoristas ativos/,
+    /rpc failed/,
   )
 })
 

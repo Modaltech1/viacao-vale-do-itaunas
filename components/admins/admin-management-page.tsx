@@ -365,7 +365,7 @@ export function AdminManagementPage() {
               <div>
                 <h2 className="font-semibold">Responsabilidade por veículo</h2>
                 <p className="text-sm text-muted-foreground">
-                  Operações do veículo herdam este escopo.
+                  Operações e motoristas vinculados ativos são transferidos em conjunto.
                 </p>
               </div>
               <FilterInput
@@ -389,7 +389,7 @@ export function AdminManagementPage() {
               <div>
                 <h2 className="font-semibold">Responsabilidade por motorista</h2>
                 <p className="text-sm text-muted-foreground">
-                  Motorista e veículo ativos devem pertencer ao mesmo responsável.
+                  Veículos e outros motoristas conectados por vínculos ativos acompanham a transferência.
                 </p>
               </div>
               <FilterInput

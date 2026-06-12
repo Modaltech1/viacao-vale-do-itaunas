@@ -106,24 +106,8 @@ export async function updateAdminUser(
   })
 }
 
-async function requireActiveAdmin(service: SupabaseClient, adminId: string | null) {
-  if (!adminId) return
-
-  const { data, error } = await service
-    .from('perfis')
-    .select('id')
-    .eq('id', adminId)
-    .eq('papel', 'admin')
-    .eq('ativo', true)
-    .maybeSingle()
-
-  if (error) throw error
-  if (!data) throw badRequest('O administrador responsável precisa estar ativo.')
-}
-
 export async function transferAdminResource(
-  service: SupabaseClient,
-  actorId: string,
+  client: SupabaseClient,
   resourceType: AdminResourceType,
   resourceId: string,
   targetAdminId: string | null,
@@ -133,83 +117,17 @@ export async function transferAdminResource(
     throw badRequest('Tipo de recurso inválido.')
   }
 
-  await requireActiveAdmin(service, targetAdminId)
+  const { data, error } = await client.rpc(
+    'fn_transferir_responsabilidade_admin',
+    {
+      p_tipo: resourceType,
+      p_recurso_id: resourceId,
+      p_admin_responsavel_id: targetAdminId,
+    },
+  )
 
-  if (resourceType === 'vehicle') {
-    const { data: links, error: linksError } = await service
-      .from('veiculo_motoristas')
-      .select('motorista_id,motoristas(admin_responsavel_id)')
-      .eq('veiculo_id', resourceId)
-      .eq('ativo', true)
-      .is('fim_em', null)
-
-    if (linksError) throw linksError
-
-    const driverIdsToAdopt: string[] = []
-    for (const link of links ?? []) {
-      const driver = Array.isArray(link.motoristas) ? link.motoristas[0] : link.motoristas
-      const ownerId = driver?.admin_responsavel_id ?? null
-      if (ownerId && ownerId !== targetAdminId) {
-        throw badRequest(
-          'Transfira primeiro os motoristas ativos vinculados ou escolha o mesmo responsável.',
-        )
-      }
-      if (!ownerId && targetAdminId) driverIdsToAdopt.push(String(link.motorista_id))
-    }
-
-    if (driverIdsToAdopt.length) {
-      const { error } = await service
-        .from('motoristas')
-        .update({ admin_responsavel_id: targetAdminId, atualizado_por: actorId })
-        .in('id', driverIdsToAdopt)
-      if (error) throw error
-    }
-
-    const { data, error } = await service
-      .from('veiculos')
-      .update({ admin_responsavel_id: targetAdminId, atualizado_por: actorId })
-      .eq('id', resourceId)
-      .is('excluido_em', null)
-      .select('id')
-      .single()
-
-    if (error || !data) throw error ?? new Error('Veículo não encontrado.')
-    return
-  }
-
-  const { data: links, error: linksError } = await service
-    .from('veiculo_motoristas')
-    .select('veiculo_id,veiculos(admin_responsavel_id)')
-    .eq('motorista_id', resourceId)
-    .eq('ativo', true)
-    .is('fim_em', null)
-
-  if (linksError) throw linksError
-
-  for (const link of links ?? []) {
-    const vehicle = Array.isArray(link.veiculos) ? link.veiculos[0] : link.veiculos
-    const ownerId = vehicle?.admin_responsavel_id ?? null
-    if (!ownerId && targetAdminId) {
-      throw badRequest(
-        'Atribua primeiro o veículo vinculado; ele incluirá os motoristas ainda sem responsável.',
-      )
-    }
-    if (ownerId && ownerId !== targetAdminId) {
-      throw badRequest(
-        'Transfira primeiro os veículos ativos vinculados ou escolha o mesmo responsável.',
-      )
-    }
-  }
-
-  const { data, error } = await service
-    .from('motoristas')
-    .update({ admin_responsavel_id: targetAdminId, atualizado_por: actorId })
-    .eq('id', resourceId)
-    .is('excluido_em', null)
-    .select('id')
-    .single()
-
-  if (error || !data) throw error ?? new Error('Motorista não encontrado.')
+  if (error) throw error
+  return data as { vehicles: number; drivers: number } | null
 }
 
 export function adminManagementErrorResponse(

@@ -55,17 +55,31 @@ test('rotas privilegiadas validam escopo antes de usar service role', async () =
 })
 
 test('gestão de administradores é exclusiva do global e aparece condicionalmente no menu', async () => {
-  const [layout, navigation, shell, route] = await Promise.all([
+  const [layout, navigation, shell, route, assignmentRoute] = await Promise.all([
     readFile(path.join(root, 'app', 'admin', 'layout.tsx'), 'utf8'),
     readFile(path.join(root, 'components', 'layout', 'navigation-items.ts'), 'utf8'),
     readFile(path.join(root, 'components', 'layout', 'admin-shell.tsx'), 'utf8'),
     readFile(path.join(root, 'app', 'api', 'admin', 'administradores', 'route.ts'), 'utf8'),
+    readFile(
+      path.join(
+        root,
+        'app',
+        'api',
+        'admin',
+        'administradores',
+        'atribuicoes',
+        'route.ts',
+      ),
+      'utf8',
+    ),
   ])
 
   assert.match(layout, /auth\.admin\.isGlobal/)
   assert.match(navigation, /globalOnly:\s*true/)
   assert.match(shell, /!item\.globalOnly \|\| isGlobalAdmin/)
   assert.match(route, /requireGlobalAdmin/)
+  assert.match(assignmentRoute, /transferAdminResource\(\s*auth\.supabase/)
+  assert.doesNotMatch(assignmentRoute, /createSupabaseServiceClient/)
 })
 
 test('middleware não converte erros JSON das APIs em redirect HTML', async () => {
@@ -196,6 +210,7 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'admin_pode_acessar_veiculo',
     'admin_pode_acessar_motorista',
     'validar_escopo_operacao_veiculo',
+    'fn_transferir_responsabilidade_admin',
     'veiculos_permitidos',
     'motoristas_permitidos',
     'auditoria_select_global',
@@ -228,6 +243,33 @@ test('migration de responsabilidade administrativa cobre RLS e dashboard', async
     'manutencoes_select_contexto',
     'pendencias_manuais_select_contexto',
     'fn_dashboard_admin',
+  ]
+
+  for (const fragment of requiredFragments) {
+    assert.ok(migration.includes(fragment), `Migration sem ${fragment}`)
+  }
+})
+
+test('transferência administrativa percorre e atualiza todo o grafo ativo', async () => {
+  const migration = await readFile(
+    path.join(
+      root,
+      'database',
+      'migrations',
+      '20260612_transfer_admin_responsibility_graph.sql',
+    ),
+    'utf8',
+  )
+  const requiredFragments = [
+    'fn_transferir_responsabilidade_admin',
+    'with recursive componentes',
+    'vm.ativo = true',
+    'vm.fim_em is null',
+    'update public.veiculos',
+    'update public.motoristas',
+    'update public.pendencias_manuais',
+    'public.eh_admin_global()',
+    'to authenticated',
   ]
 
   for (const fragment of requiredFragments) {
