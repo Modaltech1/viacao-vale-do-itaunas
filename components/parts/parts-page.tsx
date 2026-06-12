@@ -18,6 +18,7 @@ import { PartDialog } from '@/components/parts/part-dialog'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, quantity } from '@/lib/format'
 import { partCategories, type PartListItem } from '@/types/part'
 
@@ -66,6 +67,10 @@ export function PartsPage({ mode }: { mode: 'admin' | 'mechanic' }) {
       return matchesSearch && matchesCategory && matchesStock
     })
   }, [category, items, search, stock])
+  const partPagination = useTablePagination(
+    filteredItems,
+    `${search}|${category}|${stock}`,
+  )
 
   const activeItems = items.filter((item) => item.active)
   const lowStock = activeItems.filter((item) => item.stockQuantity <= item.minimumStock)
@@ -161,7 +166,7 @@ export function PartsPage({ mode }: { mode: 'admin' | 'mechanic' }) {
                       Carregando peças...
                     </TableCell>
                   </TableRow>
-                ) : filteredItems.length ? filteredItems.map((part) => {
+                ) : filteredItems.length ? partPagination.pageItems.map((part) => {
                   const stockTone = part.stockQuantity === 0
                     ? 'critica'
                     : part.stockQuantity <= part.minimumStock
@@ -230,6 +235,7 @@ export function PartsPage({ mode }: { mode: 'admin' | 'mechanic' }) {
               </TableBody>
             </Table>
           )}
+          {!error && !loading ? <TablePagination {...partPagination} /> : null}
         </CardContent>
       </Card>
 

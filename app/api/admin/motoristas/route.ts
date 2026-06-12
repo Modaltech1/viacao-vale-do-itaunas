@@ -6,6 +6,8 @@ import {
   deleteManagedUser,
   managedUserErrorResponse,
 } from '@/lib/managed-users'
+import { resolveAdminOwnerId } from '@/lib/admin-scope'
+import { assertAdminVehicleAccess } from '@/lib/admin-scope-server'
 import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
 import type { DriverProfessionalStatus } from '@/types/driver'
 
@@ -96,6 +98,10 @@ export async function POST(request: NextRequest) {
   let driverId: string | null = null
 
   try {
+    if (vehicleId) {
+      await assertAdminVehicleAccess(auth.supabase, auth.admin, vehicleId)
+    }
+
     authUserId = await createManagedUser(service, auth.user.id, {
       name,
       email,
@@ -116,6 +122,7 @@ export async function POST(request: NextRequest) {
         validade_habilitacao: licenseDueDate,
         status_profissional: professionalStatus,
         observacoes: notes,
+        admin_responsavel_id: resolveAdminOwnerId(auth.admin),
         criado_por: auth.user.id,
         atualizado_por: auth.user.id,
       })

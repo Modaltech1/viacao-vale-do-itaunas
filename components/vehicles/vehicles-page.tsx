@@ -18,6 +18,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { VehicleDialog } from '@/components/vehicles/vehicle-dialog'
 import { number } from '@/lib/format'
 import type { VehicleFormOptions, VehicleListItem } from '@/types/vehicle'
@@ -86,6 +87,10 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
       return matchesSearch && matchesStatus && matchesType && matchesDriver
     })
   }, [driverId, search, status, type, vehicles])
+  const vehiclePagination = useTablePagination(
+    filteredVehicles,
+    `${search}|${status}|${type}|${driverId}`,
+  )
 
   const ceturbExpired = vehicles.filter((vehicle) => (
     vehicle.documents.some((document) => document.code === 'ceturb' && document.status === 'vencido')
@@ -200,7 +205,7 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
                     </TableCell>
                   </TableRow>
                 ) : filteredVehicles.length ? (
-                  filteredVehicles.map((vehicle) => {
+                  vehiclePagination.pageItems.map((vehicle) => {
                     const ceturb = vehicle.documents.find((document) => document.code === 'ceturb')
 
                     return (
@@ -260,6 +265,7 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
               </TableBody>
             </Table>
           )}
+          {!error && !loading ? <TablePagination {...vehiclePagination} /> : null}
         </CardContent>
       </Card>
 

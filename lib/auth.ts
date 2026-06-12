@@ -5,6 +5,7 @@ export type UserRole = (typeof userRoles)[number]
 export type AuthProfile = {
   papel: UserRole
   ativo: boolean
+  nivel_admin?: 'global' | 'restrito' | null
 }
 
 const roleHome: Record<UserRole, string> = {

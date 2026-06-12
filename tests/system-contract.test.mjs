@@ -21,14 +21,51 @@ test('todas as APIs privadas usam o guard do respectivo perfil', async () => {
   for (const route of routes) {
     const source = await readFile(route, 'utf8')
     const relative = path.relative(apiRoot, route).replaceAll('\\', '/')
-    const expectedGuard = relative.startsWith('admin/')
-      ? 'requireAdmin'
-      : relative.startsWith('driver/')
-        ? 'requireDriver'
-        : 'requireMechanic'
+    const expectedGuard = relative.startsWith('admin/administradores')
+      ? 'requireGlobalAdmin'
+      : relative.startsWith('admin/')
+        ? 'requireAdmin'
+        : relative.startsWith('driver/')
+          ? 'requireDriver'
+          : 'requireMechanic'
 
     assert.match(source, new RegExp(`\\b${expectedGuard}\\b`), `${relative} sem ${expectedGuard}`)
   }
+})
+
+test('rotas privilegiadas validam escopo antes de usar service role', async () => {
+  const guardedRoutes = [
+    'app/api/admin/veiculos/route.ts',
+    'app/api/admin/veiculos/[id]/route.ts',
+    'app/api/admin/motoristas/route.ts',
+    'app/api/admin/motoristas/[id]/route.ts',
+    'app/api/admin/abastecimentos/route.ts',
+    'app/api/admin/abastecimentos/[id]/route.ts',
+    'app/api/admin/viagens/[id]/route.ts',
+  ]
+
+  for (const file of guardedRoutes) {
+    const source = await readFile(path.join(root, file), 'utf8')
+    assert.match(
+      source,
+      /assertAdmin(?:Vehicle|Driver|Trip)Access/,
+      `${file} usa service role sem validar o escopo administrativo`,
+    )
+  }
+})
+
+test('gestão de administradores é exclusiva do global e aparece condicionalmente no menu', async () => {
+  const [layout, navigation, shell, route] = await Promise.all([
+    readFile(path.join(root, 'app', 'admin', 'layout.tsx'), 'utf8'),
+    readFile(path.join(root, 'components', 'layout', 'navigation-items.ts'), 'utf8'),
+    readFile(path.join(root, 'components', 'layout', 'admin-shell.tsx'), 'utf8'),
+    readFile(path.join(root, 'app', 'api', 'admin', 'administradores', 'route.ts'), 'utf8'),
+  ])
+
+  assert.match(layout, /auth\.admin\.isGlobal/)
+  assert.match(navigation, /globalOnly:\s*true/)
+  assert.match(shell, /!item\.globalOnly \|\| isGlobalAdmin/)
+  assert.match(route, /requireGlobalAdmin/)
 })
 
 test('middleware não converte erros JSON das APIs em redirect HTML', async () => {
@@ -96,6 +133,31 @@ test('todas as páginas de detalhe oferecem navegação contextual de retorno', 
   }
 })
 
+test('todas as tabelas usam paginação compartilhada de dez registros', async () => {
+  const pagination = await readFile(
+    path.join(root, 'components', 'shared', 'table-pagination.tsx'),
+    'utf8',
+  )
+  assert.match(pagination, /TABLE_PAGE_SIZE\s*=\s*10\b/)
+
+  const files = (await Promise.all(
+    ['app', 'components'].map((directory) => filesRecursively(path.join(root, directory))),
+  )).flat().filter((file) => file.endsWith('.tsx'))
+
+  for (const file of files) {
+    const source = await readFile(file, 'utf8')
+    const tableCount = source.match(/<Table(?:\s|>)/g)?.length ?? 0
+    if (!tableCount) continue
+
+    const paginationCount = source.match(/<TablePagination(?:\s|>)/g)?.length ?? 0
+    assert.equal(
+      paginationCount,
+      tableCount,
+      `${path.relative(root, file)} deve paginar cada tabela`,
+    )
+  }
+})
+
 test('schema contém as invariantes centrais dos fluxos operacionais', async () => {
   const schema = await readFile(path.join(root, 'database', 'schema.sql'), 'utf8')
   const requiredFragments = [
@@ -128,9 +190,47 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'Estoque insuficiente para a peça',
     'vw_pendencias_operacionais',
     'veiculos_placa_normalizada_uniq',
+    'nivel_admin text',
+    'admin_responsavel_id uuid',
+    'eh_admin_global',
+    'admin_pode_acessar_veiculo',
+    'admin_pode_acessar_motorista',
+    'validar_escopo_operacao_veiculo',
+    'veiculos_permitidos',
+    'motoristas_permitidos',
+    'auditoria_select_global',
   ]
 
   for (const fragment of requiredFragments) {
     assert.ok(schema.includes(fragment), `Invariante ausente: ${fragment}`)
+  }
+})
+
+test('migration de responsabilidade administrativa cobre RLS e dashboard', async () => {
+  const migration = await readFile(
+    path.join(
+      root,
+      'database',
+      'migrations',
+      '20260612_admin_data_ownership.sql',
+    ),
+    'utf8',
+  )
+  const requiredFragments = [
+    "nivel_admin in ('global', 'restrito')",
+    'veiculos_admin_responsavel_idx',
+    'motoristas_admin_responsavel_idx',
+    'perfil_visivel_para_usuario',
+    'veiculos_select_por_contexto',
+    'motoristas_select_por_contexto',
+    'viagens_select_contexto',
+    'despesas_select_contexto',
+    'manutencoes_select_contexto',
+    'pendencias_manuais_select_contexto',
+    'fn_dashboard_admin',
+  ]
+
+  for (const fragment of requiredFragments) {
+    assert.ok(migration.includes(fragment), `Migration sem ${fragment}`)
   }
 })

@@ -7,6 +7,8 @@ import {
   syncVehicleDrivers,
   vehicleErrorResponse,
 } from '@/lib/vehicles-service'
+import { resolveAdminOwnerId } from '@/lib/admin-scope'
+import { assertAdminDriverAccess } from '@/lib/admin-scope-server'
 import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
 
 export async function GET() {
@@ -41,6 +43,12 @@ export async function POST(request: NextRequest) {
   let createdRouteId: string | null = null
 
   try {
+    await Promise.all(
+      payload.driverIds.map((driverId) =>
+        assertAdminDriverAccess(auth.supabase, auth.admin, driverId),
+      ),
+    )
+
     const route = await createVehicleRoute(service, payload, auth.user.id)
     createdRouteId = route.createdRouteId
 
@@ -57,6 +65,7 @@ export async function POST(request: NextRequest) {
         capacidade: payload.capacity,
         rota_fixa_id: route.routeId,
         observacoes: payload.notes,
+        admin_responsavel_id: resolveAdminOwnerId(auth.admin),
         criado_por: auth.user.id,
         atualizado_por: auth.user.id,
       })

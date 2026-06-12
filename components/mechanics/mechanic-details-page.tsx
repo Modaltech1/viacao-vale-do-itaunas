@@ -21,6 +21,7 @@ import { MechanicDialog } from '@/components/mechanics/mechanic-dialog'
 import { MetricCard } from '@/components/shared/metric-card'
 import { Section } from '@/components/shared/section'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, dateTime } from '@/lib/format'
 import type { MechanicDetails } from '@/types/mechanic'
 
@@ -51,6 +52,8 @@ export function MechanicDetailsPage({ mechanicId }: { mechanicId: string }) {
   useEffect(() => {
     void loadMechanic()
   }, [loadMechanic])
+
+  const maintenancePagination = useTablePagination(mechanic?.maintenances ?? [])
 
   if (loading) {
     return (
@@ -149,7 +152,7 @@ export function MechanicDetailsPage({ mechanicId }: { mechanicId: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mechanic.maintenances.length ? mechanic.maintenances.map((maintenance) => (
+            {mechanic.maintenances.length ? maintenancePagination.pageItems.map((maintenance) => (
               <TableRow key={maintenance.id}>
                 <TableCell className="font-semibold">{maintenance.vehicle}</TableCell>
                 <TableCell>{maintenance.maintenanceType === 'preventiva' ? 'Preventiva' : 'Corretiva'}</TableCell>
@@ -173,6 +176,7 @@ export function MechanicDetailsPage({ mechanicId }: { mechanicId: string }) {
             )}
           </TableBody>
         </Table>
+        <TablePagination {...maintenancePagination} />
       </Section>
 
       <MechanicDialog

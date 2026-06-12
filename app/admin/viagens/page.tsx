@@ -18,6 +18,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { TripDialog } from '@/components/trips/trip-dialogs'
 import { dateTime, number } from '@/lib/format'
 import type { TripFormOptions, TripListItem } from '@/types/trip'
@@ -79,6 +80,10 @@ export default function TripsPage() {
       )
     })
   }, [endDate, search, startDate, status, trips])
+  const tripPagination = useTablePagination(
+    filteredTrips,
+    `${search}|${status}|${startDate}|${endDate}`,
+  )
 
   const totalKm = trips.reduce((sum, trip) => sum + (trip.totalKm ?? 0), 0)
 
@@ -168,7 +173,7 @@ export default function TripsPage() {
                     </TableCell>
                   </TableRow>
                 ) : filteredTrips.length ? (
-                  filteredTrips.map((trip) => (
+                  tripPagination.pageItems.map((trip) => (
                     <TableRow key={trip.id}>
                       <TableCell>
                         <p className="font-semibold">{trip.origin} → {trip.destination}</p>
@@ -205,6 +210,7 @@ export default function TripsPage() {
               </TableBody>
             </Table>
           )}
+          {!error && !loading ? <TablePagination {...tripPagination} /> : null}
         </CardContent>
       </Card>
 

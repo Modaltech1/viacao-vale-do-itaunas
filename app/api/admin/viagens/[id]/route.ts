@@ -4,6 +4,7 @@ import {
   parseUpdateTripPayload,
   tripErrorResponse,
 } from '@/lib/trips-service'
+import { assertAdminTripAccess } from '@/lib/admin-scope-server'
 import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
 
 export async function GET(
@@ -45,6 +46,8 @@ export async function PATCH(
   const service = createSupabaseServiceClient()
 
   try {
+    await assertAdminTripAccess(auth.supabase, auth.admin, id)
+
     const { data: current, error: currentError } = await service
       .from('viagens')
       .select('id,status')

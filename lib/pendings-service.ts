@@ -71,6 +71,7 @@ export async function createManualPending(
   client: SupabaseClient,
   payload: PendingPayload,
   userId: string,
+  adminOwnerId?: string | null,
 ) {
   const { data, error } = await client
     .from('pendencias_manuais')
@@ -87,6 +88,7 @@ export async function createManualPending(
       vencimento_em: payload.dueDate,
       vencimento_km: payload.dueKm,
       status: 'aberta',
+      admin_responsavel_id: adminOwnerId ?? null,
       criado_por: userId,
       atualizado_por: userId,
     })

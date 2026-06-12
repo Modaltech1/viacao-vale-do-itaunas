@@ -20,6 +20,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { MetricCard } from '@/components/shared/metric-card'
 import { Section } from '@/components/shared/section'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { ConcludeTripDialog, TripDialog } from '@/components/trips/trip-dialogs'
 import { brl, dateTime, number } from '@/lib/format'
 import type { TripDetails, TripFormOptions } from '@/types/trip'
@@ -58,6 +59,9 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
   useEffect(() => {
     void loadTrip()
   }, [loadTrip])
+
+  const refuelingPagination = useTablePagination(trip?.refuelings ?? [])
+  const expensePagination = useTablePagination(trip?.expenses ?? [])
 
   if (loading) {
     return (
@@ -198,7 +202,7 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {trip.refuelings.length ? trip.refuelings.map((item) => (
+              {trip.refuelings.length ? refuelingPagination.pageItems.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>{dateTime(item.registeredAt)}</TableCell>
                   <TableCell>{number(item.registeredKm)}</TableCell>
@@ -215,6 +219,7 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
               )}
             </TableBody>
           </Table>
+          <TablePagination {...refuelingPagination} />
         </Section>
 
         <Section title="Despesas da viagem">
@@ -228,7 +233,7 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {trip.expenses.length ? trip.expenses.map((item) => (
+              {trip.expenses.length ? expensePagination.pageItems.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>{dateTime(item.registeredAt)}</TableCell>
                   <TableCell>{item.category}</TableCell>
@@ -244,6 +249,7 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
               )}
             </TableBody>
           </Table>
+          <TablePagination {...expensePagination} />
         </Section>
       </div>
 

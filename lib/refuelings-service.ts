@@ -75,6 +75,13 @@ export function refuelingPayloadToDatabase(
 export function refuelingErrorResponse(error: unknown, fallback: string, status = 400) {
   const message = error instanceof Error ? error.message : fallback
   const normalized = message.toLowerCase()
+  const explicitStatus =
+    typeof error === 'object'
+    && error !== null
+    && 'status' in error
+    && typeof error.status === 'number'
+      ? error.status
+      : null
 
   if (normalized.includes('invalid api key')) {
     return NextResponse.json(
@@ -97,5 +104,5 @@ export function refuelingErrorResponse(error: unknown, fallback: string, status 
     )
   }
 
-  return NextResponse.json({ error: message || fallback }, { status })
+  return NextResponse.json({ error: message || fallback }, { status: explicitStatus ?? status })
 }

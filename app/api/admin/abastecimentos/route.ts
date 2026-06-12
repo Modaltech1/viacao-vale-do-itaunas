@@ -5,6 +5,11 @@ import {
   refuelingErrorResponse,
   refuelingPayloadToDatabase,
 } from '@/lib/refuelings-service'
+import {
+  assertAdminDriverAccess,
+  assertAdminTripAccess,
+  assertAdminVehicleAccess,
+} from '@/lib/admin-scope-server'
 import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
 import { resolveTripRelation } from '@/lib/travel-operation-service'
 
@@ -33,7 +38,21 @@ export async function POST(request: NextRequest) {
   const service = createSupabaseServiceClient()
 
   try {
+    if (payload.tripId) {
+      await assertAdminTripAccess(auth.supabase, auth.admin, payload.tripId)
+    }
+
     const relation = await resolveTripRelation(service, payload.tripId)
+    await assertAdminVehicleAccess(
+      auth.supabase,
+      auth.admin,
+      relation?.vehicleId ?? payload.vehicleId,
+    )
+    const effectiveDriverId = relation?.driverId ?? payload.driverId
+    if (effectiveDriverId) {
+      await assertAdminDriverAccess(auth.supabase, auth.admin, effectiveDriverId)
+    }
+
     const { data, error } = await service
       .from('abastecimentos')
       .insert({

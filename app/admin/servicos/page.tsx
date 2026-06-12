@@ -18,6 +18,7 @@ import { ServiceDialog } from '@/components/services/service-dialog'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, number } from '@/lib/format'
 import { serviceCategories, type ServiceListItem } from '@/types/service'
 
@@ -77,6 +78,10 @@ export default function ServicesPage() {
       return matchesSearch && matchesCategory && matchesPeriodicity && matchesMaintenanceType
     })
   }, [category, maintenanceType, periodicity, search, services])
+  const servicePagination = useTablePagination(
+    filteredServices,
+    `${search}|${category}|${periodicity}|${maintenanceType}`,
+  )
 
   function openNewService() {
     setSelectedService(null)
@@ -180,7 +185,7 @@ export default function ServicesPage() {
                     </TableCell>
                   </TableRow>
                 ) : filteredServices.length ? (
-                  filteredServices.map((service) => (
+                  servicePagination.pageItems.map((service) => (
                     <TableRow key={service.id}>
                       <TableCell>
                         <p className="font-semibold">{service.name}</p>
@@ -234,6 +239,7 @@ export default function ServicesPage() {
               </TableBody>
             </Table>
           )}
+          {!error && !loading ? <TablePagination {...servicePagination} /> : null}
         </CardContent>
       </Card>
 

@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Package,
   Route,
+  ShieldCheck,
   Users,
   Wrench,
 } from 'lucide-react'
@@ -18,6 +19,7 @@ export type NavigationItem = {
   icon: typeof LayoutDashboard
   exact?: boolean
   activePrefixes?: string[]
+  globalOnly?: boolean
 }
 
 const navigationCatalog = {
@@ -33,6 +35,7 @@ const navigationCatalog = {
   parts: { label: 'Peças', icon: Package },
   pendings: { label: 'Pendências', icon: AlertTriangle },
   reports: { label: 'Relatórios', icon: BarChart3 },
+  administrators: { label: 'Administradores', icon: ShieldCheck },
 } as const
 
 function item(
@@ -56,6 +59,10 @@ export const adminNavigation: NavigationItem[] = [
   item('parts', '/admin/pecas'),
   item('pendings', '/admin/pendencias'),
   item('reports', '/admin/relatorios'),
+  {
+    ...item('administrators', '/admin/administradores'),
+    globalOnly: true,
+  },
 ]
 
 export const mechanicNavigation: NavigationItem[] = [

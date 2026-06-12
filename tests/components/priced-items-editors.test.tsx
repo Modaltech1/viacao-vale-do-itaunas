@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { ServiceUsageEditor } from '@/components/maintenances/service-usage-editor'
 import { PartUsageEditor } from '@/components/parts/part-usage-editor'
 import type { MaintenanceServiceFormValue } from '@/types/maintenance'
@@ -42,6 +42,8 @@ const parts = [
     unitValue: 30,
   },
 ]
+
+afterEach(cleanup)
 
 function ServiceHarness() {
   const [value, setValue] = useState<MaintenanceServiceFormValue[]>([])

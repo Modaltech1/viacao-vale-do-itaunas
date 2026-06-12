@@ -27,6 +27,7 @@ import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { brl, dateTime } from '@/lib/format'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import {
   expenseCategories,
   type ExpenseListItem,
@@ -98,6 +99,11 @@ export default function ExpensesPage() {
       )
     })
   }, [category, endDate, expenses, search, startDate])
+  const expensePagination = useTablePagination(
+    filteredExpenses,
+    `${search}|${category}|${startDate}|${endDate}`,
+  )
+  const maintenanceExpensePagination = useTablePagination(maintenanceExpenses)
 
   const metrics = useMemo(() => ({
     total: expenses.reduce((sum, expense) => sum + expense.value, 0)
@@ -197,7 +203,7 @@ export default function ExpensesPage() {
                     </TableCell>
                   </TableRow>
                 ) : filteredExpenses.length ? (
-                  filteredExpenses.map((expense) => (
+                  expensePagination.pageItems.map((expense) => (
                     <TableRow key={expense.id}>
                       <TableCell className="whitespace-nowrap">{dateTime(expense.registeredAt)}</TableCell>
                       <TableCell>{expense.category}</TableCell>
@@ -247,6 +253,7 @@ export default function ExpensesPage() {
               </TableBody>
             </Table>
           )}
+          {!error && !loading ? <TablePagination {...expensePagination} /> : null}
         </CardContent>
       </Card>
 
@@ -263,7 +270,7 @@ export default function ExpensesPage() {
               <TableRow>
                 <TableHead>Data</TableHead>
                 <TableHead>Veículo</TableHead>
-                <TableHead>Manutenção</TableHead>
+                <TableHead className="w-[220px]">Manutenção</TableHead>
                 <TableHead>Peças</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Status</TableHead>
@@ -277,11 +284,18 @@ export default function ExpensesPage() {
                     Carregando custos de manutenção...
                   </TableCell>
                 </TableRow>
-              ) : maintenanceExpenses.length ? maintenanceExpenses.map((expense) => (
+              ) : maintenanceExpenses.length ? maintenanceExpensePagination.pageItems.map((expense) => (
                 <TableRow key={expense.id}>
                   <TableCell className="whitespace-nowrap">{dateTime(expense.registeredAt)}</TableCell>
                   <TableCell className="font-semibold">{expense.vehicleLabel}</TableCell>
-                  <TableCell>{expense.cause || 'Sem descrição'}</TableCell>
+                  <TableCell className="max-w-[220px]">
+                    <p
+                      className="truncate"
+                      title={expense.cause || 'Sem descrição'}
+                    >
+                      {expense.cause || 'Sem descrição'}
+                    </p>
+                  </TableCell>
                   <TableCell>{expense.partsCount}</TableCell>
                   <TableCell className="font-medium">{brl(expense.value)}</TableCell>
                   <TableCell>
@@ -302,6 +316,7 @@ export default function ExpensesPage() {
               )}
             </TableBody>
           </Table>
+          {!loading ? <TablePagination {...maintenanceExpensePagination} /> : null}
         </CardContent>
       </Card>
 

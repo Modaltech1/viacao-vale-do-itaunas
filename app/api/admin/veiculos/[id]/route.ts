@@ -7,6 +7,10 @@ import {
   syncVehicleDrivers,
   vehicleErrorResponse,
 } from '@/lib/vehicles-service'
+import {
+  assertAdminDriverAccess,
+  assertAdminVehicleAccess,
+} from '@/lib/admin-scope-server'
 import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
 
 export async function GET(
@@ -45,6 +49,12 @@ export async function PATCH(
   const body = await request.json()
   const service = createSupabaseServiceClient()
 
+  try {
+    await assertAdminVehicleAccess(auth.supabase, auth.admin, id)
+  } catch (error) {
+    return vehicleErrorResponse(error, 'Veículo não encontrado.', 404)
+  }
+
   if (body.section === 'drivers') {
     const driverIds: string[] = Array.isArray(body.driverIds)
       ? [...new Set<string>(
@@ -56,6 +66,12 @@ export async function PATCH(
     const principalDriverId = String(body.principalDriverId ?? '').trim() || null
 
     try {
+      await Promise.all(
+        driverIds.map((driverId) =>
+          assertAdminDriverAccess(auth.supabase, auth.admin, driverId),
+        ),
+      )
+
       const { data: vehicle, error } = await service
         .from('veiculos')
         .select('id')

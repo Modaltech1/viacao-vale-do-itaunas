@@ -30,10 +30,20 @@ function BrandBlock({ compact = false, subtitle }: { compact?: boolean; subtitle
   )
 }
 
-function NavItems({ pathname, items }: { pathname: string; items: NavigationItem[] }) {
+function NavItems({
+  pathname,
+  items,
+  isGlobalAdmin,
+}: {
+  pathname: string
+  items: NavigationItem[]
+  isGlobalAdmin?: boolean
+}) {
+  const visibleItems = items.filter((item) => !item.globalOnly || isGlobalAdmin)
+
   return (
     <ul className="flex flex-1 flex-col gap-y-2">
-      {items.map((item) => {
+      {visibleItems.map((item) => {
         const Icon = item.icon
         const active =
           pathname === item.href
@@ -68,11 +78,13 @@ function AppShell({
   items,
   mainClassName = 'p-4 lg:p-8',
   subtitle,
+  isGlobalAdmin,
 }: {
   children: React.ReactNode
   items: NavigationItem[]
   mainClassName?: string
   subtitle: string
+  isGlobalAdmin?: boolean
 }) {
   const pathname = usePathname() ?? ''
 
@@ -101,7 +113,11 @@ function AppShell({
             </div>
 
             <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <NavItems pathname={pathname} items={items} />
+              <NavItems
+                pathname={pathname}
+                items={items}
+                isGlobalAdmin={isGlobalAdmin}
+              />
 
               <Button
                 variant="ghost"
@@ -123,8 +139,22 @@ function AppShell({
   )
 }
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
-  return <AppShell items={adminNavigation} subtitle="Painel administrativo">{children}</AppShell>
+export function AdminShell({
+  children,
+  isGlobalAdmin,
+}: {
+  children: React.ReactNode
+  isGlobalAdmin: boolean
+}) {
+  return (
+    <AppShell
+      items={adminNavigation}
+      subtitle="Painel administrativo"
+      isGlobalAdmin={isGlobalAdmin}
+    >
+      {children}
+    </AppShell>
+  )
 }
 
 export function MechanicShell({ children }: { children: React.ReactNode }) {

@@ -18,6 +18,7 @@ import { RefuelingDialog } from '@/components/refuelings/refueling-dialog'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, dateTime, number } from '@/lib/format'
 import {
   fuelTypes,
@@ -95,6 +96,10 @@ export default function RefuelingsPage() {
       return matchesSearch && matchesFuel && matchesFinancial && matchesStart && matchesEnd
     })
   }, [endDate, financialStatus, fuelType, refuelings, search, startDate])
+  const refuelingPagination = useTablePagination(
+    filteredRefuelings,
+    `${search}|${fuelType}|${financialStatus}|${startDate}|${endDate}`,
+  )
 
   const metrics = useMemo(() => {
     const totalLiters = refuelings.reduce((sum, item) => sum + item.liters, 0)
@@ -200,7 +205,7 @@ export default function RefuelingsPage() {
                     </TableCell>
                   </TableRow>
                 ) : filteredRefuelings.length ? (
-                  filteredRefuelings.map((refueling) => (
+                  refuelingPagination.pageItems.map((refueling) => (
                     <TableRow key={refueling.id}>
                       <TableCell className="whitespace-nowrap">
                         {dateTime(refueling.registeredAt)}
@@ -252,6 +257,7 @@ export default function RefuelingsPage() {
               </TableBody>
             </Table>
           )}
+          {!error && !loading ? <TablePagination {...refuelingPagination} /> : null}
         </CardContent>
       </Card>
 

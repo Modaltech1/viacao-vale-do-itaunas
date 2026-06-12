@@ -10,6 +10,11 @@ import {
   createManagedUser,
   updateManagedUser,
 } from '@/lib/managed-users'
+import {
+  createAdminUser,
+  transferAdminResource,
+  updateAdminUser,
+} from '@/lib/admin-management-service'
 import { savePart } from '@/lib/parts-service'
 import { saveExpense } from '@/lib/expenses-service'
 import { interactWithPending } from '@/lib/pendings-service'
@@ -133,6 +138,157 @@ test('criação e atualização de usuário propagam papel e dados do perfil', a
       name === 'auth.updateUserById' && payload.app_metadata.papel === 'mecanico'
     )),
     true,
+  )
+})
+
+test('criação de administrador propaga nível ao Auth e ao perfil', async () => {
+  const service = profileUpdateService()
+
+  await createAdminUser(service, 'admin-global', {
+    name: 'Gestor de ônibus',
+    email: 'onibus@example.com',
+    password: 'secret123',
+    phone: '',
+    active: true,
+    level: 'restrito',
+  })
+
+  const authCall = service.calls.find(([name]) => name === 'auth.createUser')
+  const profileCall = service.calls.find(([name]) => name === 'profile.update')
+  assert.equal(authCall[1].app_metadata.papel, 'admin')
+  assert.equal(authCall[1].app_metadata.nivel_admin, 'restrito')
+  assert.equal(profileCall[2].nivel_admin, 'restrito')
+})
+
+test('administrador global não pode restringir o próprio acesso', async () => {
+  await assert.rejects(
+    updateAdminUser({}, 'admin-global', 'admin-global', {
+      name: 'Administrador',
+      email: 'admin@example.com',
+      password: '',
+      phone: '',
+      active: true,
+      level: 'restrito',
+    }),
+    /próprio acesso global/,
+  )
+})
+
+function transferService({ linkedOwnerId = null } = {}) {
+  const calls = []
+
+  return {
+    calls,
+    from(table) {
+      if (table === 'perfis') {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  eq() {
+                    return {
+                      eq() {
+                        return {
+                          async maybeSingle() {
+                            return { data: { id: 'admin-b' }, error: null }
+                          },
+                        }
+                      },
+                    }
+                  },
+                }
+              },
+            }
+          },
+        }
+      }
+
+      if (table === 'veiculo_motoristas') {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  eq() {
+                    return {
+                      async is() {
+                        return {
+                          data: linkedOwnerId
+                            ? [{
+                                motorista_id: 'driver-1',
+                                motoristas: { admin_responsavel_id: linkedOwnerId },
+                              }]
+                            : [],
+                          error: null,
+                        }
+                      },
+                    }
+                  },
+                }
+              },
+            }
+          },
+        }
+      }
+
+      if (table === 'veiculos') {
+        return {
+          update(payload) {
+            calls.push(['vehicle.update', payload])
+            return {
+              eq() {
+                return {
+                  is() {
+                    return {
+                      select() {
+                        return {
+                          async single() {
+                            return { data: { id: 'vehicle-1' }, error: null }
+                          },
+                        }
+                      },
+                    }
+                  },
+                }
+              },
+            }
+          },
+        }
+      }
+
+      throw new Error(`Tabela inesperada: ${table}`)
+    },
+  }
+}
+
+test('transferência de veículo preserva consistência com motoristas ativos', async () => {
+  const service = transferService()
+  await transferAdminResource(
+    service,
+    'admin-global',
+    'vehicle',
+    'vehicle-1',
+    'admin-b',
+  )
+
+  assert.deepEqual(service.calls[0], [
+    'vehicle.update',
+    {
+      admin_responsavel_id: 'admin-b',
+      atualizado_por: 'admin-global',
+    },
+  ])
+
+  await assert.rejects(
+    transferAdminResource(
+      transferService({ linkedOwnerId: 'admin-a' }),
+      'admin-global',
+      'vehicle',
+      'vehicle-1',
+      'admin-b',
+    ),
+    /Transfira primeiro os motoristas ativos/,
   )
 })
 

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { normalizeOptionalText } from '@/lib/driver-utils'
 import { getDriverDetails, listDriverVehicleOptions } from '@/lib/drivers-repository'
 import { managedUserErrorResponse, updateManagedUser } from '@/lib/managed-users'
+import {
+  assertAdminDriverAccess,
+  assertAdminVehicleAccess,
+} from '@/lib/admin-scope-server'
 import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
 import type { DriverProfessionalStatus } from '@/types/driver'
 
@@ -73,6 +77,11 @@ export async function PATCH(
   const service = createSupabaseServiceClient()
 
   try {
+    await assertAdminDriverAccess(auth.supabase, auth.admin, id)
+    if (vehicleId) {
+      await assertAdminVehicleAccess(auth.supabase, auth.admin, vehicleId)
+    }
+
     const { data: currentDriver, error: currentDriverError } = await service
       .from('motoristas')
       .select('id,perfil_id')

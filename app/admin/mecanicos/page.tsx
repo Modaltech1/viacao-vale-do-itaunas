@@ -19,6 +19,7 @@ import { MechanicDialog } from '@/components/mechanics/mechanic-dialog'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl } from '@/lib/format'
 import type { MechanicListItem } from '@/types/mechanic'
 
@@ -74,6 +75,10 @@ export default function MechanicsPage() {
       return matchesSearch && matchesStatus && matchesSpecialty
     })
   }, [mechanics, search, specialty, status])
+  const mechanicPagination = useTablePagination(
+    filteredMechanics,
+    `${search}|${status}|${specialty}`,
+  )
 
   return (
     <>
@@ -158,7 +163,7 @@ export default function MechanicsPage() {
                     </TableCell>
                   </TableRow>
                 ) : filteredMechanics.length ? (
-                  filteredMechanics.map((mechanic) => (
+                  mechanicPagination.pageItems.map((mechanic) => (
                     <TableRow key={mechanic.id}>
                       <TableCell>
                         <p className="font-semibold">{mechanic.name}</p>
@@ -203,6 +208,7 @@ export default function MechanicsPage() {
               </TableBody>
             </Table>
           )}
+          {!error && !loading ? <TablePagination {...mechanicPagination} /> : null}
         </CardContent>
       </Card>
 

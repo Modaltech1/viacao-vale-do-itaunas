@@ -3,6 +3,7 @@ import 'server-only'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
+import { createAdminAccess } from '@/lib/admin-scope'
 
 function getSupabaseConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -61,15 +62,35 @@ export async function requireAdmin() {
 
   const { data: profile } = await supabase
     .from('perfis')
-    .select('papel, ativo')
+    .select('papel, ativo, nivel_admin')
     .eq('id', user.id)
-    .single<{ papel: string; ativo: boolean }>()
+    .single<{ papel: string; ativo: boolean; nivel_admin: string | null }>()
 
   if (!profile || !profile.ativo || profile.papel !== 'admin') {
     return { ok: false as const, status: 403, error: 'Acesso permitido apenas para administradores.' }
   }
 
-  return { ok: true as const, user, supabase }
+  return {
+    ok: true as const,
+    user,
+    supabase,
+    admin: createAdminAccess(user.id, profile.nivel_admin),
+  }
+}
+
+export async function requireGlobalAdmin() {
+  const auth = await requireAdmin()
+  if (!auth.ok) return auth
+
+  if (!auth.admin.isGlobal) {
+    return {
+      ok: false as const,
+      status: 403,
+      error: 'Acesso permitido apenas para administradores globais.',
+    }
+  }
+
+  return auth
 }
 
 export async function requireDriver() {

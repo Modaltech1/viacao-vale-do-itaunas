@@ -3,6 +3,12 @@ import test from 'node:test'
 
 import { canAccessPath, getRoleHome, isUserRole } from '@/lib/auth'
 import {
+  canAccessAdminOwnedRecord,
+  createAdminAccess,
+  resolveAdminOwnerId,
+} from '@/lib/admin-scope'
+import { parseAdminPayload } from '@/lib/admin-management-service'
+import {
   getDriverLicenseStatus,
   normalizeOptionalText,
   toNumber,
@@ -48,6 +54,50 @@ test('autorização direciona e restringe cada papel', () => {
   assert.equal(canAccessPath('motorista', '/admin/veiculos'), false)
   assert.equal(canAccessPath('mecanico', '/mechanic/manutencoes/1'), true)
   assert.equal(canAccessPath('motorista', '/driver'), true)
+})
+
+test('escopo administrativo diferencia acesso global e responsabilidade direta', () => {
+  const global = createAdminAccess('admin-global', 'global')
+  const restricted = createAdminAccess('admin-a', 'restrito')
+
+  assert.equal(global.isGlobal, true)
+  assert.equal(restricted.isGlobal, false)
+  assert.equal(canAccessAdminOwnedRecord(global, 'admin-b'), true)
+  assert.equal(canAccessAdminOwnedRecord(restricted, 'admin-a'), true)
+  assert.equal(canAccessAdminOwnedRecord(restricted, 'admin-b'), false)
+  assert.equal(resolveAdminOwnerId(restricted, 'admin-b'), 'admin-a')
+  assert.equal(resolveAdminOwnerId(global, 'admin-b'), 'admin-b')
+  assert.equal(resolveAdminOwnerId(global), 'admin-global')
+})
+
+test('cadastro administrativo exige nível e credenciais válidas', () => {
+  assert.deepEqual(parseAdminPayload({
+    name: 'Gestor de caminhões',
+    email: 'GESTOR@example.com',
+    password: 'secret123',
+    phone: '27999999999',
+    level: 'restrito',
+  }), {
+    name: 'Gestor de caminhões',
+    email: 'gestor@example.com',
+    password: 'secret123',
+    phone: '27999999999',
+    active: true,
+    level: 'restrito',
+  })
+
+  throwsMessage(() => parseAdminPayload({
+    name: 'Gestor',
+    email: 'gestor@example.com',
+    password: '123',
+    level: 'restrito',
+  }), 'pelo menos 6 caracteres')
+  throwsMessage(() => parseAdminPayload({
+    name: 'Gestor',
+    email: 'gestor@example.com',
+    password: 'secret123',
+    level: 'super',
+  }), 'Nível administrativo inválido')
 })
 
 test('utilitários normalizam texto e números sem propagar NaN', () => {

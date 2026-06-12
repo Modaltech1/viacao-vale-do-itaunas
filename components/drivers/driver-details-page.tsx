@@ -25,6 +25,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { MetricCard } from '@/components/shared/metric-card'
 import { Section } from '@/components/shared/section'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, dateTime, maskCpf, number } from '@/lib/format'
 import type { DriverDetails, DriverVehicleOption } from '@/types/driver'
 
@@ -73,6 +74,10 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
   useEffect(() => {
     void loadDriver()
   }, [loadDriver])
+
+  const tripPagination = useTablePagination(driver?.trips ?? [])
+  const refuelingPagination = useTablePagination(driver?.refuelings ?? [])
+  const expensePagination = useTablePagination(driver?.expenses ?? [])
 
   if (loading) {
     return (
@@ -212,7 +217,7 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {driver.trips.length ? driver.trips.map((trip) => (
+                {driver.trips.length ? tripPagination.pageItems.map((trip) => (
                   <TableRow key={trip.id}>
                     <TableCell>{trip.origin} → {trip.destination}</TableCell>
                     <TableCell>{trip.vehicle}</TableCell>
@@ -226,6 +231,7 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
                 )}
               </TableBody>
             </Table>
+            <TablePagination {...tripPagination} />
           </Section>
         </TabsContent>
 
@@ -243,7 +249,7 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {driver.refuelings.length ? driver.refuelings.map((refueling) => (
+                {driver.refuelings.length ? refuelingPagination.pageItems.map((refueling) => (
                   <TableRow key={refueling.id}>
                     <TableCell>{dateTime(refueling.registeredAt)}</TableCell>
                     <TableCell>{refueling.vehicle}</TableCell>
@@ -257,6 +263,7 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
                 )}
               </TableBody>
             </Table>
+            <TablePagination {...refuelingPagination} />
           </Section>
         </TabsContent>
 
@@ -273,7 +280,7 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {driver.expenses.length ? driver.expenses.map((expense) => (
+                {driver.expenses.length ? expensePagination.pageItems.map((expense) => (
                   <TableRow key={expense.id}>
                     <TableCell>{dateTime(expense.registeredAt)}</TableCell>
                     <TableCell>{expense.vehicle}</TableCell>
@@ -286,6 +293,7 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
                 )}
               </TableBody>
             </Table>
+            <TablePagination {...expensePagination} />
           </Section>
         </TabsContent>
       </Tabs>

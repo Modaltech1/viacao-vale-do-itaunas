@@ -55,6 +55,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { ProgressBar } from '@/components/shared/progress-bar'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, number } from '@/lib/format'
 import type { ReportData, ReportDelta, ReportInsight } from '@/types/report'
 
@@ -136,6 +137,17 @@ export function ExecutiveReportsPage() {
   useEffect(() => {
     void loadReport()
   }, [loadReport])
+
+  const reportResetKey = [
+    appliedFilters.startDate,
+    appliedFilters.endDate,
+    appliedFilters.vehicleId,
+    appliedFilters.driverId,
+    appliedFilters.serviceId,
+    appliedFilters.maintenanceType,
+  ].join('|')
+  const driverPagination = useTablePagination(report?.drivers ?? [], reportResetKey)
+  const routePagination = useTablePagination(report?.routes ?? [], reportResetKey)
 
   function selectPreset(preset: string) {
     if (preset === 'custom') {
@@ -466,7 +478,7 @@ export function ExecutiveReportsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {report.drivers.length ? report.drivers.map((driver) => (
+                      {report.drivers.length ? driverPagination.pageItems.map((driver) => (
                         <TableRow key={driver.id}>
                           <TableCell>
                             <Link className="font-semibold text-primary" href={`/admin/motoristas/${driver.id}`}>
@@ -485,6 +497,7 @@ export function ExecutiveReportsPage() {
                       )}
                     </TableBody>
                   </Table>
+                  <TablePagination {...driverPagination} />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -637,7 +650,7 @@ export function ExecutiveReportsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {report.routes.slice(0, 8).map((route) => (
+                        {routePagination.pageItems.map((route) => (
                           <TableRow key={route.name}>
                             <TableCell className="font-medium">{route.name}</TableCell>
                             <TableCell>{route.trips}</TableCell>
@@ -651,6 +664,7 @@ export function ExecutiveReportsPage() {
                         ) : null}
                       </TableBody>
                     </Table>
+                    <TablePagination {...routePagination} />
                   </CardContent>
                 </Card>
               </div>

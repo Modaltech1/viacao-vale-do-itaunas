@@ -397,6 +397,13 @@ export async function renewChangedVehicleDocuments(
 export function vehicleErrorResponse(error: unknown, fallback: string, status = 400) {
   const message = error instanceof Error ? error.message : fallback
   const normalized = message.toLowerCase()
+  const explicitStatus =
+    typeof error === 'object'
+    && error !== null
+    && 'status' in error
+    && typeof error.status === 'number'
+      ? error.status
+      : null
 
   if (normalized.includes('duplicate') || normalized.includes('veiculos_placa_normalizada_uniq')) {
     return NextResponse.json({ error: 'Já existe um veículo cadastrado com essa placa.' }, { status: 409 })
@@ -409,5 +416,5 @@ export function vehicleErrorResponse(error: unknown, fallback: string, status = 
     )
   }
 
-  return NextResponse.json({ error: message || fallback }, { status })
+  return NextResponse.json({ error: message || fallback }, { status: explicitStatus ?? status })
 }

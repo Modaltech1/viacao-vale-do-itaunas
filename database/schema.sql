@@ -83,13 +83,18 @@ create table if not exists public.perfis (
   email text,
   telefone text,
   papel text not null default 'motorista',
+  nivel_admin text,
   ativo boolean not null default true,
   avatar_url text,
   criado_em timestamptz not null default now(),
   atualizado_em timestamptz not null default now(),
   criado_por uuid references public.perfis(id) on delete set null,
   atualizado_por uuid references public.perfis(id) on delete set null,
-  constraint perfis_papel_check check (papel in ('admin', 'motorista', 'mecanico'))
+  constraint perfis_papel_check check (papel in ('admin', 'motorista', 'mecanico')),
+  constraint perfis_nivel_admin_check check (
+    (papel = 'admin' and nivel_admin in ('global', 'restrito'))
+    or (papel <> 'admin' and nivel_admin is null)
+  )
 );
 
 comment on table public.perfis is 'Autorização e dados comuns dos usuários autenticados. A identidade real fica em auth.users.';
@@ -102,17 +107,33 @@ language plpgsql
 security definer
 set search_path = public, auth, pg_temp
 as $$
+declare
+  v_papel text;
+  v_nivel_admin text;
 begin
-  insert into public.perfis (id, nome, email, papel, ativo)
+  v_papel := case
+    when new.raw_app_meta_data ->> 'papel' in ('admin', 'motorista', 'mecanico')
+      then new.raw_app_meta_data ->> 'papel'
+    else 'motorista'
+  end;
+
+  v_nivel_admin := case
+    when v_papel = 'admin'
+      then case
+        when new.raw_app_meta_data ->> 'nivel_admin' in ('global', 'restrito')
+          then new.raw_app_meta_data ->> 'nivel_admin'
+        else 'restrito'
+      end
+    else null
+  end;
+
+  insert into public.perfis (id, nome, email, papel, nivel_admin, ativo)
   values (
     new.id,
     coalesce(new.raw_user_meta_data ->> 'nome', split_part(new.email, '@', 1), 'Usuário'),
     new.email,
-    case
-      when new.raw_app_meta_data ->> 'papel' in ('admin', 'motorista', 'mecanico')
-        then new.raw_app_meta_data ->> 'papel'
-      else 'motorista'
-    end,
+    v_papel,
+    v_nivel_admin,
     true
   )
   on conflict (id) do update set
@@ -164,6 +185,39 @@ as $$
   )
 $$;
 
+create or replace function public.eh_admin_global()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1
+    from public.perfis p
+    where p.id = auth.uid()
+      and p.ativo = true
+      and p.papel = 'admin'
+      and p.nivel_admin = 'global'
+  )
+$$;
+
+create or replace function public.admin_pode_acessar_responsavel(
+  p_admin_responsavel_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select public.eh_admin()
+    and (
+      public.eh_admin_global()
+      or p_admin_responsavel_id = auth.uid()
+    )
+$$;
+
 create or replace function public.eh_motorista()
 returns boolean
 language sql
@@ -196,6 +250,7 @@ $$;
 create table if not exists public.motoristas (
   id uuid primary key default gen_random_uuid(),
   perfil_id uuid unique references public.perfis(id) on delete set null,
+  admin_responsavel_id uuid references public.perfis(id) on delete set null,
   cpf text,
   cpf_normalizado text generated always as (public.normalizar_texto(cpf)) stored,
   endereco text,
@@ -287,6 +342,7 @@ create table if not exists public.rotas (
 
 create table if not exists public.veiculos (
   id uuid primary key default gen_random_uuid(),
+  admin_responsavel_id uuid references public.perfis(id) on delete set null,
   tipo text not null,
   marca text not null,
   modelo text not null,
@@ -837,6 +893,7 @@ $$;
 -- =========================================================
 create table if not exists public.pendencias_manuais (
   id uuid primary key default gen_random_uuid(),
+  admin_responsavel_id uuid references public.perfis(id) on delete set null,
   tipo text not null default 'manual',
   severidade text not null default 'atencao',
   titulo text not null,
@@ -2901,6 +2958,217 @@ create index if not exists pendencias_manuais_status_idx on public.pendencias_ma
 create index if not exists pendencias_manuais_severidade_idx on public.pendencias_manuais(severidade);
 create index if not exists pendencia_interacoes_chave_idx on public.pendencia_interacoes(pendencia_chave);
 create index if not exists auditoria_eventos_tabela_registro_idx on public.auditoria_eventos(tabela, registro_id);
+create index if not exists veiculos_admin_responsavel_idx
+  on public.veiculos(admin_responsavel_id)
+  where excluido_em is null;
+create index if not exists motoristas_admin_responsavel_idx
+  on public.motoristas(admin_responsavel_id)
+  where excluido_em is null;
+create index if not exists pendencias_admin_responsavel_idx
+  on public.pendencias_manuais(admin_responsavel_id)
+  where status = 'aberta';
+
+create or replace function public.admin_pode_acessar_veiculo(p_veiculo_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select public.eh_admin()
+    and (
+      public.eh_admin_global()
+      or exists (
+        select 1
+        from public.veiculos v
+        where v.id = p_veiculo_id
+          and v.excluido_em is null
+          and v.admin_responsavel_id = auth.uid()
+      )
+    )
+$$;
+
+create or replace function public.admin_pode_acessar_motorista(p_motorista_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select public.eh_admin()
+    and (
+      public.eh_admin_global()
+      or exists (
+        select 1
+        from public.motoristas m
+        where m.id = p_motorista_id
+          and m.excluido_em is null
+          and m.admin_responsavel_id = auth.uid()
+      )
+    )
+$$;
+
+create or replace function public.perfil_visivel_para_usuario(p_perfil_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select
+    p_perfil_id = auth.uid()
+    or public.eh_admin_global()
+    or public.eh_mecanico()
+    or (
+      public.eh_admin()
+      and (
+        exists (
+          select 1
+          from public.motoristas m
+          where m.perfil_id = p_perfil_id
+            and m.excluido_em is null
+            and m.admin_responsavel_id = auth.uid()
+        )
+        or exists (
+          select 1
+          from public.mecanicos mec
+          where mec.perfil_id = p_perfil_id
+            and mec.excluido_em is null
+        )
+      )
+    )
+$$;
+
+create or replace function public.preparar_admin_responsavel()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_admin public.perfis%rowtype;
+begin
+  if public.eh_admin() and not public.eh_admin_global() then
+    new.admin_responsavel_id := auth.uid();
+  end if;
+
+  if new.admin_responsavel_id is not null then
+    select * into v_admin
+    from public.perfis
+    where id = new.admin_responsavel_id
+      and papel = 'admin'
+      and ativo = true;
+
+    if not found then
+      raise exception 'Administrador responsavel invalido ou inativo';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists veiculos_preparar_admin_responsavel_trg on public.veiculos;
+create trigger veiculos_preparar_admin_responsavel_trg
+  before insert or update of admin_responsavel_id on public.veiculos
+  for each row execute function public.preparar_admin_responsavel();
+
+drop trigger if exists motoristas_preparar_admin_responsavel_trg on public.motoristas;
+create trigger motoristas_preparar_admin_responsavel_trg
+  before insert or update of admin_responsavel_id on public.motoristas
+  for each row execute function public.preparar_admin_responsavel();
+
+drop trigger if exists pendencias_preparar_admin_responsavel_trg on public.pendencias_manuais;
+create trigger pendencias_preparar_admin_responsavel_trg
+  before insert or update of admin_responsavel_id on public.pendencias_manuais
+  for each row execute function public.preparar_admin_responsavel();
+
+create or replace function public.validar_escopo_vinculo_motorista()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_admin_veiculo uuid;
+  v_admin_motorista uuid;
+begin
+  select admin_responsavel_id into v_admin_veiculo
+  from public.veiculos
+  where id = new.veiculo_id;
+
+  select admin_responsavel_id into v_admin_motorista
+  from public.motoristas
+  where id = new.motorista_id;
+
+  if v_admin_veiculo is not null
+    and v_admin_motorista is not null
+    and v_admin_veiculo <> v_admin_motorista
+  then
+    raise exception 'Motorista e veiculo pertencem a administradores diferentes';
+  end if;
+
+  if public.eh_admin() and not public.eh_admin_global() then
+    if v_admin_veiculo <> auth.uid() or v_admin_motorista <> auth.uid() then
+      raise exception 'Vinculo fora da responsabilidade do administrador';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists veiculo_motoristas_validar_escopo_trg on public.veiculo_motoristas;
+create trigger veiculo_motoristas_validar_escopo_trg
+  before insert or update of veiculo_id, motorista_id on public.veiculo_motoristas
+  for each row execute function public.validar_escopo_vinculo_motorista();
+
+create or replace function public.validar_escopo_operacao_veiculo()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_motorista_id uuid;
+begin
+  if public.eh_admin()
+    and not public.admin_pode_acessar_veiculo(new.veiculo_id)
+  then
+    raise exception 'Operacao fora da responsabilidade do administrador';
+  end if;
+
+  v_motorista_id := nullif(to_jsonb(new) ->> 'motorista_id', '')::uuid;
+  if public.eh_admin()
+    and v_motorista_id is not null
+    and not public.admin_pode_acessar_motorista(v_motorista_id)
+  then
+    raise exception 'Motorista fora da responsabilidade do administrador';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists viagens_validar_escopo_trg on public.viagens;
+create trigger viagens_validar_escopo_trg
+  before insert or update of veiculo_id on public.viagens
+  for each row execute function public.validar_escopo_operacao_veiculo();
+
+drop trigger if exists abastecimentos_validar_escopo_trg on public.abastecimentos;
+create trigger abastecimentos_validar_escopo_trg
+  before insert or update of veiculo_id on public.abastecimentos
+  for each row execute function public.validar_escopo_operacao_veiculo();
+
+drop trigger if exists despesas_validar_escopo_trg on public.despesas_viagem;
+create trigger despesas_validar_escopo_trg
+  before insert or update of veiculo_id on public.despesas_viagem
+  for each row execute function public.validar_escopo_operacao_veiculo();
+
+drop trigger if exists manutencoes_validar_escopo_trg on public.manutencoes;
+create trigger manutencoes_validar_escopo_trg
+  before insert or update of veiculo_id on public.manutencoes
+  for each row execute function public.validar_escopo_operacao_veiculo();
 
 -- =========================================================
 -- 15. RLS
@@ -3197,6 +3465,597 @@ create policy auditoria_insert_admin on public.auditoria_eventos
   for insert to authenticated
   with check (public.eh_admin());
 
+-- Escopo administrativo aplicado depois das regras operacionais globais.
+-- Mecanicos, servicos, pecas e rotas permanecem compartilhados.
+do $$
+declare
+  pol record;
+begin
+  for pol in
+    select schemaname, tablename, policyname
+    from pg_policies
+    where schemaname = 'public'
+      and tablename in (
+        'perfis','motoristas','veiculos','veiculo_motoristas',
+        'veiculo_documentos','veiculo_servico_programacoes','viagens',
+        'abastecimentos','despesas_viagem','manutencoes',
+        'manutencao_mecanicos','manutencao_servicos','manutencao_pecas',
+        'despesa_pecas','pendencias_manuais','pendencia_interacoes',
+        'auditoria_eventos'
+      )
+  loop
+    execute format(
+      'drop policy if exists %I on %I.%I',
+      pol.policyname,
+      pol.schemaname,
+      pol.tablename
+    );
+  end loop;
+end $$;
+
+create policy perfis_select_por_contexto on public.perfis
+  for select to authenticated
+  using (public.perfil_visivel_para_usuario(id));
+
+create policy motoristas_select_por_contexto on public.motoristas
+  for select to authenticated
+  using (
+    public.admin_pode_acessar_responsavel(admin_responsavel_id)
+    or public.eh_mecanico()
+    or perfil_id = auth.uid()
+  );
+create policy motoristas_admin_insert_escopo on public.motoristas
+  for insert to authenticated
+  with check (public.admin_pode_acessar_responsavel(admin_responsavel_id));
+create policy motoristas_admin_update_escopo on public.motoristas
+  for update to authenticated
+  using (public.admin_pode_acessar_responsavel(admin_responsavel_id))
+  with check (public.admin_pode_acessar_responsavel(admin_responsavel_id));
+
+create policy veiculos_select_por_contexto on public.veiculos
+  for select to authenticated
+  using (
+    public.admin_pode_acessar_responsavel(admin_responsavel_id)
+    or public.eh_mecanico()
+    or exists (
+      select 1
+      from public.veiculo_motoristas vm
+      where vm.veiculo_id = veiculos.id
+        and vm.motorista_id = public.motorista_atual_id()
+        and vm.ativo = true
+        and vm.fim_em is null
+    )
+    or exists (
+      select 1
+      from public.viagens vi
+      where vi.veiculo_id = veiculos.id
+        and vi.motorista_id = public.motorista_atual_id()
+    )
+  );
+create policy veiculos_admin_insert_escopo on public.veiculos
+  for insert to authenticated
+  with check (public.admin_pode_acessar_responsavel(admin_responsavel_id));
+create policy veiculos_admin_update_escopo on public.veiculos
+  for update to authenticated
+  using (public.admin_pode_acessar_responsavel(admin_responsavel_id))
+  with check (public.admin_pode_acessar_responsavel(admin_responsavel_id));
+
+create policy veiculo_motoristas_select_por_contexto on public.veiculo_motoristas
+  for select to authenticated
+  using (
+    public.eh_mecanico()
+    or motorista_id = public.motorista_atual_id()
+    or (
+      public.admin_pode_acessar_veiculo(veiculo_id)
+      and public.admin_pode_acessar_motorista(motorista_id)
+    )
+  );
+create policy veiculo_motoristas_admin_insert_escopo on public.veiculo_motoristas
+  for insert to authenticated
+  with check (
+    public.admin_pode_acessar_veiculo(veiculo_id)
+    and public.admin_pode_acessar_motorista(motorista_id)
+  );
+create policy veiculo_motoristas_admin_update_escopo on public.veiculo_motoristas
+  for update to authenticated
+  using (
+    public.admin_pode_acessar_veiculo(veiculo_id)
+    and public.admin_pode_acessar_motorista(motorista_id)
+  )
+  with check (
+    public.admin_pode_acessar_veiculo(veiculo_id)
+    and public.admin_pode_acessar_motorista(motorista_id)
+  );
+
+create policy veiculo_documentos_select_contexto on public.veiculo_documentos
+  for select to authenticated
+  using (
+    public.admin_pode_acessar_veiculo(veiculo_id)
+    or public.eh_mecanico()
+    or exists (
+      select 1
+      from public.veiculo_motoristas vm
+      where vm.veiculo_id = veiculo_documentos.veiculo_id
+        and vm.motorista_id = public.motorista_atual_id()
+        and vm.ativo = true
+        and vm.fim_em is null
+    )
+  );
+create policy veiculo_documentos_admin_insert_escopo on public.veiculo_documentos
+  for insert to authenticated
+  with check (public.admin_pode_acessar_veiculo(veiculo_id));
+create policy veiculo_documentos_admin_update_escopo on public.veiculo_documentos
+  for update to authenticated
+  using (public.admin_pode_acessar_veiculo(veiculo_id))
+  with check (public.admin_pode_acessar_veiculo(veiculo_id));
+
+create policy programacoes_select_contexto on public.veiculo_servico_programacoes
+  for select to authenticated
+  using (
+    public.eh_mecanico()
+    or public.admin_pode_acessar_veiculo(veiculo_id)
+  );
+create policy programacoes_insert_contexto on public.veiculo_servico_programacoes
+  for insert to authenticated
+  with check (
+    public.eh_mecanico()
+    or public.admin_pode_acessar_veiculo(veiculo_id)
+  );
+create policy programacoes_update_contexto on public.veiculo_servico_programacoes
+  for update to authenticated
+  using (
+    public.eh_mecanico()
+    or public.admin_pode_acessar_veiculo(veiculo_id)
+  )
+  with check (
+    public.eh_mecanico()
+    or public.admin_pode_acessar_veiculo(veiculo_id)
+  );
+
+create policy viagens_select_contexto on public.viagens
+  for select to authenticated
+  using (
+    motorista_id = public.motorista_atual_id()
+    or (
+      public.admin_pode_acessar_veiculo(veiculo_id)
+      and public.admin_pode_acessar_motorista(motorista_id)
+    )
+  );
+create policy viagens_admin_insert_escopo on public.viagens
+  for insert to authenticated
+  with check (
+    public.admin_pode_acessar_veiculo(veiculo_id)
+    and public.admin_pode_acessar_motorista(motorista_id)
+  );
+create policy viagens_admin_update_escopo on public.viagens
+  for update to authenticated
+  using (public.admin_pode_acessar_veiculo(veiculo_id))
+  with check (
+    public.admin_pode_acessar_veiculo(veiculo_id)
+    and public.admin_pode_acessar_motorista(motorista_id)
+  );
+
+create policy abastecimentos_select_contexto on public.abastecimentos
+  for select to authenticated
+  using (
+    motorista_id = public.motorista_atual_id()
+    or public.admin_pode_acessar_veiculo(veiculo_id)
+  );
+create policy abastecimentos_admin_insert_escopo on public.abastecimentos
+  for insert to authenticated
+  with check (
+    public.admin_pode_acessar_veiculo(veiculo_id)
+    and (
+      motorista_id is null
+      or public.admin_pode_acessar_motorista(motorista_id)
+    )
+  );
+create policy abastecimentos_admin_update_escopo on public.abastecimentos
+  for update to authenticated
+  using (public.admin_pode_acessar_veiculo(veiculo_id))
+  with check (
+    public.admin_pode_acessar_veiculo(veiculo_id)
+    and (
+      motorista_id is null
+      or public.admin_pode_acessar_motorista(motorista_id)
+    )
+  );
+
+create policy despesas_select_contexto on public.despesas_viagem
+  for select to authenticated
+  using (
+    motorista_id = public.motorista_atual_id()
+    or public.admin_pode_acessar_veiculo(veiculo_id)
+  );
+create policy despesas_admin_insert_escopo on public.despesas_viagem
+  for insert to authenticated
+  with check (
+    public.admin_pode_acessar_veiculo(veiculo_id)
+    and (
+      motorista_id is null
+      or public.admin_pode_acessar_motorista(motorista_id)
+    )
+  );
+create policy despesas_admin_update_escopo on public.despesas_viagem
+  for update to authenticated
+  using (public.admin_pode_acessar_veiculo(veiculo_id))
+  with check (
+    public.admin_pode_acessar_veiculo(veiculo_id)
+    and (
+      motorista_id is null
+      or public.admin_pode_acessar_motorista(motorista_id)
+    )
+  );
+
+create policy manutencoes_select_contexto on public.manutencoes
+  for select to authenticated
+  using (
+    public.eh_mecanico()
+    or public.admin_pode_acessar_veiculo(veiculo_id)
+  );
+create policy manutencoes_insert_contexto on public.manutencoes
+  for insert to authenticated
+  with check (
+    public.eh_mecanico()
+    or public.admin_pode_acessar_veiculo(veiculo_id)
+  );
+create policy manutencoes_update_contexto on public.manutencoes
+  for update to authenticated
+  using (
+    public.eh_mecanico()
+    or public.admin_pode_acessar_veiculo(veiculo_id)
+  )
+  with check (
+    public.eh_mecanico()
+    or public.admin_pode_acessar_veiculo(veiculo_id)
+  );
+
+create policy manutencao_mecanicos_select_contexto on public.manutencao_mecanicos
+  for select to authenticated
+  using (
+    public.eh_mecanico()
+    or exists (
+      select 1 from public.manutencoes m
+      where m.id = manutencao_id
+        and public.admin_pode_acessar_veiculo(m.veiculo_id)
+    )
+  );
+create policy manutencao_mecanicos_write_contexto on public.manutencao_mecanicos
+  for all to authenticated
+  using (
+    public.eh_mecanico()
+    or exists (
+      select 1 from public.manutencoes m
+      where m.id = manutencao_id
+        and public.admin_pode_acessar_veiculo(m.veiculo_id)
+    )
+  )
+  with check (
+    public.eh_mecanico()
+    or exists (
+      select 1 from public.manutencoes m
+      where m.id = manutencao_id
+        and public.admin_pode_acessar_veiculo(m.veiculo_id)
+    )
+  );
+
+create policy manutencao_servicos_select_contexto on public.manutencao_servicos
+  for select to authenticated
+  using (
+    public.eh_mecanico()
+    or exists (
+      select 1 from public.manutencoes m
+      where m.id = manutencao_id
+        and public.admin_pode_acessar_veiculo(m.veiculo_id)
+    )
+  );
+create policy manutencao_servicos_write_contexto on public.manutencao_servicos
+  for all to authenticated
+  using (
+    public.eh_mecanico()
+    or exists (
+      select 1 from public.manutencoes m
+      where m.id = manutencao_id
+        and public.admin_pode_acessar_veiculo(m.veiculo_id)
+    )
+  )
+  with check (
+    public.eh_mecanico()
+    or exists (
+      select 1 from public.manutencoes m
+      where m.id = manutencao_id
+        and public.admin_pode_acessar_veiculo(m.veiculo_id)
+    )
+  );
+
+create policy manutencao_pecas_select_contexto on public.manutencao_pecas
+  for select to authenticated
+  using (
+    public.eh_mecanico()
+    or exists (
+      select 1 from public.manutencoes m
+      where m.id = manutencao_id
+        and public.admin_pode_acessar_veiculo(m.veiculo_id)
+    )
+  );
+create policy despesa_pecas_select_contexto on public.despesa_pecas
+  for select to authenticated
+  using (
+    public.eh_mecanico()
+    or exists (
+      select 1 from public.despesas_viagem d
+      where d.id = despesa_id
+        and public.admin_pode_acessar_veiculo(d.veiculo_id)
+    )
+  );
+
+create policy pendencias_manuais_select_contexto on public.pendencias_manuais
+  for select to authenticated
+  using (
+    public.eh_mecanico()
+    or motorista_id = public.motorista_atual_id()
+    or public.admin_pode_acessar_responsavel(admin_responsavel_id)
+    or (
+      veiculo_id is not null
+      and public.admin_pode_acessar_veiculo(veiculo_id)
+    )
+    or (
+      motorista_id is not null
+      and public.admin_pode_acessar_motorista(motorista_id)
+    )
+  );
+create policy pendencias_manuais_insert_contexto on public.pendencias_manuais
+  for insert to authenticated
+  with check (
+    public.eh_mecanico()
+    or public.admin_pode_acessar_responsavel(admin_responsavel_id)
+    or (
+      veiculo_id is not null
+      and public.admin_pode_acessar_veiculo(veiculo_id)
+    )
+    or (
+      motorista_id is not null
+      and public.admin_pode_acessar_motorista(motorista_id)
+    )
+  );
+create policy pendencias_manuais_update_contexto on public.pendencias_manuais
+  for update to authenticated
+  using (
+    public.eh_mecanico()
+    or public.admin_pode_acessar_responsavel(admin_responsavel_id)
+    or (
+      veiculo_id is not null
+      and public.admin_pode_acessar_veiculo(veiculo_id)
+    )
+    or (
+      motorista_id is not null
+      and public.admin_pode_acessar_motorista(motorista_id)
+    )
+  )
+  with check (
+    public.eh_mecanico()
+    or public.admin_pode_acessar_responsavel(admin_responsavel_id)
+    or (
+      veiculo_id is not null
+      and public.admin_pode_acessar_veiculo(veiculo_id)
+    )
+    or (
+      motorista_id is not null
+      and public.admin_pode_acessar_motorista(motorista_id)
+    )
+  );
+
+create policy pendencia_interacoes_select_contexto on public.pendencia_interacoes
+  for select to authenticated
+  using (
+    public.eh_admin_global()
+    or public.eh_mecanico()
+    or criado_por = auth.uid()
+  );
+create policy pendencia_interacoes_insert_contexto on public.pendencia_interacoes
+  for insert to authenticated
+  with check (
+    public.perfil_ativo()
+    and criado_por = auth.uid()
+  );
+create policy auditoria_select_global on public.auditoria_eventos
+  for select to authenticated
+  using (public.eh_admin_global());
+create policy auditoria_insert_admin on public.auditoria_eventos
+  for insert to authenticated
+  with check (public.eh_admin());
+
+create or replace function public.fn_dashboard_admin(
+  p_inicio date default null,
+  p_fim date default null,
+  p_veiculo_id uuid default null,
+  p_motorista_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_inicio timestamptz := coalesce(
+    p_inicio::timestamptz,
+    date_trunc('month', now())
+  );
+  v_fim timestamptz := coalesce(
+    p_fim::timestamptz + interval '1 day',
+    now() + interval '1 day'
+  );
+  result jsonb;
+begin
+  if not public.eh_admin() then
+    raise exception 'Somente admin pode consultar dashboard administrativo';
+  end if;
+
+  with veiculos_permitidos as (
+    select v.id
+    from public.veiculos v
+    where v.excluido_em is null
+      and (
+        public.eh_admin_global()
+        or v.admin_responsavel_id = auth.uid()
+      )
+  ), motoristas_permitidos as (
+    select m.id
+    from public.motoristas m
+    where m.excluido_em is null
+      and (
+        public.eh_admin_global()
+        or m.admin_responsavel_id = auth.uid()
+      )
+  ), viagens_filtradas as (
+    select v.*
+    from public.viagens v
+    join veiculos_permitidos vp on vp.id = v.veiculo_id
+    where v.saiu_em >= v_inicio
+      and v.saiu_em < v_fim
+      and (p_veiculo_id is null or v.veiculo_id = p_veiculo_id)
+      and (p_motorista_id is null or v.motorista_id = p_motorista_id)
+  ), abastecimentos_filtrados as (
+    select a.*
+    from public.abastecimentos a
+    join veiculos_permitidos vp on vp.id = a.veiculo_id
+    where a.registrado_em >= v_inicio
+      and a.registrado_em < v_fim
+      and a.cancelado_em is null
+      and (p_veiculo_id is null or a.veiculo_id = p_veiculo_id)
+      and (p_motorista_id is null or a.motorista_id = p_motorista_id)
+  ), despesas_filtradas as (
+    select d.*
+    from public.despesas_viagem d
+    join veiculos_permitidos vp on vp.id = d.veiculo_id
+    where d.registrado_em >= v_inicio
+      and d.registrado_em < v_fim
+      and d.cancelado_em is null
+      and (p_veiculo_id is null or d.veiculo_id = p_veiculo_id)
+      and (p_motorista_id is null or d.motorista_id = p_motorista_id)
+  ), manutencoes_filtradas as (
+    select
+      m.*,
+      coalesce(servicos.valor_servicos, 0)
+      + coalesce(itens.valor_pecas, 0) as valor_realizado
+    from public.manutencoes m
+    join veiculos_permitidos vp on vp.id = m.veiculo_id
+    left join lateral (
+      select sum(ms.valor_aplicado) as valor_servicos
+      from public.manutencao_servicos ms
+      where ms.manutencao_id = m.id
+    ) servicos on true
+    left join lateral (
+      select sum(mp.valor_total) as valor_pecas
+      from public.manutencao_pecas mp
+      where mp.manutencao_id = m.id
+    ) itens on true
+    where m.aberto_em >= v_inicio
+      and m.aberto_em < v_fim
+      and m.status <> 'cancelada'
+      and (p_veiculo_id is null or m.veiculo_id = p_veiculo_id)
+  ), pendencias_criticas as (
+    select count(*) as total
+    from public.vw_pendencias_operacionais p
+    where p.severidade = 'critica'
+      and p.status = 'aberta'
+      and (
+        public.eh_admin_global()
+        or p.veiculo_id in (select id from veiculos_permitidos)
+        or p.motorista_id in (select id from motoristas_permitidos)
+        or p.chave in (
+          select 'manual:' || pm.id::text
+          from public.pendencias_manuais pm
+          where pm.admin_responsavel_id = auth.uid()
+        )
+      )
+  )
+  select jsonb_build_object(
+    'total_veiculos', (select count(*) from veiculos_permitidos),
+    'veiculos_em_manutencao', (
+      select count(*)
+      from public.veiculos v
+      join veiculos_permitidos vp on vp.id = v.id
+      where v.status_operacional = 'em_manutencao'
+    ),
+    'viagens_em_andamento', (
+      select count(*)
+      from public.viagens v
+      join veiculos_permitidos vp on vp.id = v.veiculo_id
+      where v.status = 'em_andamento'
+    ),
+    'pendencias_criticas', (select total from pendencias_criticas),
+    'km_rodados', coalesce((
+      select sum(km_final - km_inicial)
+      from viagens_filtradas
+      where status = 'concluida'
+    ), 0),
+    'litros_abastecidos', coalesce((
+      select sum(litros)
+      from abastecimentos_filtrados
+      where tipo_combustivel <> 'ARLA'
+    ), 0),
+    'consumo_medio', case
+      when coalesce((
+        select sum(litros)
+        from abastecimentos_filtrados
+        where tipo_combustivel <> 'ARLA'
+      ), 0) > 0
+      then round(((
+        select coalesce(sum(km_final - km_inicial), 0)
+        from viagens_filtradas
+        where status = 'concluida'
+      ) / nullif((
+        select coalesce(sum(litros), 0)
+        from abastecimentos_filtrados
+        where tipo_combustivel <> 'ARLA'
+      ), 0))::numeric, 2)
+      else null
+    end,
+    'gasto_abastecimento', coalesce((
+      select sum(coalesce(valor_total, 0))
+      from abastecimentos_filtrados
+    ), 0),
+    'gasto_manutencao', coalesce((
+      select sum(valor_realizado)
+      from manutencoes_filtradas
+    ), 0),
+    'gasto_despesas', coalesce((
+      select sum(valor)
+      from despesas_filtradas
+    ), 0),
+    'gasto_total',
+      coalesce((
+        select sum(coalesce(valor_total, 0))
+        from abastecimentos_filtrados
+      ), 0)
+      + coalesce((
+        select sum(valor_realizado)
+        from manutencoes_filtradas
+      ), 0)
+      + coalesce((
+        select sum(valor)
+        from despesas_filtradas
+      ), 0),
+    'pecas_estoque_baixo', (
+      select count(*)
+      from public.pecas
+      where ativo
+        and excluido_em is null
+        and quantidade_estoque <= estoque_minimo
+    ),
+    'valor_estoque_pecas', (
+      select coalesce(sum(quantidade_estoque * valor_unitario), 0)
+      from public.pecas
+      where ativo
+        and excluido_em is null
+    )
+  ) into result;
+
+  return result;
+end;
+$$;
+
 -- =========================================================
 -- 16. GRANTS
 -- =========================================================
@@ -3217,6 +4076,10 @@ revoke execute on function public.fn_editar_manutencao_concluida(uuid,uuid,text,
 revoke execute on function public.fn_cancelar_manutencao(uuid,text) from public, anon;
 revoke execute on function public.fn_renovar_documento_veiculo(uuid, text, date, date, text, text) from public, anon;
 revoke execute on function public.fn_dashboard_admin(date, date, uuid, uuid) from public, anon;
+revoke execute on function public.eh_admin_global() from public, anon;
+revoke execute on function public.admin_pode_acessar_responsavel(uuid) from public, anon;
+revoke execute on function public.admin_pode_acessar_veiculo(uuid) from public, anon;
+revoke execute on function public.admin_pode_acessar_motorista(uuid) from public, anon;
 
 grant execute on function public.fn_iniciar_viagem(uuid, uuid, uuid, text, text, timestamptz, numeric, text, boolean) to authenticated;
 grant execute on function public.fn_concluir_viagem(uuid, numeric, timestamptz, text) to authenticated;
@@ -3231,6 +4094,10 @@ grant execute on function public.fn_editar_manutencao_concluida(uuid,uuid,text,t
 grant execute on function public.fn_cancelar_manutencao(uuid,text) to authenticated;
 grant execute on function public.fn_renovar_documento_veiculo(uuid, text, date, date, text, text) to authenticated;
 grant execute on function public.fn_dashboard_admin(date, date, uuid, uuid) to authenticated;
+grant execute on function public.eh_admin_global() to authenticated;
+grant execute on function public.admin_pode_acessar_responsavel(uuid) to authenticated;
+grant execute on function public.admin_pode_acessar_veiculo(uuid) to authenticated;
+grant execute on function public.admin_pode_acessar_motorista(uuid) to authenticated;
 
 -- =========================================================
 -- 17. DADOS BASE

@@ -16,6 +16,7 @@ import { ClipboardList, Repeat, Wrench } from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, number } from '@/lib/format'
 import {
   serviceCategories,
@@ -76,6 +77,10 @@ export default function MechanicServicesPage() {
       )
     })
   }, [category, maintenanceType, search, services])
+  const servicePagination = useTablePagination(
+    filteredServices,
+    `${search}|${category}|${maintenanceType}`,
+  )
 
   const recurringServices = services.filter(
     (service) => service.periodicityType !== 'nenhuma',
@@ -159,7 +164,7 @@ export default function MechanicServicesPage() {
                     </TableCell>
                   </TableRow>
                 ) : filteredServices.length ? (
-                  filteredServices.map((service) => (
+                  servicePagination.pageItems.map((service) => (
                     <TableRow key={service.id}>
                       <TableCell>
                         <p className="font-semibold">{service.name}</p>
@@ -189,6 +194,7 @@ export default function MechanicServicesPage() {
               </TableBody>
             </Table>
           )}
+          {!error && !loading ? <TablePagination {...servicePagination} /> : null}
         </CardContent>
       </Card>
     </>

@@ -24,6 +24,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { MetricCard } from '@/components/shared/metric-card'
 import { Section } from '@/components/shared/section'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { VehicleDialog, VehicleDriversDialog } from '@/components/vehicles/vehicle-dialog'
 import { brl, dateTime, number } from '@/lib/format'
 import { vehicleStatusLabel } from '@/lib/status'
@@ -83,6 +84,11 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
   useEffect(() => {
     void loadVehicle()
   }, [loadVehicle])
+
+  const tripPagination = useTablePagination(vehicle?.trips ?? [])
+  const refuelingPagination = useTablePagination(vehicle?.refuelings ?? [])
+  const maintenancePagination = useTablePagination(vehicle?.maintenances ?? [])
+  const servicePagination = useTablePagination(vehicle?.serviceSchedules ?? [])
 
   if (loading) {
     return (
@@ -295,7 +301,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {vehicle.trips.length ? vehicle.trips.map((trip) => (
+                {vehicle.trips.length ? tripPagination.pageItems.map((trip) => (
                   <TableRow key={trip.id}>
                     <TableCell>{trip.origin} → {trip.destination}</TableCell>
                     <TableCell>{trip.driverName}</TableCell>
@@ -316,6 +322,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                 )}
               </TableBody>
             </Table>
+            <TablePagination {...tripPagination} />
             </Section>
           </TabsContent>
         ) : null}
@@ -334,7 +341,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {vehicle.refuelings.length ? vehicle.refuelings.map((refueling) => (
+                {vehicle.refuelings.length ? refuelingPagination.pageItems.map((refueling) => (
                   <TableRow key={refueling.id}>
                     <TableCell>{dateTime(refueling.registeredAt)}</TableCell>
                     <TableCell>{number(refueling.registeredKm)}</TableCell>
@@ -349,6 +356,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                 )}
               </TableBody>
             </Table>
+            <TablePagination {...refuelingPagination} />
             </Section>
           </TabsContent>
         ) : null}
@@ -369,7 +377,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {vehicle.maintenances.length ? vehicle.maintenances.map((maintenance) => (
+                {vehicle.maintenances.length ? maintenancePagination.pageItems.map((maintenance) => (
                   <TableRow key={maintenance.id}>
                     <TableCell>{dateTime(maintenance.openedAt)}</TableCell>
                     <TableCell>
@@ -395,6 +403,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                 )}
               </TableBody>
             </Table>
+            <TablePagination {...maintenancePagination} />
           </Section>
         </TabsContent>
 
@@ -414,7 +423,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {vehicle.serviceSchedules.length ? vehicle.serviceSchedules.map((schedule) => (
+                {vehicle.serviceSchedules.length ? servicePagination.pageItems.map((schedule) => (
                   <TableRow key={schedule.id}>
                     <TableCell className="font-semibold">{schedule.serviceName}</TableCell>
                     <TableCell>{schedule.category}</TableCell>
@@ -439,6 +448,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                 )}
               </TableBody>
             </Table>
+            <TablePagination {...servicePagination} />
           </Section>
         </TabsContent>
 

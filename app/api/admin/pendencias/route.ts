@@ -8,6 +8,7 @@ import {
   parsePendingPayload,
   pendingErrorResponse,
 } from '@/lib/pendings-service'
+import { resolveAdminOwnerId } from '@/lib/admin-scope'
 import {
   requireAdmin,
 } from '@/lib/supabase-server'
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
       auth.supabase,
       payload,
       auth.user.id,
+      resolveAdminOwnerId(auth.admin),
     )
     return NextResponse.json({ ok: true, id }, { status: 201 })
   } catch (error) {

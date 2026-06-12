@@ -4,6 +4,11 @@ import {
   refuelingErrorResponse,
   refuelingPayloadToDatabase,
 } from '@/lib/refuelings-service'
+import {
+  assertAdminDriverAccess,
+  assertAdminTripAccess,
+  assertAdminVehicleAccess,
+} from '@/lib/admin-scope-server'
 import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
 import { resolveTripRelation } from '@/lib/travel-operation-service'
 
@@ -42,7 +47,21 @@ export async function PATCH(
       return NextResponse.json({ error: 'Abastecimento não encontrado.' }, { status: 404 })
     }
 
+    await assertAdminVehicleAccess(auth.supabase, auth.admin, current.veiculo_id)
+    if (payload.tripId) {
+      await assertAdminTripAccess(auth.supabase, auth.admin, payload.tripId)
+    }
+
     const relation = await resolveTripRelation(service, payload.tripId)
+    await assertAdminVehicleAccess(
+      auth.supabase,
+      auth.admin,
+      relation?.vehicleId ?? payload.vehicleId,
+    )
+    const effectiveDriverId = relation?.driverId ?? payload.driverId
+    if (effectiveDriverId) {
+      await assertAdminDriverAccess(auth.supabase, auth.admin, effectiveDriverId)
+    }
 
     const { error } = await service
       .from('abastecimentos')

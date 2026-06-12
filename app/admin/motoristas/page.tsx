@@ -19,6 +19,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { number } from '@/lib/format'
 import type { DriverListItem, DriverVehicleOption } from '@/types/driver'
 
@@ -73,6 +74,10 @@ export default function DriversPage() {
       return matchesSearch && matchesStatus && matchesLicense
     })
   }, [drivers, licenseStatus, search, status])
+  const driverPagination = useTablePagination(
+    filteredDrivers,
+    `${search}|${status}|${licenseStatus}`,
+  )
 
   const totalKm = drivers.reduce((total, driver) => total + driver.totalKm, 0)
 
@@ -156,7 +161,7 @@ export default function DriversPage() {
                     </TableCell>
                   </TableRow>
                 ) : filteredDrivers.length ? (
-                  filteredDrivers.map((driver) => (
+                  driverPagination.pageItems.map((driver) => (
                     <TableRow key={driver.id}>
                       <TableCell>
                         <p className="font-semibold">{driver.name}</p>
@@ -205,6 +210,7 @@ export default function DriversPage() {
               </TableBody>
             </Table>
           )}
+          {!error && !loading ? <TablePagination {...driverPagination} /> : null}
         </CardContent>
       </Card>
 

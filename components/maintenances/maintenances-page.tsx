@@ -19,6 +19,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, dateTime, number } from '@/lib/format'
 import type {
   MaintenanceFormOptions,
@@ -103,6 +104,10 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
       return matchesSearch && matchesType && matchesStatus
     })
   }, [items, search, status, type])
+  const maintenancePagination = useTablePagination(
+    filteredItems,
+    `${search}|${type}|${status}`,
+  )
 
   const active = items.filter(
     (item) => item.status === 'aberta' || item.status === 'em_andamento',
@@ -188,7 +193,7 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
                     </TableCell>
                   </TableRow>
                 ) : filteredItems.length ? (
-                  filteredItems.map((item) => (
+                  maintenancePagination.pageItems.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>
                         <p className="font-semibold">{item.vehiclePlate}</p>
@@ -226,6 +231,7 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
               </TableBody>
             </Table>
           )}
+          {!error && !loading ? <TablePagination {...maintenancePagination} /> : null}
         </CardContent>
       </Card>
 

@@ -3,6 +3,7 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { UserRole } from '@/lib/auth'
+import type { AdminLevel } from '@/lib/admin-scope'
 
 type ManagedUserInput = {
   name: string
@@ -10,12 +11,20 @@ type ManagedUserInput = {
   password?: string
   phone: string
   active: boolean
-  role: Exclude<UserRole, 'admin'>
+  role: UserRole
+  adminLevel?: AdminLevel | null
 }
 
 export function managedUserErrorResponse(error: unknown, entity: string, fallback: string, status = 400) {
   const message = error instanceof Error ? error.message : fallback
   const normalized = message.toLowerCase()
+  const explicitStatus =
+    typeof error === 'object'
+    && error !== null
+    && 'status' in error
+    && typeof error.status === 'number'
+      ? error.status
+      : null
 
   if (normalized.includes('invalid api key')) {
     return NextResponse.json(
@@ -35,7 +44,7 @@ export function managedUserErrorResponse(error: unknown, entity: string, fallbac
     )
   }
 
-  return NextResponse.json({ error: message || fallback }, { status })
+  return NextResponse.json({ error: message || fallback }, { status: explicitStatus ?? status })
 }
 
 export async function createManagedUser(
@@ -47,7 +56,10 @@ export async function createManagedUser(
     email: input.email,
     password: input.password,
     email_confirm: true,
-    app_metadata: { papel: input.role },
+    app_metadata: {
+      papel: input.role,
+      nivel_admin: input.role === 'admin' ? input.adminLevel ?? 'restrito' : null,
+    },
     user_metadata: { nome: input.name },
   })
 
@@ -63,6 +75,7 @@ export async function createManagedUser(
       email: input.email,
       telefone: input.phone || null,
       papel: input.role,
+      nivel_admin: input.role === 'admin' ? input.adminLevel ?? 'restrito' : null,
       ativo: input.active,
       criado_por: adminId,
       atualizado_por: adminId,
@@ -87,13 +100,14 @@ export async function updateManagedUser(
 ) {
   const { data: currentProfile, error: currentProfileError } = await service
     .from('perfis')
-    .select('nome, email, telefone, papel, ativo, atualizado_por')
+    .select('nome, email, telefone, papel, nivel_admin, ativo, atualizado_por')
     .eq('id', userId)
     .single<{
       nome: string
       email: string
       telefone: string | null
       papel: UserRole
+      nivel_admin: AdminLevel | null
       ativo: boolean
       atualizado_por: string | null
     }>()
@@ -105,11 +119,14 @@ export async function updateManagedUser(
   const authPayload: {
     email: string
     password?: string
-    app_metadata: { papel: string }
+    app_metadata: { papel: string; nivel_admin: AdminLevel | null }
     user_metadata: { nome: string }
   } = {
     email: input.email,
-    app_metadata: { papel: input.role },
+    app_metadata: {
+      papel: input.role,
+      nivel_admin: input.role === 'admin' ? input.adminLevel ?? 'restrito' : null,
+    },
     user_metadata: { nome: input.name },
   }
 
@@ -122,6 +139,7 @@ export async function updateManagedUser(
       email: input.email,
       telefone: input.phone || null,
       papel: input.role,
+      nivel_admin: input.role === 'admin' ? input.adminLevel ?? 'restrito' : null,
       ativo: input.active,
       atualizado_por: adminId,
     })
