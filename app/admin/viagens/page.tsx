@@ -20,7 +20,7 @@ import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { TripDialog } from '@/components/trips/trip-dialogs'
-import { dateTime, number } from '@/lib/format'
+import { compactDateTime, formatTripDuration, number } from '@/lib/format'
 import type { TripFormOptions, TripListItem } from '@/types/trip'
 
 const emptyOptions: TripFormOptions = { drivers: [], vehicles: [] }
@@ -152,57 +152,77 @@ export default function TripsPage() {
               </Button>
             </div>
           ) : (
-            <Table>
+            <Table className="min-w-[980px] table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Rota</TableHead>
-                  <TableHead>Motorista</TableHead>
-                  <TableHead>Veículo</TableHead>
-                  <TableHead>Saída</TableHead>
-                  <TableHead>Chegada</TableHead>
-                  <TableHead>KM</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead />
+                  <TableHead className="w-[24%]">Rota</TableHead>
+                  <TableHead className="w-[14%]">Motorista</TableHead>
+                  <TableHead className="w-[16%]">Veículo</TableHead>
+                  <TableHead className="w-[19%]">Saída / chegada</TableHead>
+                  <TableHead className="w-[12%]">KM</TableHead>
+                  <TableHead className="w-[9%]">Status</TableHead>
+                  <TableHead className="w-[6%]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                       Carregando viagens...
                     </TableCell>
                   </TableRow>
                 ) : filteredTrips.length ? (
-                  tripPagination.pageItems.map((trip) => (
-                    <TableRow key={trip.id}>
-                      <TableCell>
-                        <p className="font-semibold">{trip.origin} → {trip.destination}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {trip.routeName || 'Rota informada na viagem'}
-                          {trip.temporaryVehicle ? ' · Veículo temporário' : ''}
-                        </p>
-                      </TableCell>
-                      <TableCell>{trip.driverName}</TableCell>
-                      <TableCell>{trip.vehicleLabel}</TableCell>
-                      <TableCell className="whitespace-nowrap">{dateTime(trip.startedAt)}</TableCell>
-                      <TableCell className="whitespace-nowrap">{dateTime(trip.finishedAt ?? undefined)}</TableCell>
-                      <TableCell>
-                        <p>{number(trip.initialKm)} / {trip.finalKm == null ? '—' : number(trip.finalKm)}</p>
-                        {trip.totalKm != null ? (
-                          <p className="text-xs text-muted-foreground">{number(trip.totalKm)} km rodados</p>
-                        ) : null}
-                      </TableCell>
-                      <TableCell><StatusBadge type="trip" value={trip.status} /></TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="link" asChild>
-                          <Link href={`/admin/viagens/${trip.id}`}>Detalhes →</Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  tripPagination.pageItems.map((trip) => {
+                    const [vehiclePlate, vehicleDescription = ''] = trip.vehicleLabel.split(' · ', 2)
+                    const routeLabel = `${trip.origin} → ${trip.destination}`
+
+                    return (
+                      <TableRow key={trip.id}>
+                        <TableCell className="overflow-hidden">
+                          <p className="truncate font-semibold" title={routeLabel}>{routeLabel}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {trip.routeName || 'Rota informada na viagem'}
+                            {trip.temporaryVehicle ? ' · Veículo temporário' : ''}
+                          </p>
+                        </TableCell>
+                        <TableCell className="overflow-hidden">
+                          <p className="truncate" title={trip.driverName}>{trip.driverName}</p>
+                        </TableCell>
+                        <TableCell className="overflow-hidden">
+                          <p className="truncate font-medium" title={trip.vehicleLabel}>{vehiclePlate}</p>
+                          {vehicleDescription ? (
+                            <p className="truncate text-xs text-muted-foreground" title={vehicleDescription}>
+                              {vehicleDescription}
+                            </p>
+                          ) : null}
+                        </TableCell>
+                        <TableCell>
+                          <p className="truncate tabular-nums">
+                            {compactDateTime(trip.startedAt)} / {compactDateTime(trip.finishedAt ?? undefined)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatTripDuration(trip.startedAt, trip.finishedAt)}
+                            {trip.finishedAt ? ' de viagem' : ' até agora'}
+                          </p>
+                        </TableCell>
+                        <TableCell>
+                          <p>{number(trip.initialKm)} / {trip.finalKm == null ? '—' : number(trip.finalKm)}</p>
+                          {trip.totalKm != null ? (
+                            <p className="text-xs text-muted-foreground">{number(trip.totalKm)} km rodados</p>
+                          ) : null}
+                        </TableCell>
+                        <TableCell><StatusBadge type="trip" value={trip.status} /></TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="link" size="sm" className="px-0" asChild>
+                            <Link href={`/admin/viagens/${trip.id}`}>Detalhes</Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                       Nenhuma viagem encontrada.
                     </TableCell>
                   </TableRow>

@@ -15,6 +15,11 @@ import {
 } from '@/lib/driver-utils'
 import { parseExpensePayload } from '@/lib/expenses-service'
 import {
+  compactDateTime,
+  formatTripDuration,
+  tripDurationMinutes,
+} from '@/lib/format'
+import {
   parseMaintenancePayload,
   isMaintenanceEditable,
 } from '@/lib/maintenances-service'
@@ -105,6 +110,20 @@ test('utilitários normalizam texto e números sem propagar NaN', () => {
   assert.equal(normalizeOptionalText('   '), null)
   assert.equal(toNumber('12.5'), 12.5)
   assert.equal(toNumber('inválido'), 0)
+})
+
+test('duração de viagem preserva minutos para análise e formata horas para exibição', () => {
+  const startedAt = '2026-06-15T05:10:00.000Z'
+  const finishedAt = '2026-06-15T10:32:00.000Z'
+
+  assert.equal(tripDurationMinutes(startedAt, finishedAt), 322)
+  assert.equal(formatTripDuration(startedAt, finishedAt), '5h 22min')
+  assert.equal(
+    formatTripDuration(startedAt, null, new Date('2026-06-15T06:10:00.000Z')),
+    '1h',
+  )
+  assert.equal(tripDurationMinutes(finishedAt, startedAt), null)
+  assert.match(compactDateTime(startedAt), /15\/06/)
 })
 
 test('situação da CNH diferencia vencida, próxima e em dia', () => {

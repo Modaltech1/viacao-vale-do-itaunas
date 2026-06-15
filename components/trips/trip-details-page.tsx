@@ -15,14 +15,14 @@ import {
   TableHeader,
   TableRow,
 } from '@prodexy/ui'
-import { DollarSign, Edit3, Fuel, Gauge, Route, SquareCheckBig } from 'lucide-react'
+import { DollarSign, Edit3, Fuel, Gauge, Route, SquareCheckBig, Timer } from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
 import { MetricCard } from '@/components/shared/metric-card'
 import { Section } from '@/components/shared/section'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { ConcludeTripDialog, TripDialog } from '@/components/trips/trip-dialogs'
-import { brl, dateTime, number } from '@/lib/format'
+import { brl, dateTime, formatTripDuration, number } from '@/lib/format'
 import type { TripDetails, TripFormOptions } from '@/types/trip'
 
 const emptyOptions: TripFormOptions = { drivers: [], vehicles: [] }
@@ -111,11 +111,17 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
         ) : null}
       </PageHeader>
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <MetricCard
           title="Status"
           value={trip.status === 'em_andamento' ? 'Em andamento' : trip.status === 'concluida' ? 'Concluída' : 'Cancelada'}
           icon={Route}
+        />
+        <MetricCard
+          title="Tempo de viagem"
+          value={formatTripDuration(trip.startedAt, trip.finishedAt)}
+          subtitle={trip.finishedAt ? 'Duração total' : 'Tempo decorrido'}
+          icon={Timer}
         />
         <MetricCard title="KM rodados" value={trip.totalKm == null ? '—' : number(trip.totalKm)} icon={Gauge} />
         <MetricCard title="Litros" value={number(trip.fuelLiters, 1)} icon={Fuel} />
@@ -150,6 +156,13 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
             <div className="flex justify-between gap-4 py-3">
               <span className="text-muted-foreground">Chegada</span>
               <span className="text-right font-medium">{dateTime(trip.finishedAt ?? undefined)}</span>
+            </div>
+            <div className="flex justify-between gap-4 py-3">
+              <span className="text-muted-foreground">Tempo de viagem</span>
+              <span className="text-right font-medium">
+                {formatTripDuration(trip.startedAt, trip.finishedAt)}
+                {!trip.finishedAt ? ' até agora' : ''}
+              </span>
             </div>
             <div className="flex justify-between gap-4 py-3">
               <span className="text-muted-foreground">KM inicial / final</span>
