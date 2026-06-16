@@ -118,7 +118,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
   return (
     <>
       <PageHeader
-        title={`${vehicle.plate} · ${vehicle.brand} ${vehicle.model}`}
+        title={`${vehicle.fleetCode} · ${vehicle.brand} ${vehicle.model}`}
         description={isAdmin
           ? 'Dados do ativo, vínculos, documentos e histórico operacional consolidado.'
           : 'Visão técnica consolidada do veículo, seus vencimentos, serviços e manutenções.'}
@@ -196,6 +196,8 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <p><b>Tipo:</b> {vehicle.type}</p>
+                <p><b>Frota:</b> {vehicle.fleetCode}</p>
+                <p><b>Placa:</b> {vehicle.plate}</p>
                 <p><b>Ano:</b> {vehicle.year ?? 'Não informado'}</p>
                 <p><b>Capacidade:</b> {vehicle.capacity || 'Não informada'}</p>
                 <div className="flex flex-wrap items-center gap-2">

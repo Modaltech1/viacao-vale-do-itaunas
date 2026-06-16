@@ -7,6 +7,7 @@ export type DriverTripStatus = 'em_andamento' | 'concluida' | 'cancelada'
 
 export type DriverVehicle = {
   id: string
+  fleetCode: string
   plate: string
   brand: string
   model: string

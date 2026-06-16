@@ -3,6 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { toNumber } from '@/lib/driver-utils'
 import { queryRows, type DatabaseRow } from '@/lib/supabase-query'
+import { vehicleLabel } from '@/lib/vehicle-label'
 import type {
   ReportCategoryValue,
   ReportData,
@@ -245,9 +246,9 @@ export async function getReportData(
     queryRows(
       client
         .from('veiculos')
-        .select('id,placa,marca,modelo,status_operacional')
+        .select('id,codigo_frota,placa,marca,modelo,status_operacional')
         .is('excluido_em', null)
-        .order('placa'),
+        .order('codigo_frota'),
     ),
     queryRows(
       client
@@ -267,7 +268,7 @@ export async function getReportData(
     queryRows(
       client
         .from('vw_viagens_detalhadas')
-        .select('id,motorista_id,motorista_nome,veiculo_id,veiculo_placa,veiculo_marca,veiculo_modelo,origem_snapshot,destino_snapshot,saiu_em,chegou_em,status,km_total')
+        .select('id,motorista_id,motorista_nome,veiculo_id,veiculo_codigo_frota,veiculo_placa,veiculo_marca,veiculo_modelo,origem_snapshot,destino_snapshot,saiu_em,chegou_em,status,km_total')
         .gte('saiu_em', totalPeriod.start.toISOString())
         .lt('saiu_em', totalPeriod.endExclusive.toISOString()),
     ),
@@ -403,7 +404,7 @@ export async function getReportData(
 
     return {
       id: vehicle.id,
-      label: `${vehicle.placa} · ${vehicle.marca} ${vehicle.modelo}`,
+      label: vehicleLabel(vehicle),
       status: vehicle.status_operacional,
       trips: trips.length,
       km,
@@ -621,7 +622,7 @@ export async function getReportData(
     options: {
       vehicles: vehicleRows.map((vehicle) => ({
         id: vehicle.id,
-        label: `${vehicle.placa} · ${vehicle.marca} ${vehicle.modelo}`,
+        label: vehicleLabel(vehicle),
       })),
       drivers: driverRows
         .filter((driver) => profileById.get(driver.perfil_id)?.ativo)

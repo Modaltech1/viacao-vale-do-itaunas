@@ -346,6 +346,8 @@ create table if not exists public.veiculos (
   tipo text not null,
   marca text not null,
   modelo text not null,
+  codigo_frota text not null,
+  codigo_frota_normalizado text generated always as (public.normalizar_texto(codigo_frota)) stored,
   placa text not null,
   placa_normalizada text generated always as (public.normalizar_texto(placa)) stored,
   ano integer,
@@ -367,6 +369,10 @@ create table if not exists public.veiculos (
 create unique index if not exists veiculos_placa_normalizada_uniq
   on public.veiculos(placa_normalizada)
   where placa_normalizada is not null and excluido_em is null;
+
+create unique index if not exists veiculos_codigo_frota_normalizado_uniq
+  on public.veiculos(codigo_frota_normalizado)
+  where codigo_frota_normalizado is not null and excluido_em is null;
 
 create table if not exists public.veiculo_motoristas (
   id uuid primary key default gen_random_uuid(),
@@ -990,6 +996,8 @@ select
   v.tipo,
   v.marca,
   v.modelo,
+  v.codigo_frota,
+  v.codigo_frota_normalizado,
   v.placa,
   v.placa_normalizada,
   v.ano,
@@ -1061,6 +1069,7 @@ as
 select
   vi.*,
   p.nome as motorista_nome,
+  v.codigo_frota as veiculo_codigo_frota,
   v.placa as veiculo_placa,
   v.marca as veiculo_marca,
   v.modelo as veiculo_modelo,
@@ -1078,6 +1087,7 @@ with (security_invoker = true)
 as
 select
   m.*,
+  v.codigo_frota as veiculo_codigo_frota,
   v.placa as veiculo_placa,
   v.marca as veiculo_marca,
   v.modelo as veiculo_modelo,
@@ -1130,6 +1140,7 @@ with (security_invoker = true)
 as
 select
   p.*,
+  v.codigo_frota as veiculo_codigo_frota,
   v.placa as veiculo_placa,
   v.km_atual,
   s.nome as servico_nome,
@@ -1155,6 +1166,7 @@ with (security_invoker = true)
 as
 select
   d.*,
+  v.codigo_frota as veiculo_codigo_frota,
   v.placa as veiculo_placa,
   t.codigo as tipo_codigo,
   t.nome as tipo_nome,
@@ -1179,7 +1191,7 @@ select
   p.servico_id,
   null::uuid as manutencao_id,
   (p.servico_nome || case when p.status_calculado = 'vencido' then ' vencido' else ' próximo' end) as titulo,
-  (p.veiculo_placa || ' · ' || p.servico_nome || ' · status: ' || p.status_calculado) as descricao,
+  (coalesce(p.veiculo_codigo_frota, p.veiculo_placa) || ' · ' || p.servico_nome || ' · status: ' || p.status_calculado) as descricao,
   p.proximo_vencimento_em as vencimento_em,
   p.proximo_vencimento_km as vencimento_km,
   p.km_atual,
@@ -1199,7 +1211,7 @@ select
   null::uuid,
   null::uuid,
   d.tipo_nome || ' ' || case when d.status_calculado = 'vencido' then 'vencido' else 'próximo' end,
-  d.veiculo_placa || ' · vencimento em ' || d.vencimento_em::text,
+  coalesce(d.veiculo_codigo_frota, d.veiculo_placa) || ' · vencimento em ' || d.vencimento_em::text,
   d.vencimento_em,
   null::numeric,
   null::numeric,
@@ -1241,7 +1253,7 @@ select
   null::uuid,
   mn.id,
   'Manutenção ' || mn.status,
-  v.placa || ' · ' || coalesce(mn.causa, 'sem descrição'),
+  coalesce(v.codigo_frota, v.placa) || ' · ' || coalesce(mn.causa, 'sem descrição'),
   mn.concluido_em::date,
   null::numeric,
   mn.km_veiculo,
@@ -1262,7 +1274,7 @@ select
   null::uuid,
   null::uuid,
   'Veículo ' || v.status_operacional,
-  v.placa || ' · ' || v.marca || ' ' || v.modelo,
+  coalesce(v.codigo_frota, v.placa) || ' · ' || v.marca || ' ' || v.modelo,
   null::date,
   null::numeric,
   v.km_atual,

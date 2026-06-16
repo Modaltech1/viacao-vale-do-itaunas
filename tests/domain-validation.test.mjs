@@ -137,6 +137,7 @@ test('veículo aceita múltiplos motoristas e valida o principal', () => {
     type: 'Caminhão',
     brand: 'Scania',
     model: 'R 450',
+    fleetCode: 'frota-07',
     plate: 'abc-1d23',
     year: '2024',
     status: 'ativo',
@@ -148,6 +149,7 @@ test('veículo aceita múltiplos motoristas e valida o principal', () => {
     principalDriverId: 'driver-b',
   })
 
+  assert.equal(payload.fleetCode, 'FROTA-07')
   assert.equal(payload.plate, 'ABC-1D23')
   assert.deepEqual(payload.driverIds, ['driver-a', 'driver-b'])
   assert.equal(payload.principalDriverId, 'driver-b')

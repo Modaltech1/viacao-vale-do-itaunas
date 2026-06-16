@@ -217,7 +217,7 @@ export default function DriverPage() {
                 <div className="col-span-2">
                   <p className="text-xs text-muted-foreground">Veículo</p>
                   <p className="mt-1 font-medium">
-                    {currentTrip.vehicle.plate} · {currentTrip.vehicle.brand} {currentTrip.vehicle.model}
+                    {currentTrip.vehicle.fleetCode} · {currentTrip.vehicle.brand} {currentTrip.vehicle.model}
                   </p>
                 </div>
               </div>
@@ -304,7 +304,7 @@ export default function DriverPage() {
                           value={vehicle.id}
                           disabled={unavailableVehicleStatuses.includes(vehicle.status)}
                         >
-                          {vehicle.plate} · {vehicle.brand} {vehicle.model}
+                          {vehicle.fleetCode} · {vehicle.brand} {vehicle.model}
                           {vehicle.principal ? ' · Principal' : ''}
                         </SelectItem>
                       ))}
@@ -430,9 +430,9 @@ export default function DriverPage() {
 
           {selectedVehicle ? (
             <div>
-              <p className="text-xl font-bold">{selectedVehicle.plate}</p>
+              <p className="text-xl font-bold">{selectedVehicle.fleetCode}</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {selectedVehicle.brand} {selectedVehicle.model} · KM {number(selectedVehicle.currentKm)}
+                {selectedVehicle.brand} {selectedVehicle.model} · Placa {selectedVehicle.plate} · KM {number(selectedVehicle.currentKm)}
               </p>
               <div className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
                 <MapPin className="mt-0.5 size-4 shrink-0" />

@@ -173,7 +173,7 @@ export default function TripsPage() {
                   </TableRow>
                 ) : filteredTrips.length ? (
                   tripPagination.pageItems.map((trip) => {
-                    const [vehiclePlate, vehicleDescription = ''] = trip.vehicleLabel.split(' · ', 2)
+                    const [vehicleFleetCode, vehicleDescription = ''] = trip.vehicleLabel.split(' · ', 2)
                     const routeLabel = `${trip.origin} → ${trip.destination}`
 
                     return (
@@ -189,7 +189,7 @@ export default function TripsPage() {
                           <p className="truncate" title={trip.driverName}>{trip.driverName}</p>
                         </TableCell>
                         <TableCell className="overflow-hidden">
-                          <p className="truncate font-medium" title={trip.vehicleLabel}>{vehiclePlate}</p>
+                          <p className="truncate font-medium" title={trip.vehicleLabel}>{vehicleFleetCode}</p>
                           {vehicleDescription ? (
                             <p className="truncate text-xs text-muted-foreground" title={vehicleDescription}>
                               {vehicleDescription}

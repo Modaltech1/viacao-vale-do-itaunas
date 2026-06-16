@@ -7,6 +7,7 @@ import type {
   AdminOwnedResource,
 } from '@/types/admin-management'
 import type { AdminLevel } from '@/lib/admin-scope'
+import { vehicleFleetCode } from '@/lib/vehicle-label'
 
 type ProfileRow = {
   id: string
@@ -19,6 +20,7 @@ type ProfileRow = {
 
 type VehicleRow = {
   id: string
+  codigo_frota: string | null
   placa: string
   marca: string
   modelo: string
@@ -48,9 +50,9 @@ export async function getAdminManagementData(
       .order('nome'),
     service
       .from('veiculos')
-      .select('id,placa,marca,modelo,admin_responsavel_id')
+      .select('id,codigo_frota,placa,marca,modelo,admin_responsavel_id')
       .is('excluido_em', null)
-      .order('placa'),
+      .order('codigo_frota'),
     service
       .from('motoristas')
       .select('id,perfil_id,numero_habilitacao,admin_responsavel_id')
@@ -97,7 +99,7 @@ export async function getAdminManagementData(
 
   const vehicleItems: AdminOwnedResource[] = vehicles.map((vehicle) => ({
     id: vehicle.id,
-    label: vehicle.placa,
+    label: vehicleFleetCode(vehicle),
     detail: `${vehicle.marca} ${vehicle.modelo}`.trim(),
     ownerId: vehicle.admin_responsavel_id,
     ownerName: vehicle.admin_responsavel_id

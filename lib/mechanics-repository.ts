@@ -3,6 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { toNumber } from '@/lib/driver-utils'
 import { queryRows, type DatabaseRow } from '@/lib/supabase-query'
+import { vehicleLabel } from '@/lib/vehicle-label'
 import type {
   MechanicDetails,
   MechanicListItem,
@@ -46,7 +47,7 @@ async function loadMechanicRelations(service: SupabaseClient) {
       service
         .from('vw_manutencoes_detalhadas')
         .select(
-          'id,veiculo_id,veiculo_placa,veiculo_marca,veiculo_modelo,tipo_manutencao,causa,aberto_em,iniciado_em,concluido_em,status,valor_total_realizado,mecanico_responsavel_id',
+          'id,veiculo_id,veiculo_codigo_frota,veiculo_placa,veiculo_marca,veiculo_modelo,tipo_manutencao,causa,aberto_em,iniciado_em,concluido_em,status,valor_total_realizado,mecanico_responsavel_id',
         )
         .order('aberto_em', { ascending: false }),
     ),
@@ -134,7 +135,12 @@ export async function getMechanicDetails(
     .map((maintenance) => ({
       id: maintenance.id,
       vehicleId: maintenance.veiculo_id,
-      vehicle: `${maintenance.veiculo_placa} · ${maintenance.veiculo_marca} ${maintenance.veiculo_modelo}`,
+      vehicle: vehicleLabel({
+        codigo_frota: maintenance.veiculo_codigo_frota,
+        placa: maintenance.veiculo_placa,
+        marca: maintenance.veiculo_marca,
+        modelo: maintenance.veiculo_modelo,
+      }),
       maintenanceType: maintenance.tipo_manutencao,
       cause: maintenance.causa ?? '',
       openedAt: maintenance.aberto_em,

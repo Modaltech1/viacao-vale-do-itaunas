@@ -21,6 +21,7 @@ export type MaintenancePartItem = PartUsageItem
 export type MaintenanceListItem = {
   id: string
   vehicleId: string
+  vehicleFleetCode: string
   vehiclePlate: string
   vehicleLabel: string
   maintenanceType: MaintenanceType

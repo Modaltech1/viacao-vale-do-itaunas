@@ -66,6 +66,7 @@ export default function DriversPage() {
         || driver.email.toLocaleLowerCase('pt-BR').includes(term)
         || driver.phone.toLocaleLowerCase('pt-BR').includes(term)
         || driver.cpf.toLocaleLowerCase('pt-BR').includes(term)
+        || driver.vehicle?.fleetCode.toLocaleLowerCase('pt-BR').includes(term)
         || driver.vehicle?.plate.toLocaleLowerCase('pt-BR').includes(term)
 
       const matchesStatus = status === 'todos' || driver.professionalStatus === status
@@ -114,7 +115,7 @@ export default function DriversPage() {
         <CardContent className="space-y-4 p-4">
           <div className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_minmax(190px,0.55fr)_minmax(190px,0.55fr)]">
             <FilterInput
-              placeholder="Buscar por nome, email, CPF, telefone ou placa..."
+              placeholder="Buscar por nome, email, CPF, telefone ou frota..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -170,7 +171,7 @@ export default function DriversPage() {
                       <TableCell>{driver.phone || 'Não informado'}</TableCell>
                       <TableCell>
                         {driver.vehicle
-                          ? `${driver.vehicle.plate} · ${driver.vehicle.model}`
+                          ? `${driver.vehicle.fleetCode} · ${driver.vehicle.model}`
                           : 'Sem veículo'}
                       </TableCell>
                       <TableCell>

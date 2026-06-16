@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
         tipo: payload.type,
         marca: payload.brand,
         modelo: payload.model,
+        codigo_frota: payload.fleetCode,
         placa: payload.plate,
         ano: payload.year,
         status_operacional: payload.status,

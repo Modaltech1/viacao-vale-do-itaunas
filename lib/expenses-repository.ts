@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { toNumber } from '@/lib/driver-utils'
 import { queryRows } from '@/lib/supabase-query'
 import { getTravelOperationLookups } from '@/lib/travel-operation-repository'
+import { vehicleLabel } from '@/lib/vehicle-label'
 import type {
   ExpenseListItem,
   ExpenseLookups,
@@ -34,7 +35,7 @@ export async function listExpenses(
     queryRows(
       supabase
         .from('vw_manutencoes_detalhadas')
-        .select('id,veiculo_id,veiculo_placa,veiculo_marca,veiculo_modelo,causa,aberto_em,status,valor_total_realizado,pecas')
+        .select('id,veiculo_id,veiculo_codigo_frota,veiculo_placa,veiculo_marca,veiculo_modelo,causa,aberto_em,status,valor_total_realizado,pecas')
         .neq('status', 'cancelada')
         .order('aberto_em', { ascending: false }),
     ),
@@ -95,7 +96,12 @@ export async function listExpenses(
     maintenanceItems: maintenances.map((maintenance) => ({
       id: maintenance.id,
       vehicleId: maintenance.veiculo_id,
-      vehicleLabel: `${maintenance.veiculo_placa} · ${maintenance.veiculo_marca} ${maintenance.veiculo_modelo}`,
+      vehicleLabel: vehicleLabel({
+        codigo_frota: maintenance.veiculo_codigo_frota,
+        placa: maintenance.veiculo_placa,
+        marca: maintenance.veiculo_marca,
+        modelo: maintenance.veiculo_modelo,
+      }),
       cause: maintenance.causa ?? '',
       registeredAt: maintenance.aberto_em,
       value: toNumber(maintenance.valor_total_realizado),

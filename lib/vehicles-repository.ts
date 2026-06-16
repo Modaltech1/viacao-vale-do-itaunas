@@ -3,6 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { queryRows, type DatabaseRow } from '@/lib/supabase-query'
 import { toNumber } from '@/lib/driver-utils'
+import { vehicleLabel } from '@/lib/vehicle-label'
 import type {
   VehicleDetails,
   VehicleDocument,
@@ -92,7 +93,7 @@ export async function listVehicles(service: SupabaseClient): Promise<VehicleList
     service
       .from('vw_veiculos_resumo')
       .select('*')
-      .order('placa', { ascending: true }),
+      .order('codigo_frota', { ascending: true }),
   )
 
   if (!rows.length) return []
@@ -131,6 +132,7 @@ export async function listVehicles(service: SupabaseClient): Promise<VehicleList
       type: row.tipo,
       brand: row.marca,
       model: row.modelo,
+      fleetCode: row.codigo_frota ?? row.placa,
       plate: row.placa,
       year: row.ano == null ? null : Number(row.ano),
       status: row.status_operacional,
@@ -186,7 +188,13 @@ export async function listVehicleFormOptions(service: SupabaseClient): Promise<V
         .eq('principal', true)
         .is('fim_em', null),
     ),
-    queryRows(service.from('veiculos').select('id,placa,marca,modelo').is('excluido_em', null)),
+    queryRows(
+      service
+        .from('veiculos')
+        .select('id,codigo_frota,placa,marca,modelo')
+        .is('excluido_em', null)
+        .order('codigo_frota', { ascending: true }),
+    ),
   ])
 
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]))
@@ -210,7 +218,7 @@ export async function listVehicleFormOptions(service: SupabaseClient): Promise<V
       accessActive: Boolean(profile.ativo),
       principalVehicleId: vehicle?.id ?? null,
       principalVehicleLabel: vehicle
-        ? `${vehicle.placa} · ${vehicle.marca} ${vehicle.modelo}`
+        ? vehicleLabel(vehicle)
         : null,
     }]
   })

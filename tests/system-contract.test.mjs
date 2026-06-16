@@ -203,6 +203,9 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'validar_quantidade_peca_discreta',
     'Estoque insuficiente para a peça',
     'vw_pendencias_operacionais',
+    'codigo_frota text not null',
+    'veiculos_codigo_frota_normalizado_uniq',
+    'veiculo_codigo_frota',
     'veiculos_placa_normalizada_uniq',
     'nivel_admin text',
     'admin_responsavel_id uuid',
@@ -270,6 +273,31 @@ test('transferência administrativa percorre e atualiza todo o grafo ativo', asy
     'update public.pendencias_manuais',
     'public.eh_admin_global()',
     'to authenticated',
+  ]
+
+  for (const fragment of requiredFragments) {
+    assert.ok(migration.includes(fragment), `Migration sem ${fragment}`)
+  }
+})
+
+test('migration de código de frota preserva compatibilidade e troca labels operacionais', async () => {
+  const migration = await readFile(
+    path.join(
+      root,
+      'database',
+      'migrations',
+      '20260616_vehicle_fleet_code.sql',
+    ),
+    'utf8',
+  )
+  const requiredFragments = [
+    'add column if not exists codigo_frota',
+    'set codigo_frota = placa',
+    'veiculos_codigo_frota_normalizado_uniq',
+    'v.codigo_frota as veiculo_codigo_frota',
+    'coalesce(p.veiculo_codigo_frota, p.veiculo_placa)',
+    'coalesce(v.codigo_frota, v.placa)',
+    'grant select on',
   ]
 
   for (const fragment of requiredFragments) {

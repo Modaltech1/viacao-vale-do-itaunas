@@ -51,6 +51,7 @@ export type VehicleListItem = {
   type: string
   brand: string
   model: string
+  fleetCode: string
   plate: string
   year: number | null
   status: VehicleStatus
@@ -142,6 +143,7 @@ export type VehicleFormValues = {
   type: string
   brand: string
   model: string
+  fleetCode: string
   plate: string
   year: string
   status: VehicleStatus

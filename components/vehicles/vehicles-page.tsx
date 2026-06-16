@@ -76,6 +76,7 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
     return vehicles.filter((vehicle) => {
       const matchesSearch =
         !term
+        || vehicle.fleetCode.toLocaleLowerCase('pt-BR').includes(term)
         || vehicle.plate.toLocaleLowerCase('pt-BR').includes(term)
         || vehicle.brand.toLocaleLowerCase('pt-BR').includes(term)
         || vehicle.model.toLocaleLowerCase('pt-BR').includes(term)
@@ -148,7 +149,7 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
               : 'lg:grid-cols-[minmax(260px,1fr)_minmax(200px,0.55fr)_minmax(200px,0.55fr)]'
           }`}>
             <FilterInput
-              placeholder="Buscar por placa, marca ou modelo..."
+              placeholder="Buscar por frota, placa, marca ou modelo..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -187,7 +188,7 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Placa</TableHead>
+                  <TableHead>Frota</TableHead>
                   <TableHead>Veículo</TableHead>
                   <TableHead>Rota fixa</TableHead>
                   {isAdmin ? <TableHead>Motoristas</TableHead> : null}
@@ -210,7 +211,10 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
 
                     return (
                       <TableRow key={vehicle.id}>
-                        <TableCell className="font-semibold">{vehicle.plate}</TableCell>
+                        <TableCell>
+                          <p className="font-semibold">{vehicle.fleetCode}</p>
+                          <p className="text-xs text-muted-foreground">Placa {vehicle.plate}</p>
+                        </TableCell>
                         <TableCell>
                           {vehicle.brand} {vehicle.model}
                           {vehicle.year ? ` · ${vehicle.year}` : ''}

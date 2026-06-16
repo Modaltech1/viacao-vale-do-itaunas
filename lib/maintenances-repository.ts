@@ -3,6 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { toNumber } from '@/lib/driver-utils'
 import { queryRows, type DatabaseRow } from '@/lib/supabase-query'
+import { vehicleLabel } from '@/lib/vehicle-label'
 import type {
   MaintenanceDetails,
   MaintenanceFormOptions,
@@ -42,8 +43,14 @@ function normalizeMaintenance(row: DatabaseRow): MaintenanceListItem {
   return {
     id: row.id,
     vehicleId: row.veiculo_id,
+    vehicleFleetCode: row.veiculo_codigo_frota ?? row.veiculo_placa,
     vehiclePlate: row.veiculo_placa,
-    vehicleLabel: `${row.veiculo_placa} · ${row.veiculo_marca} ${row.veiculo_modelo}`,
+    vehicleLabel: vehicleLabel({
+      codigo_frota: row.veiculo_codigo_frota,
+      placa: row.veiculo_placa,
+      marca: row.veiculo_marca,
+      modelo: row.veiculo_modelo,
+    }),
     maintenanceType: row.tipo_manutencao,
     cause: row.causa ?? '',
     openedAt: row.aberto_em,
@@ -98,9 +105,9 @@ export async function listMaintenanceFormOptions(
     queryRows(
       client
         .from('veiculos')
-        .select('id,placa,marca,modelo,km_atual,status_operacional')
+        .select('id,codigo_frota,placa,marca,modelo,km_atual,status_operacional')
         .is('excluido_em', null)
-        .order('placa', { ascending: true }),
+        .order('codigo_frota', { ascending: true }),
     ),
     queryRows(
       client
@@ -142,7 +149,7 @@ export async function listMaintenanceFormOptions(
   return {
     vehicles: vehicles.map((vehicle) => ({
       id: vehicle.id,
-      label: `${vehicle.placa} · ${vehicle.marca} ${vehicle.modelo}`,
+      label: vehicleLabel(vehicle),
       currentKm: toNumber(vehicle.km_atual),
       status: vehicle.status_operacional,
     })),

@@ -27,6 +27,7 @@ export type DriverPortalVehicle = {
   type: string
   brand: string
   model: string
+  fleetCode: string
   plate: string
   currentKm: number
   status: VehicleStatus

@@ -41,6 +41,7 @@ const emptyForm: VehicleFormValues = {
   type: '',
   brand: '',
   model: '',
+  fleetCode: '',
   plate: '',
   year: '',
   status: 'ativo',
@@ -71,6 +72,7 @@ function formFromVehicle(vehicle?: EditableVehicle | null): VehicleFormValues {
     type: vehicle.type,
     brand: vehicle.brand,
     model: vehicle.model,
+    fleetCode: vehicle.fleetCode,
     plate: vehicle.plate,
     year: vehicle.year?.toString() ?? '',
     status: vehicle.status,
@@ -181,7 +183,7 @@ export function VehicleDialog({
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
               <div className="space-y-2">
                 <Label htmlFor="vehicle-type">Tipo</Label>
                 <Input
@@ -209,6 +211,16 @@ export function VehicleDialog({
                   placeholder="Ex.: R 450"
                   value={form.model}
                   onChange={updateField('model')}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vehicle-fleet-code">Frota</Label>
+                <Input
+                  id="vehicle-fleet-code"
+                  placeholder="Ex.: 1027"
+                  value={form.fleetCode}
+                  onChange={updateField('fleetCode')}
                   required
                 />
               </div>
@@ -568,7 +580,7 @@ export function VehicleDriversDialog({
         <DialogHeader>
           <DialogTitle>Gerenciar motoristas</DialogTitle>
           <DialogDescription>
-            Defina os motoristas vinculados a {vehicle.plate} e escolha o vínculo principal.
+            Defina os motoristas vinculados à frota {vehicle.fleetCode} e escolha o vínculo principal.
           </DialogDescription>
         </DialogHeader>
 

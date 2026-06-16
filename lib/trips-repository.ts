@@ -3,6 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { toNumber } from '@/lib/driver-utils'
 import { queryRows } from '@/lib/supabase-query'
+import { vehicleLabel } from '@/lib/vehicle-label'
 import type {
   TripDetails,
   TripFormOptions,
@@ -15,7 +16,12 @@ function normalizeTrip(row: Record<string, any>): TripListItem {
     driverId: row.motorista_id,
     driverName: row.motorista_nome ?? 'Motorista não encontrado',
     vehicleId: row.veiculo_id,
-    vehicleLabel: `${row.veiculo_placa} · ${row.veiculo_marca} ${row.veiculo_modelo}`,
+    vehicleLabel: vehicleLabel({
+      codigo_frota: row.veiculo_codigo_frota,
+      placa: row.veiculo_placa,
+      marca: row.veiculo_marca,
+      modelo: row.veiculo_modelo,
+    }),
     routeId: row.rota_id ?? null,
     routeName: row.rota_nome_snapshot ?? '',
     origin: row.origem_snapshot,
@@ -120,9 +126,9 @@ export async function getTripFormOptions(
     queryRows(
       supabase
         .from('veiculos')
-        .select('id,placa,marca,modelo,km_atual,status_operacional,rota_fixa_id')
+        .select('id,codigo_frota,placa,marca,modelo,km_atual,status_operacional,rota_fixa_id')
         .is('excluido_em', null)
-        .order('placa', { ascending: true }),
+        .order('codigo_frota', { ascending: true }),
     ),
     queryRows(
       supabase
@@ -162,7 +168,7 @@ export async function getTripFormOptions(
       const route = vehicle.rota_fixa_id ? routeById.get(vehicle.rota_fixa_id) : null
       return {
         id: vehicle.id,
-        label: `${vehicle.placa} · ${vehicle.marca} ${vehicle.modelo}`,
+        label: vehicleLabel(vehicle),
         currentKm: toNumber(vehicle.km_atual),
         status: vehicle.status_operacional,
         routeId: route?.id ?? null,

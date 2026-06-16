@@ -3,6 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getDriverLicenseStatus, toNumber } from '@/lib/driver-utils'
 import { queryRows, type DatabaseRow } from '@/lib/supabase-query'
+import { vehicleLabel } from '@/lib/vehicle-label'
 import type {
   DriverDetails,
   DriverExpense,
@@ -13,8 +14,8 @@ import type {
   DriverVehicleOption,
 } from '@/types/driver'
 
-function vehicleLabel(vehicle?: DatabaseRow) {
-  return vehicle ? `${vehicle.placa} · ${vehicle.marca} ${vehicle.modelo}` : 'Veículo não encontrado'
+function formatDriverVehicleLabel(vehicle?: DatabaseRow) {
+  return vehicle ? vehicleLabel(vehicle) : 'Veículo não encontrado'
 }
 
 export async function listDriverVehicleOptions(service: SupabaseClient): Promise<DriverVehicleOption[]> {
@@ -22,9 +23,9 @@ export async function listDriverVehicleOptions(service: SupabaseClient): Promise
     queryRows(
       service
         .from('veiculos')
-        .select('id,placa,marca,modelo')
+        .select('id,codigo_frota,placa,marca,modelo')
         .is('excluido_em', null)
-        .order('placa', { ascending: true }),
+        .order('codigo_frota', { ascending: true }),
     ),
     queryRows(
       service
@@ -52,7 +53,7 @@ export async function listDriverVehicleOptions(service: SupabaseClient): Promise
 
     return {
       id: vehicle.id,
-      label: vehicleLabel(vehicle),
+      label: formatDriverVehicleLabel(vehicle),
       currentDriverName: profile?.nome ?? null,
     }
   })
@@ -107,7 +108,7 @@ export async function listDrivers(service: SupabaseClient): Promise<DriverListIt
 
   const vehicleIds = [...new Set(assignments.map((assignment) => assignment.veiculo_id))]
   const vehicles = vehicleIds.length
-    ? await queryRows(service.from('veiculos').select('id,placa,marca,modelo,km_atual,status_operacional').in('id', vehicleIds))
+    ? await queryRows(service.from('veiculos').select('id,codigo_frota,placa,marca,modelo,km_atual,status_operacional').in('id', vehicleIds))
     : []
 
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]))
@@ -138,6 +139,7 @@ export async function listDrivers(service: SupabaseClient): Promise<DriverListIt
       vehicle: vehicle
         ? {
             id: vehicle.id,
+            fleetCode: vehicle.codigo_frota ?? vehicle.placa,
             plate: vehicle.placa,
             brand: vehicle.marca,
             model: vehicle.modelo,
@@ -210,7 +212,7 @@ export async function getDriverDetails(service: SupabaseClient, driverId: string
   ]
 
   const vehicles = vehicleIds.length
-    ? await queryRows(service.from('veiculos').select('id,placa,marca,modelo,km_atual,status_operacional').in('id', vehicleIds))
+    ? await queryRows(service.from('veiculos').select('id,codigo_frota,placa,marca,modelo,km_atual,status_operacional').in('id', vehicleIds))
     : []
   const vehicleById = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]))
 
@@ -220,6 +222,7 @@ export async function getDriverDetails(service: SupabaseClient, driverId: string
 
     return [{
       id: vehicle.id,
+      fleetCode: vehicle.codigo_frota ?? vehicle.placa,
       plate: vehicle.placa,
       brand: vehicle.marca,
       model: vehicle.modelo,
@@ -231,7 +234,7 @@ export async function getDriverDetails(service: SupabaseClient, driverId: string
 
   const normalizedTrips: DriverTrip[] = trips.map((trip) => ({
     id: trip.id,
-    vehicle: vehicleLabel(vehicleById.get(trip.veiculo_id)),
+    vehicle: formatDriverVehicleLabel(vehicleById.get(trip.veiculo_id)),
     origin: trip.origem_snapshot,
     destination: trip.destino_snapshot,
     startedAt: trip.saiu_em,
@@ -243,7 +246,7 @@ export async function getDriverDetails(service: SupabaseClient, driverId: string
 
   const normalizedRefuelings: DriverRefueling[] = refuelings.map((refueling) => ({
     id: refueling.id,
-    vehicle: vehicleLabel(vehicleById.get(refueling.veiculo_id)),
+    vehicle: formatDriverVehicleLabel(vehicleById.get(refueling.veiculo_id)),
     registeredAt: refueling.registrado_em,
     fuelType: refueling.tipo_combustivel,
     liters: toNumber(refueling.litros),
@@ -253,7 +256,7 @@ export async function getDriverDetails(service: SupabaseClient, driverId: string
 
   const normalizedExpenses: DriverExpense[] = expenses.map((expense) => ({
     id: expense.id,
-    vehicle: vehicleLabel(vehicleById.get(expense.veiculo_id)),
+    vehicle: formatDriverVehicleLabel(vehicleById.get(expense.veiculo_id)),
     registeredAt: expense.registrado_em,
     category: expense.categoria,
     value: toNumber(expense.valor),

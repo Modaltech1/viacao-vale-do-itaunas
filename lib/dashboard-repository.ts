@@ -3,6 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { toNumber } from '@/lib/driver-utils'
 import { queryRows } from '@/lib/supabase-query'
+import { vehicleFleetCode, vehicleLabel } from '@/lib/vehicle-label'
 import type { DashboardAlert, DashboardData } from '@/types/dashboard'
 
 type DashboardFilters = {
@@ -38,9 +39,9 @@ export async function getDashboardData(
     queryRows(
       supabase
         .from('veiculos')
-        .select('id,placa,marca,modelo,km_atual,status_operacional')
+        .select('id,codigo_frota,placa,marca,modelo,km_atual,status_operacional')
         .is('excluido_em', null)
-        .order('placa', { ascending: true }),
+        .order('codigo_frota', { ascending: true }),
     ),
     queryRows(
       supabase
@@ -146,20 +147,20 @@ export async function getDashboardData(
         return (
           (priority[a.status_operacional as keyof typeof priority] ?? 5)
           - (priority[b.status_operacional as keyof typeof priority] ?? 5)
-          || a.placa.localeCompare(b.placa, 'pt-BR')
+          || vehicleFleetCode(a).localeCompare(vehicleFleetCode(b), 'pt-BR')
         )
       })
       .slice(0, 6)
       .map((vehicle) => ({
         id: vehicle.id,
-        label: `${vehicle.placa} · ${vehicle.marca} ${vehicle.modelo}`,
+        label: vehicleLabel(vehicle),
         currentKm: toNumber(vehicle.km_atual),
         status: vehicle.status_operacional,
       })),
     options: {
       vehicles: vehicleRows.map((vehicle) => ({
         id: vehicle.id,
-        label: `${vehicle.placa} · ${vehicle.marca} ${vehicle.modelo}`,
+        label: vehicleLabel(vehicle),
       })),
       drivers: driverRows
         .filter((driver) => {

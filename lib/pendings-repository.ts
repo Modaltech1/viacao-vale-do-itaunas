@@ -3,6 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { toNumber } from '@/lib/driver-utils'
 import { queryRows } from '@/lib/supabase-query'
+import { vehicleLabel } from '@/lib/vehicle-label'
 import type {
   PendingFormOptions,
   PendingListItem,
@@ -82,9 +83,9 @@ export async function listPendingFormOptions(
     queryRows(
       client
         .from('veiculos')
-        .select('id,placa,marca,modelo')
+        .select('id,codigo_frota,placa,marca,modelo')
         .is('excluido_em', null)
-        .order('placa'),
+        .order('codigo_frota'),
     ),
     queryRows(
       client
@@ -109,7 +110,7 @@ export async function listPendingFormOptions(
     queryRows(
       client
         .from('vw_manutencoes_detalhadas')
-        .select('id,veiculo_placa,causa,status')
+        .select('id,veiculo_codigo_frota,veiculo_placa,causa,status')
         .in('status', ['aberta', 'em_andamento'])
         .order('aberto_em', { ascending: false }),
     ),
@@ -127,7 +128,7 @@ export async function listPendingFormOptions(
   return {
     vehicles: vehicles.map((vehicle) => ({
       id: vehicle.id,
-      label: `${vehicle.placa} · ${vehicle.marca} ${vehicle.modelo}`,
+      label: vehicleLabel(vehicle),
     })),
     drivers: drivers.flatMap((driver) => {
       const name = profileById.get(driver.perfil_id)
@@ -140,7 +141,7 @@ export async function listPendingFormOptions(
     services: services.map((service) => ({ id: service.id, label: service.nome })),
     maintenances: maintenances.map((maintenance) => ({
       id: maintenance.id,
-      label: `${maintenance.veiculo_placa} · ${maintenance.causa || 'Sem descrição'}`,
+      label: `${maintenance.veiculo_codigo_frota ?? maintenance.veiculo_placa} · ${maintenance.causa || 'Sem descrição'}`,
     })),
     currentMechanicId,
   }

@@ -91,6 +91,7 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
     return items.filter((item) => {
       const matchesSearch =
         !term
+        || item.vehicleFleetCode.toLocaleLowerCase('pt-BR').includes(term)
         || item.vehiclePlate.toLocaleLowerCase('pt-BR').includes(term)
         || item.vehicleLabel.toLocaleLowerCase('pt-BR').includes(term)
         || item.cause.toLocaleLowerCase('pt-BR').includes(term)
@@ -143,7 +144,7 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
         <CardContent className="space-y-4 p-4">
           <div className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_minmax(190px,0.45fr)_minmax(210px,0.5fr)]">
             <FilterInput
-              placeholder="Buscar por placa, veículo, causa, serviço ou peça..."
+              placeholder="Buscar por frota, placa, veículo, causa, serviço ou peça..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -196,8 +197,10 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
                   maintenancePagination.pageItems.map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>
-                        <p className="font-semibold">{item.vehiclePlate}</p>
-                        <p className="text-xs text-muted-foreground">{item.vehicleLabel.replace(`${item.vehiclePlate} · `, '')}</p>
+                        <p className="font-semibold">{item.vehicleFleetCode}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.vehicleLabel.replace(`${item.vehicleFleetCode} · `, '')}
+                        </p>
                       </TableCell>
                       <TableCell>{item.maintenanceType === 'preventiva' ? 'Preventiva' : 'Corretiva'}</TableCell>
                       <TableCell className="max-w-[280px]">

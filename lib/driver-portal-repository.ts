@@ -59,7 +59,7 @@ export async function getDriverPortalData(
     ? await queryRows(
         supabase
           .from('veiculos')
-          .select('id,tipo,marca,modelo,placa,km_atual,status_operacional,rota_fixa_id')
+          .select('id,tipo,marca,modelo,codigo_frota,placa,km_atual,status_operacional,rota_fixa_id')
           .in('id', vehicleIds)
           .is('excluido_em', null),
       )
@@ -91,6 +91,7 @@ export async function getDriverPortalData(
       type: vehicle.tipo,
       brand: vehicle.marca,
       model: vehicle.modelo,
+      fleetCode: vehicle.codigo_frota ?? vehicle.placa,
       plate: vehicle.placa,
       currentKm: toNumber(vehicle.km_atual),
       status: vehicle.status_operacional,
@@ -106,7 +107,7 @@ export async function getDriverPortalData(
           }
         : null,
     }
-  }).sort((a, b) => Number(b.principal) - Number(a.principal) || a.plate.localeCompare(b.plate))
+  }).sort((a, b) => Number(b.principal) - Number(a.principal) || a.fleetCode.localeCompare(b.fleetCode))
 
   const trip = trips[0]
   const currentVehicle = trip

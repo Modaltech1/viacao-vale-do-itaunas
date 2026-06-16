@@ -19,6 +19,7 @@ export type VehiclePayload = {
   type: string
   brand: string
   model: string
+  fleetCode: string
   plate: string
   year: number | null
   status: VehicleStatus
@@ -52,6 +53,7 @@ export function parseVehiclePayload(body: Record<string, unknown>): VehiclePaylo
     type: String(body.type ?? '').trim(),
     brand: String(body.brand ?? '').trim(),
     model: String(body.model ?? '').trim(),
+    fleetCode: String(body.fleetCode ?? '').trim().toUpperCase(),
     plate: String(body.plate ?? '').trim().toUpperCase(),
     year: yearText ? Number(yearText) : null,
     status: String(body.status ?? 'ativo') as VehicleStatus,
@@ -82,8 +84,8 @@ export function parseVehiclePayload(body: Record<string, unknown>): VehiclePaylo
 }
 
 function validateVehiclePayload(payload: VehiclePayload) {
-  if (!payload.type || !payload.brand || !payload.model || !payload.plate) {
-    throw new Error('Tipo, marca, modelo e placa são obrigatórios.')
+  if (!payload.type || !payload.brand || !payload.model || !payload.fleetCode || !payload.plate) {
+    throw new Error('Tipo, marca, modelo, frota e placa são obrigatórios.')
   }
 
   if (!vehicleStatuses.includes(payload.status)) {
@@ -404,6 +406,10 @@ export function vehicleErrorResponse(error: unknown, fallback: string, status = 
     && typeof error.status === 'number'
       ? error.status
       : null
+
+  if (normalized.includes('veiculos_codigo_frota_normalizado_uniq')) {
+    return NextResponse.json({ error: 'Já existe um veículo cadastrado com esse código de frota.' }, { status: 409 })
+  }
 
   if (normalized.includes('duplicate') || normalized.includes('veiculos_placa_normalizada_uniq')) {
     return NextResponse.json({ error: 'Já existe um veículo cadastrado com essa placa.' }, { status: 409 })

@@ -181,10 +181,12 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
             {driver.vehicles.length ? driver.vehicles.map((vehicle) => (
               <div key={vehicle.id} className="border-b pb-4 last:border-b-0 last:pb-0">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-lg font-semibold">{vehicle.plate} · {vehicle.brand} {vehicle.model}</p>
+                  <p className="text-lg font-semibold">{vehicle.fleetCode} · {vehicle.brand} {vehicle.model}</p>
                   {vehicle.principal ? <StatusBadge type="raw" value="ativo" label="Principal" /> : null}
                 </div>
-                <p className="mt-2 text-sm text-muted-foreground">KM atual: {number(vehicle.currentKm)}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Placa {vehicle.plate} · KM atual: {number(vehicle.currentKm)}
+                </p>
                 <div className="mt-2">
                   <StatusBadge type="vehicle" value={vehicle.status} />
                 </div>

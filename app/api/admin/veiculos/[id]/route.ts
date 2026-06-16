@@ -102,7 +102,7 @@ export async function PATCH(
   try {
     const { data: currentVehicle, error: currentError } = await service
       .from('veiculos')
-      .select('tipo,marca,modelo,placa,ano,status_operacional,km_atual,capacidade,rota_fixa_id,observacoes')
+      .select('tipo,marca,modelo,codigo_frota,placa,ano,status_operacional,km_atual,capacidade,rota_fixa_id,observacoes')
       .eq('id', id)
       .is('excluido_em', null)
       .single()
@@ -120,6 +120,7 @@ export async function PATCH(
         tipo: payload.type,
         marca: payload.brand,
         modelo: payload.model,
+        codigo_frota: payload.fleetCode,
         placa: payload.plate,
         ano: payload.year,
         status_operacional: payload.status,
@@ -142,6 +143,7 @@ export async function PATCH(
           tipo: currentVehicle.tipo,
           marca: currentVehicle.marca,
           modelo: currentVehicle.modelo,
+          codigo_frota: currentVehicle.codigo_frota,
           placa: currentVehicle.placa,
           ano: currentVehicle.ano,
           status_operacional: currentVehicle.status_operacional,

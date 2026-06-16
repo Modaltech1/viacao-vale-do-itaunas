@@ -124,7 +124,7 @@ export function MaintenanceDetailsPage({
   return (
     <>
       <PageHeader
-        title={`Manutenção · ${maintenance.vehiclePlate}`}
+        title={`Manutenção · ${maintenance.vehicleFleetCode}`}
         description={`${maintenance.vehicleLabel} · ${maintenance.maintenanceType === 'preventiva' ? 'Preventiva' : 'Corretiva'}`}
         backHref={listPath}
         backLabel="Voltar para manutenções"
