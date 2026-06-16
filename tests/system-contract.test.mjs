@@ -179,8 +179,14 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'viagens_veiculo_em_andamento_uniq',
     'fn_iniciar_viagem',
     'fn_concluir_viagem',
+    'fn_corrigir_viagem_concluida',
     'v_ultimo_km_abastecimento',
     'and cancelado_em is null',
+    "app.permitir_correcao_km_veiculo",
+    'Somente a ultima viagem do veiculo pode ter KM final corrigido',
+    'admin_pode_acessar_veiculo(v_viagem_antes.veiculo_id)',
+    'Data de chegada nao pode ser anterior ao ultimo abastecimento da viagem',
+    'corrigir_km_final',
     'Data de chegada não pode ser anterior à data de saída',
     'fn_registrar_abastecimento',
     'fn_registrar_despesa_viagem',
@@ -246,6 +252,32 @@ test('migration de responsabilidade administrativa cobre RLS e dashboard', async
     'manutencoes_select_contexto',
     'pendencias_manuais_select_contexto',
     'fn_dashboard_admin',
+  ]
+
+  for (const fragment of requiredFragments) {
+    assert.ok(migration.includes(fragment), `Migration sem ${fragment}`)
+  }
+})
+
+test('migration de correcao de km de viagem preserva invariantes operacionais', async () => {
+  const migration = await readFile(
+    path.join(
+      root,
+      'database',
+      'migrations',
+      '20260616_trip_km_correction.sql',
+    ),
+    'utf8',
+  )
+  const requiredFragments = [
+    'fn_corrigir_viagem_concluida',
+    "posterior.status <> 'cancelada'",
+    'admin_pode_acessar_veiculo(v_viagem_antes.veiculo_id)',
+    'v_ultimo_abastecimento_em',
+    "set_config('app.permitir_correcao_km_veiculo'",
+    'update public.veiculos',
+    'auditoria_eventos',
+    'grant execute',
   ]
 
   for (const fragment of requiredFragments) {

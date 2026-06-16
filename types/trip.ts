@@ -77,6 +77,8 @@ export type TripFormValues = {
   destination: string
   startedAt: string
   initialKm: string
+  finishedAt: string
+  finalKm: string
   notes: string
 }
 

@@ -4,7 +4,12 @@ import { NextResponse } from 'next/server'
 import { normalizeOptionalText } from '@/lib/driver-utils'
 
 function nonNegativeNumber(value: unknown, label: string) {
-  const parsed = Number(String(value ?? '').replace(',', '.'))
+  const rawValue = String(value ?? '').trim()
+  if (!rawValue) {
+    throw new Error(`${label} deve ser maior ou igual a zero.`)
+  }
+
+  const parsed = Number(rawValue.replace(',', '.'))
   if (!Number.isFinite(parsed) || parsed < 0) {
     throw new Error(`${label} deve ser maior ou igual a zero.`)
   }
@@ -12,9 +17,22 @@ function nonNegativeNumber(value: unknown, label: string) {
 }
 
 function requiredDate(value: unknown, label: string) {
-  const date = new Date(String(value ?? ''))
+  const rawValue = String(value ?? '').trim()
+  if (!rawValue) throw new Error(`${label} inválida.`)
+
+  const date = new Date(rawValue)
   if (Number.isNaN(date.getTime())) throw new Error(`${label} inválida.`)
   return date.toISOString()
+}
+
+function optionalNonNegativeNumber(value: unknown, label: string) {
+  if (String(value ?? '').trim() === '') return null
+  return nonNegativeNumber(value, label)
+}
+
+function optionalDate(value: unknown, label: string) {
+  if (String(value ?? '').trim() === '') return null
+  return requiredDate(value, label)
 }
 
 export function parseCreateTripPayload(body: Record<string, unknown>) {
@@ -42,6 +60,8 @@ export function parseUpdateTripPayload(body: Record<string, unknown>) {
   return {
     origin,
     destination,
+    finishedAt: optionalDate(body.finishedAt, 'Data de chegada'),
+    finalKm: optionalNonNegativeNumber(body.finalKm, 'O KM final'),
     notes: normalizeOptionalText(body.notes),
   }
 }

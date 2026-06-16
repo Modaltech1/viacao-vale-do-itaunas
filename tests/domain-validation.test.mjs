@@ -296,7 +296,15 @@ test('viagens validam criação, edição e conclusão', () => {
     initialKm: '23000',
   })
   assert.equal(created.initialKm, 23000)
-  assert.equal(parseUpdateTripPayload({ origin: 'A', destination: 'B' }).destination, 'B')
+  const updated = parseUpdateTripPayload({
+    origin: 'A',
+    destination: 'B',
+    finishedAt: '2026-06-06T12:00',
+    finalKm: '23200',
+  })
+  assert.equal(updated.destination, 'B')
+  assert.equal(updated.finalKm, 23200)
+  assert.equal(parseUpdateTripPayload({ origin: 'A', destination: 'B', finalKm: '' }).finalKm, null)
   assert.equal(parseConcludeTripPayload({
     finishedAt: '2026-06-06T12:00',
     finalKm: '23200',

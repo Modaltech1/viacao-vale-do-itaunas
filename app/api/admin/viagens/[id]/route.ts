@@ -50,9 +50,9 @@ export async function PATCH(
 
     const { data: current, error: currentError } = await service
       .from('viagens')
-      .select('id,status')
+      .select('id,status,km_final,chegou_em')
       .eq('id', id)
-      .single<{ id: string; status: string }>()
+      .single<{ id: string; status: string; km_final: number | null; chegou_em: string | null }>()
 
     if (currentError || !current) {
       return NextResponse.json({ error: 'Viagem não encontrada.' }, { status: 404 })
@@ -62,6 +62,30 @@ export async function PATCH(
         { error: 'Viagens canceladas não podem ser alteradas.' },
         { status: 409 },
       )
+    }
+
+    if (current.status === 'concluida') {
+      const finalKm = payload.finalKm ?? current.km_final
+      const finishedAt = payload.finishedAt ?? current.chegou_em
+
+      if (finalKm == null || !finishedAt) {
+        return NextResponse.json(
+          { error: 'KM final e chegada são obrigatórios para corrigir uma viagem concluída.' },
+          { status: 400 },
+        )
+      }
+
+      const { error } = await auth.supabase.rpc('fn_corrigir_viagem_concluida', {
+        p_viagem_id: id,
+        p_km_final: finalKm,
+        p_chegou_em: finishedAt,
+        p_origem: payload.origin,
+        p_destino: payload.destination,
+        p_observacoes: payload.notes,
+      })
+
+      if (error) throw error
+      return NextResponse.json({ ok: true })
     }
 
     const { error } = await service

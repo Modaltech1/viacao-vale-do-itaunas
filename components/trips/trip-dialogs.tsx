@@ -39,6 +39,8 @@ const emptyTripForm: TripFormValues = {
   destination: '',
   startedAt: '',
   initialKm: '',
+  finishedAt: '',
+  finalKm: '',
   notes: '',
 }
 
@@ -71,6 +73,8 @@ export function TripDialog({
           destination: trip.destination,
           startedAt: localDateTime(trip.startedAt),
           initialKm: trip.initialKm.toString(),
+          finishedAt: trip.finishedAt ? localDateTime(trip.finishedAt) : '',
+          finalKm: trip.finalKm?.toString() ?? '',
           notes: trip.notes,
         }
       : { ...emptyTripForm, startedAt: localDateTime() })
@@ -86,8 +90,16 @@ export function TripDialog({
     && form.driverId
     && !selectedVehicle.linkedDriverIds.includes(form.driverId),
   )
+  const minimumFinalKm = trip
+    ? Math.max(
+        trip.initialKm,
+        'latestRecordedKm' in trip ? trip.latestRecordedKm : trip.initialKm,
+      )
+    : 0
 
-  function updateField(field: 'origin' | 'destination' | 'startedAt' | 'initialKm' | 'notes') {
+  function updateField(
+    field: 'origin' | 'destination' | 'startedAt' | 'initialKm' | 'finishedAt' | 'finalKm' | 'notes',
+  ) {
     return (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setForm((current) => ({ ...current, [field]: event.target.value }))
     }
@@ -120,6 +132,9 @@ export function TripDialog({
             startedAt: form.startedAt
               ? new Date(form.startedAt).toISOString()
               : undefined,
+            finishedAt: form.finishedAt
+              ? new Date(form.finishedAt).toISOString()
+              : undefined,
           }),
         },
       )
@@ -142,7 +157,7 @@ export function TripDialog({
           <DialogTitle>{trip ? 'Editar viagem' : 'Nova viagem'}</DialogTitle>
           <DialogDescription>
             {trip
-              ? 'Atualize a descrição da rota e as observações preservadas no histórico.'
+              ? 'Atualize a rota, observações e, quando permitido, corrija o encerramento operacional.'
               : 'Inicie uma viagem administrativa com motorista, veículo e snapshot da rota.'}
           </DialogDescription>
         </DialogHeader>
@@ -267,6 +282,42 @@ export function TripDialog({
                   />
                 </div>
               </div>
+            ) : null}
+
+            {trip?.status === 'concluida' ? (
+              <section className="space-y-4 border-t pt-5">
+                <div>
+                  <h3 className="font-semibold">Correção de encerramento</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Disponível apenas para correções que preservem a sequência operacional do veículo.
+                  </p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="trip-admin-finished-at">Chegada</Label>
+                    <Input
+                      id="trip-admin-finished-at"
+                      type="datetime-local"
+                      value={form.finishedAt}
+                      onChange={updateField('finishedAt')}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="trip-admin-final-km">KM final</Label>
+                    <Input
+                      id="trip-admin-final-km"
+                      type="number"
+                      min={minimumFinalKm}
+                      step="0.01"
+                      value={form.finalKm}
+                      onChange={updateField('finalKm')}
+                      required
+                    />
+                  </div>
+                </div>
+              </section>
             ) : null}
 
             <div className="space-y-2">
