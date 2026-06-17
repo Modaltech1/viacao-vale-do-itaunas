@@ -180,6 +180,8 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'fn_iniciar_viagem',
     'fn_concluir_viagem',
     'fn_corrigir_viagem_concluida',
+    'fn_km_referencia_atual_veiculo',
+    'fn_corrigir_km_atual_veiculo',
     'v_ultimo_km_abastecimento',
     'and cancelado_em is null',
     "app.permitir_correcao_km_veiculo",
@@ -187,6 +189,7 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'admin_pode_acessar_veiculo(v_viagem_antes.veiculo_id)',
     'Data de chegada nao pode ser anterior ao ultimo abastecimento da viagem',
     'corrigir_km_final',
+    'corrigir_km_atual',
     'Data de chegada não pode ser anterior à data de saída',
     'fn_registrar_abastecimento',
     'fn_registrar_despesa_viagem',
@@ -278,6 +281,31 @@ test('migration de correcao de km de viagem preserva invariantes operacionais', 
     'update public.veiculos',
     'auditoria_eventos',
     'grant execute',
+  ]
+
+  for (const fragment of requiredFragments) {
+    assert.ok(migration.includes(fragment), `Migration sem ${fragment}`)
+  }
+})
+
+test('migration de correcao de km atual usa ultimo evento operacional', async () => {
+  const migration = await readFile(
+    path.join(
+      root,
+      'database',
+      'migrations',
+      '20260617_vehicle_current_km_corrections.sql',
+    ),
+    'utf8',
+  )
+  const requiredFragments = [
+    'fn_km_referencia_atual_veiculo',
+    'order by eventos.evento_em desc',
+    'fn_corrigir_km_atual_veiculo',
+    'Nao e possivel corrigir o KM atual com viagem em andamento',
+    'KM atual nao pode ser menor que o ultimo evento operacional',
+    'corrigir_km_atual',
+    'v_km_atual_corrigido := public.fn_km_referencia_atual_veiculo',
   ]
 
   for (const fragment of requiredFragments) {

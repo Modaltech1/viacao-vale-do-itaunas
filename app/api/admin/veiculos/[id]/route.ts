@@ -124,7 +124,6 @@ export async function PATCH(
         placa: payload.plate,
         ano: payload.year,
         status_operacional: payload.status,
-        km_atual: payload.currentKm,
         capacidade: payload.capacity,
         rota_fixa_id: route.routeId,
         observacoes: payload.notes,
@@ -147,7 +146,6 @@ export async function PATCH(
           placa: currentVehicle.placa,
           ano: currentVehicle.ano,
           status_operacional: currentVehicle.status_operacional,
-          km_atual: currentVehicle.km_atual,
           capacidade: currentVehicle.capacidade,
           rota_fixa_id: currentVehicle.rota_fixa_id,
           observacoes: currentVehicle.observacoes,
@@ -157,6 +155,16 @@ export async function PATCH(
 
       if (createdRouteId) await service.from('rotas').delete().eq('id', createdRouteId)
       throw documentError
+    }
+
+    if (payload.currentKm !== Number(currentVehicle.km_atual)) {
+      const { error: kmError } = await auth.supabase.rpc('fn_corrigir_km_atual_veiculo', {
+        p_veiculo_id: id,
+        p_km_atual: payload.currentKm,
+        p_motivo: 'Edição administrativa do veículo',
+      })
+
+      if (kmError) throw kmError
     }
 
     return NextResponse.json({ ok: true })

@@ -1482,6 +1482,145 @@ begin
 end;
 $$;
 
+create or replace function public.fn_km_referencia_atual_veiculo(
+  p_veiculo_id uuid
+)
+returns numeric
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  with eventos as (
+    select
+      vi.km_final as km,
+      vi.chegou_em as evento_em,
+      vi.criado_em
+    from public.viagens vi
+    where vi.veiculo_id = p_veiculo_id
+      and vi.status = 'concluida'
+      and vi.km_final is not null
+      and vi.chegou_em is not null
+
+    union all
+
+    select
+      a.km_registrado as km,
+      a.registrado_em as evento_em,
+      a.criado_em
+    from public.abastecimentos a
+    where a.veiculo_id = p_veiculo_id
+      and a.cancelado_em is null
+
+    union all
+
+    select
+      m.km_veiculo as km,
+      coalesce(m.concluido_em, m.iniciado_em, m.aberto_em, m.criado_em) as evento_em,
+      m.criado_em
+    from public.manutencoes m
+    where m.veiculo_id = p_veiculo_id
+      and m.status <> 'cancelada'
+      and m.km_veiculo is not null
+  )
+  select coalesce((
+    select eventos.km
+    from eventos
+    where eventos.km is not null
+    order by eventos.evento_em desc, eventos.criado_em desc
+    limit 1
+  ), 0)
+$$;
+
+create or replace function public.fn_corrigir_km_atual_veiculo(
+  p_veiculo_id uuid,
+  p_km_atual numeric,
+  p_motivo text default null
+)
+returns public.veiculos
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_veiculo_antes public.veiculos%rowtype;
+  v_veiculo_depois public.veiculos%rowtype;
+  v_km_referencia numeric;
+begin
+  if not public.perfil_ativo() then
+    raise exception 'Perfil inativo ou nao autenticado';
+  end if;
+
+  if not public.eh_admin() then
+    raise exception 'Somente administradores podem corrigir o KM atual do veiculo';
+  end if;
+
+  select * into v_veiculo_antes
+    from public.veiculos
+    where id = p_veiculo_id
+      and excluido_em is null
+    for update;
+
+  if not found then
+    raise exception 'Veiculo nao encontrado';
+  end if;
+
+  if not public.admin_pode_acessar_veiculo(p_veiculo_id) then
+    raise exception 'Sem permissao para corrigir este veiculo';
+  end if;
+
+  if p_km_atual is null or p_km_atual < 0 then
+    raise exception 'KM atual deve ser maior ou igual a zero';
+  end if;
+
+  if exists (
+    select 1
+    from public.viagens vi
+    where vi.veiculo_id = p_veiculo_id
+      and vi.status = 'em_andamento'
+  ) then
+    raise exception 'Nao e possivel corrigir o KM atual com viagem em andamento';
+  end if;
+
+  v_km_referencia := public.fn_km_referencia_atual_veiculo(p_veiculo_id);
+
+  if p_km_atual < v_km_referencia then
+    raise exception 'KM atual nao pode ser menor que o ultimo evento operacional do veiculo (%)', v_km_referencia;
+  end if;
+
+  perform set_config('app.permitir_correcao_km_veiculo', 'on', true);
+
+  update public.veiculos
+    set km_atual = p_km_atual,
+        atualizado_por = auth.uid()
+    where id = p_veiculo_id
+    returning * into v_veiculo_depois;
+
+  insert into public.auditoria_eventos (
+    tabela,
+    registro_id,
+    acao,
+    dados_antes,
+    dados_depois,
+    motivo,
+    criado_por
+  ) values (
+    'veiculos',
+    p_veiculo_id,
+    'corrigir_km_atual',
+    jsonb_build_object('km_atual', v_veiculo_antes.km_atual),
+    jsonb_build_object(
+      'km_atual', v_veiculo_depois.km_atual,
+      'km_referencia', v_km_referencia
+    ),
+    coalesce(nullif(btrim(p_motivo), ''), 'Correcao administrativa do KM atual do veiculo'),
+    auth.uid()
+  );
+
+  return v_veiculo_depois;
+end;
+$$;
+
 create or replace function public.fn_corrigir_viagem_concluida(
   p_viagem_id uuid,
   p_km_final numeric,
@@ -1589,26 +1728,7 @@ begin
     where id = p_viagem_id
     returning * into v_viagem_depois;
 
-  select greatest(
-    coalesce((
-      select max(coalesce(vi.km_final, vi.km_inicial))
-        from public.viagens vi
-        where vi.veiculo_id = v_viagem_depois.veiculo_id
-          and vi.status <> 'cancelada'
-    ), 0),
-    coalesce((
-      select max(a.km_registrado)
-        from public.abastecimentos a
-        where a.veiculo_id = v_viagem_depois.veiculo_id
-          and a.cancelado_em is null
-    ), 0),
-    coalesce((
-      select max(m.km_veiculo)
-        from public.manutencoes m
-        where m.veiculo_id = v_viagem_depois.veiculo_id
-          and m.status <> 'cancelada'
-    ), 0)
-  ) into v_km_atual_corrigido;
+  v_km_atual_corrigido := public.fn_km_referencia_atual_veiculo(v_viagem_depois.veiculo_id);
 
   perform set_config('app.permitir_correcao_km_veiculo', 'on', true);
 
@@ -1630,7 +1750,7 @@ begin
     p_viagem_id,
     'corrigir_km_final',
     to_jsonb(v_viagem_antes),
-    to_jsonb(v_viagem_depois),
+    jsonb_set(to_jsonb(v_viagem_depois), '{km_atual_veiculo}', to_jsonb(v_km_atual_corrigido), true),
     'Correcao administrativa de encerramento da ultima viagem do veiculo',
     auth.uid()
   );
@@ -4369,6 +4489,8 @@ grant usage, select on all sequences in schema public to authenticated;
 
 revoke execute on function public.fn_iniciar_viagem(uuid, uuid, uuid, text, text, timestamptz, numeric, text, boolean) from public, anon;
 revoke execute on function public.fn_concluir_viagem(uuid, numeric, timestamptz, text) from public, anon;
+revoke execute on function public.fn_km_referencia_atual_veiculo(uuid) from public, anon;
+revoke execute on function public.fn_corrigir_km_atual_veiculo(uuid, numeric, text) from public, anon;
 revoke execute on function public.fn_corrigir_viagem_concluida(uuid, numeric, timestamptz, text, text, text) from public, anon;
 revoke execute on function public.fn_registrar_abastecimento(uuid, numeric, text, numeric, text) from public, anon;
 revoke execute on function public.fn_registrar_despesa_viagem(uuid, text, numeric, text, text) from public, anon;
@@ -4389,6 +4511,8 @@ revoke execute on function public.fn_transferir_responsabilidade_admin(text, uui
 
 grant execute on function public.fn_iniciar_viagem(uuid, uuid, uuid, text, text, timestamptz, numeric, text, boolean) to authenticated;
 grant execute on function public.fn_concluir_viagem(uuid, numeric, timestamptz, text) to authenticated;
+grant execute on function public.fn_km_referencia_atual_veiculo(uuid) to authenticated;
+grant execute on function public.fn_corrigir_km_atual_veiculo(uuid, numeric, text) to authenticated;
 grant execute on function public.fn_corrigir_viagem_concluida(uuid, numeric, timestamptz, text, text, text) to authenticated;
 grant execute on function public.fn_registrar_abastecimento(uuid, numeric, text, numeric, text) to authenticated;
 grant execute on function public.fn_registrar_despesa_viagem(uuid, text, numeric, text, text) to authenticated;
