@@ -10,7 +10,7 @@ type VehicleIdentity = {
 }
 
 export function vehicleFleetCode(vehicle?: VehicleIdentity | null) {
-  const code = vehicle?.fleetCode ?? vehicle?.codigo_frota ?? vehicle?.plate ?? vehicle?.placa ?? ''
+  const code = vehicle?.fleetCode ?? vehicle?.codigo_frota ?? ''
   return String(code).trim() || 'Sem frota'
 }
 

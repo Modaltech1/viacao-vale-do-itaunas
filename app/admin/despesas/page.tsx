@@ -208,7 +208,7 @@ export default function ExpensesPage() {
                       <TableCell className="whitespace-nowrap">{dateTime(expense.registeredAt)}</TableCell>
                       <TableCell>{expense.category}</TableCell>
                       <TableCell>
-                        <p className="font-semibold">{expense.vehicleLabel}</p>
+                        <p className="font-semibold">{expense.vehicleFleetCode}</p>
                         <p className="text-xs text-muted-foreground">
                           {expense.tripId ? 'Vinculada a viagem' : 'Registro avulso'}
                         </p>
@@ -287,7 +287,7 @@ export default function ExpensesPage() {
               ) : maintenanceExpenses.length ? maintenanceExpensePagination.pageItems.map((expense) => (
                 <TableRow key={expense.id}>
                   <TableCell className="whitespace-nowrap">{dateTime(expense.registeredAt)}</TableCell>
-                  <TableCell className="font-semibold">{expense.vehicleLabel}</TableCell>
+                  <TableCell className="font-semibold">{expense.vehicleFleetCode}</TableCell>
                   <TableCell className="max-w-[220px]">
                     <p
                       className="truncate"

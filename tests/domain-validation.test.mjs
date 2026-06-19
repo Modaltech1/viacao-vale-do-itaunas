@@ -36,6 +36,7 @@ import {
   parseUpdateTripPayload,
 } from '@/lib/trips-service'
 import { parseVehiclePayload } from '@/lib/vehicles-service'
+import { vehicleFleetCode, vehicleLabel } from '@/lib/vehicle-label'
 import {
   parseEndTripPayload,
   parseExpensePayload as parseDriverExpense,
@@ -110,6 +111,12 @@ test('utilitários normalizam texto e números sem propagar NaN', () => {
   assert.equal(normalizeOptionalText('   '), null)
   assert.equal(toNumber('12.5'), 12.5)
   assert.equal(toNumber('inválido'), 0)
+})
+
+test('identidade principal do veículo nunca usa placa como fallback de frota', () => {
+  assert.equal(vehicleFleetCode({ codigo_frota: 'FROTA-42', placa: 'ABC-1D23' }), 'FROTA-42')
+  assert.equal(vehicleFleetCode({ placa: 'ABC-1D23' }), 'Sem frota')
+  assert.equal(vehicleLabel({ placa: 'ABC-1D23', marca: 'Scania', modelo: 'R 450' }), 'Sem frota · Scania R 450')
 })
 
 test('duração de viagem preserva minutos para análise e formata horas para exibição', () => {

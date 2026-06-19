@@ -211,7 +211,7 @@ export default function RefuelingsPage() {
                         {dateTime(refueling.registeredAt)}
                       </TableCell>
                       <TableCell>
-                        <p className="font-semibold">{refueling.vehicleLabel}</p>
+                        <p className="font-semibold">{refueling.vehicleFleetCode}</p>
                         <p className="text-xs text-muted-foreground">
                           {refueling.tripId ? 'Vinculado a viagem' : 'Registro avulso'}
                         </p>

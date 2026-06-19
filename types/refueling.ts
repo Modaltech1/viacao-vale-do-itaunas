@@ -12,6 +12,7 @@ export type RefuelingListItem = {
   id: string
   tripId: string | null
   vehicleId: string
+  vehicleFleetCode: string
   vehicleLabel: string
   driverId: string | null
   driverName: string
@@ -26,6 +27,7 @@ export type RefuelingListItem = {
 
 export type RefuelingVehicleOption = {
   id: string
+  fleetCode: string
   label: string
   currentKm: number
   status: string

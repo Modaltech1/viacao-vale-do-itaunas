@@ -5,6 +5,7 @@ export type TripListItem = {
   driverId: string
   driverName: string
   vehicleId: string
+  vehicleFleetCode: string
   vehicleLabel: string
   routeId: string | null
   routeName: string

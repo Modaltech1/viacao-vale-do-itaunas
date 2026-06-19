@@ -4,7 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { toNumber } from '@/lib/driver-utils'
 import { queryRows } from '@/lib/supabase-query'
 import { getTravelOperationLookups } from '@/lib/travel-operation-repository'
-import { vehicleLabel } from '@/lib/vehicle-label'
+import { vehicleFleetCode, vehicleLabel } from '@/lib/vehicle-label'
 import type {
   ExpenseListItem,
   ExpenseLookups,
@@ -69,6 +69,7 @@ export async function listExpenses(
       id: expense.id,
       tripId: expense.viagem_id ?? null,
       vehicleId: expense.veiculo_id,
+      vehicleFleetCode: vehicleById.get(expense.veiculo_id)?.fleetCode ?? 'Sem frota',
       vehicleLabel: vehicleById.get(expense.veiculo_id)?.label ?? 'Veículo não encontrado',
       driverId: expense.motorista_id ?? null,
       driverName: expense.motorista_id
@@ -96,6 +97,10 @@ export async function listExpenses(
     maintenanceItems: maintenances.map((maintenance) => ({
       id: maintenance.id,
       vehicleId: maintenance.veiculo_id,
+      vehicleFleetCode: vehicleFleetCode({
+        codigo_frota: maintenance.veiculo_codigo_frota,
+        placa: maintenance.veiculo_placa,
+      }),
       vehicleLabel: vehicleLabel({
         codigo_frota: maintenance.veiculo_codigo_frota,
         placa: maintenance.veiculo_placa,

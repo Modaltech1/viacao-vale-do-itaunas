@@ -20,6 +20,7 @@ export type ExpenseListItem = {
   id: string
   tripId: string | null
   vehicleId: string
+  vehicleFleetCode: string
   vehicleLabel: string
   driverId: string | null
   driverName: string
@@ -34,6 +35,7 @@ export type ExpenseListItem = {
 export type MaintenanceExpenseItem = {
   id: string
   vehicleId: string
+  vehicleFleetCode: string
   vehicleLabel: string
   cause: string
   registeredAt: string

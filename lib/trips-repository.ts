@@ -3,7 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { toNumber } from '@/lib/driver-utils'
 import { queryRows } from '@/lib/supabase-query'
-import { vehicleLabel } from '@/lib/vehicle-label'
+import { vehicleFleetCode, vehicleLabel } from '@/lib/vehicle-label'
 import type {
   TripDetails,
   TripFormOptions,
@@ -16,6 +16,10 @@ function normalizeTrip(row: Record<string, any>): TripListItem {
     driverId: row.motorista_id,
     driverName: row.motorista_nome ?? 'Motorista não encontrado',
     vehicleId: row.veiculo_id,
+    vehicleFleetCode: vehicleFleetCode({
+      codigo_frota: row.veiculo_codigo_frota,
+      placa: row.veiculo_placa,
+    }),
     vehicleLabel: vehicleLabel({
       codigo_frota: row.veiculo_codigo_frota,
       placa: row.veiculo_placa,

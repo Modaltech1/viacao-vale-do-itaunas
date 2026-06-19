@@ -257,6 +257,20 @@ test('AET integra o catálogo documental, formulário e alertas operacionais', a
   assert.match(pendings, /vehicleDocumentLabel\(type\)/)
 })
 
+test('tabelas operacionais identificam veículos pela frota', async () => {
+  const [trips, refuelings, expenses, maintenances] = await Promise.all([
+    readFile(path.join(root, 'app', 'admin', 'viagens', 'page.tsx'), 'utf8'),
+    readFile(path.join(root, 'app', 'admin', 'abastecimentos', 'page.tsx'), 'utf8'),
+    readFile(path.join(root, 'app', 'admin', 'despesas', 'page.tsx'), 'utf8'),
+    readFile(path.join(root, 'components', 'maintenances', 'maintenances-page.tsx'), 'utf8'),
+  ])
+
+  assert.match(trips, /\{trip\.vehicleFleetCode\}/)
+  assert.match(refuelings, /\{refueling\.vehicleFleetCode\}/)
+  assert.match(expenses, /\{expense\.vehicleFleetCode\}/)
+  assert.match(maintenances, /\{item\.vehicleFleetCode\}/)
+})
+
 test('migration de responsabilidade administrativa cobre RLS e dashboard', async () => {
   const migration = await readFile(
     path.join(

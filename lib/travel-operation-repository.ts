@@ -50,6 +50,7 @@ export async function getTravelOperationLookups(
   return {
     vehicles: vehicles.map((vehicle) => ({
       id: vehicle.id,
+      fleetCode: vehicleFleetCode(vehicle),
       label: vehicleLabel(vehicle),
       currentKm: toNumber(vehicle.km_atual),
       status: vehicle.status_operacional,

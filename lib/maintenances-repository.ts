@@ -3,7 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { toNumber } from '@/lib/driver-utils'
 import { queryRows, type DatabaseRow } from '@/lib/supabase-query'
-import { vehicleLabel } from '@/lib/vehicle-label'
+import { vehicleFleetCode, vehicleLabel } from '@/lib/vehicle-label'
 import type {
   MaintenanceDetails,
   MaintenanceFormOptions,
@@ -43,7 +43,10 @@ function normalizeMaintenance(row: DatabaseRow): MaintenanceListItem {
   return {
     id: row.id,
     vehicleId: row.veiculo_id,
-    vehicleFleetCode: row.veiculo_codigo_frota ?? row.veiculo_placa,
+    vehicleFleetCode: vehicleFleetCode({
+      codigo_frota: row.veiculo_codigo_frota,
+      placa: row.veiculo_placa,
+    }),
     vehiclePlate: row.veiculo_placa,
     vehicleLabel: vehicleLabel({
       codigo_frota: row.veiculo_codigo_frota,

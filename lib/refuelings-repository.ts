@@ -43,6 +43,7 @@ export async function listRefuelings(
         id: refueling.id,
         tripId: refueling.viagem_id ?? null,
         vehicleId: refueling.veiculo_id,
+        vehicleFleetCode: vehicle?.fleetCode ?? 'Sem frota',
         vehicleLabel: vehicle?.label ?? 'Veículo não encontrado',
         driverId: refueling.motorista_id ?? null,
         driverName: driver?.name ?? 'Sem motorista',

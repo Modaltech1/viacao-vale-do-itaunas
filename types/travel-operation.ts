@@ -1,5 +1,6 @@
 export type TravelOperationVehicleOption = {
   id: string
+  fleetCode: string
   label: string
   currentKm: number
   status: string
