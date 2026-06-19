@@ -10,19 +10,19 @@ import type {
   TripListItem,
 } from '@/types/trip'
 
-function normalizeTrip(row: Record<string, any>): TripListItem {
+function normalizeTrip(row: Record<string, any>, currentFleetCode?: string | null): TripListItem {
+  const fleetCode = vehicleFleetCode({
+    codigo_frota: currentFleetCode ?? row.veiculo_codigo_frota,
+  })
+
   return {
     id: row.id,
     driverId: row.motorista_id,
     driverName: row.motorista_nome ?? 'Motorista não encontrado',
     vehicleId: row.veiculo_id,
-    vehicleFleetCode: vehicleFleetCode({
-      codigo_frota: row.veiculo_codigo_frota,
-      placa: row.veiculo_placa,
-    }),
+    vehicleFleetCode: fleetCode,
     vehicleLabel: vehicleLabel({
-      codigo_frota: row.veiculo_codigo_frota,
-      placa: row.veiculo_placa,
+      codigo_frota: fleetCode,
       marca: row.veiculo_marca,
       modelo: row.veiculo_modelo,
     }),
@@ -55,7 +55,20 @@ export async function listTrips(supabase: SupabaseClient): Promise<TripListItem[
       .order('saiu_em', { ascending: false }),
   )
 
-  return rows.map(normalizeTrip)
+  const vehicleIds = [...new Set(rows.map((row) => row.veiculo_id).filter(Boolean))]
+  const vehicles = vehicleIds.length
+    ? await queryRows(
+        supabase
+          .from('veiculos')
+          .select('id,codigo_frota')
+          .in('id', vehicleIds),
+      )
+    : []
+  const fleetCodeByVehicle = new Map(
+    vehicles.map((vehicle) => [vehicle.id, vehicle.codigo_frota]),
+  )
+
+  return rows.map((row) => normalizeTrip(row, fleetCodeByVehicle.get(row.veiculo_id)))
 }
 
 export async function getTripDetails(
@@ -71,7 +84,13 @@ export async function getTripDetails(
   const row = rows[0]
   if (!row) return null
 
-  const [refuelings, expenses] = await Promise.all([
+  const [vehicles, refuelings, expenses] = await Promise.all([
+    queryRows(
+      supabase
+        .from('veiculos')
+        .select('id,codigo_frota')
+        .eq('id', row.veiculo_id),
+    ),
     queryRows(
       supabase
         .from('abastecimentos')
@@ -90,7 +109,7 @@ export async function getTripDetails(
     ),
   ])
 
-  const trip = normalizeTrip(row)
+  const trip = normalizeTrip(row, vehicles[0]?.codigo_frota)
   return {
     ...trip,
     latestRecordedKm: Math.max(

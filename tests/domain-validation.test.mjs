@@ -33,6 +33,7 @@ import { parseServicePayload, servicePayloadToDatabase } from '@/lib/services-se
 import {
   parseConcludeTripPayload,
   parseCreateTripPayload,
+  parseRemoveTripPayload,
   parseUpdateTripPayload,
 } from '@/lib/trips-service'
 import { parseVehiclePayload } from '@/lib/vehicles-service'
@@ -332,6 +333,8 @@ test('viagens validam criação, edição e conclusão', () => {
     finishedAt: '2026-06-06T12:00',
     finalKm: '23200',
   }).finalKm, 23200)
+  assert.equal(parseRemoveTripPayload({ reason: 'Lançamento duplicado' }).reason, 'Lançamento duplicado')
+  throwsMessage(() => parseRemoveTripPayload({ reason: 'x' }), 'pelo menos 5 caracteres')
   throwsMessage(() => parseCreateTripPayload({
     startedAt: '2026-06-06T08:00',
     initialKm: '0',

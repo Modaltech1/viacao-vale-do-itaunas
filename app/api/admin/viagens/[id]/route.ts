@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getTripDetails, getTripFormOptions } from '@/lib/trips-repository'
 import {
+  parseRemoveTripPayload,
   parseUpdateTripPayload,
   tripErrorResponse,
 } from '@/lib/trips-service'
@@ -102,5 +103,35 @@ export async function PATCH(
     return NextResponse.json({ ok: true })
   } catch (error) {
     return tripErrorResponse(error, 'Não foi possível atualizar a viagem.')
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> },
+) {
+  const auth = await requireAdmin()
+  if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
+
+  const { id } = await context.params
+  let payload
+  try {
+    payload = parseRemoveTripPayload(await request.json())
+  } catch (error) {
+    return tripErrorResponse(error, 'Motivo da remoção inválido.')
+  }
+
+  try {
+    await assertAdminTripAccess(auth.supabase, auth.admin, id)
+
+    const { data, error } = await auth.supabase.rpc('fn_remover_viagem', {
+      p_viagem_id: id,
+      p_motivo: payload.reason,
+    })
+
+    if (error) throw error
+    return NextResponse.json({ ok: true, result: data })
+  } catch (error) {
+    return tripErrorResponse(error, 'Não foi possível remover a viagem.')
   }
 }

@@ -198,6 +198,7 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'fn_iniciar_viagem',
     'fn_concluir_viagem',
     'fn_corrigir_viagem_concluida',
+    'fn_remover_viagem',
     'fn_km_referencia_atual_veiculo',
     'fn_corrigir_km_atual_veiculo',
     'v_ultimo_km_abastecimento',
@@ -252,6 +253,39 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
   }
 })
 
+test('remoção de viagem é transacional, recompõe estoque e preserva auditoria', async () => {
+  const [migration, route, details, dialogs] = await Promise.all([
+    readFile(
+      path.join(root, 'database', 'migrations', '20260619_remove_trip_transactionally.sql'),
+      'utf8',
+    ),
+    readFile(path.join(root, 'app', 'api', 'admin', 'viagens', '[id]', 'route.ts'), 'utf8'),
+    readFile(path.join(root, 'components', 'trips', 'trip-details-page.tsx'), 'utf8'),
+    readFile(path.join(root, 'components', 'trips', 'trip-dialogs.tsx'), 'utf8'),
+  ])
+
+  for (const fragment of [
+    'fn_remover_viagem',
+    'admin_pode_acessar_veiculo',
+    'devolucao_cancelamento_despesa',
+    'delete from public.abastecimentos',
+    'delete from public.despesas_viagem',
+    'delete from public.viagens',
+    'fn_km_referencia_atual_veiculo',
+    "set_config('app.permitir_correcao_km_veiculo'",
+    'auditoria_eventos',
+    'grant execute',
+  ]) {
+    assert.ok(migration.includes(fragment), `Migration de remoção sem ${fragment}`)
+  }
+
+  assert.match(route, /export async function DELETE/)
+  assert.match(route, /fn_remover_viagem/)
+  assert.match(details, /<RemoveTripDialog/)
+  assert.match(details, /Remover viagem/)
+  assert.match(dialogs, /peças consumidas nessas despesas retornarão ao estoque/)
+})
+
 test('AET integra o catálogo documental, formulário e alertas operacionais', async () => {
   const [migration, definitions, vehicleDialog, vehicleDetails, reports, pendings] = await Promise.all([
     readFile(
@@ -276,17 +310,35 @@ test('AET integra o catálogo documental, formulário e alertas operacionais', a
 })
 
 test('tabelas operacionais identificam veículos pela frota', async () => {
-  const [trips, refuelings, expenses, maintenances] = await Promise.all([
+  const [trips, tripRepository, refuelings, expenses, maintenances] = await Promise.all([
     readFile(path.join(root, 'app', 'admin', 'viagens', 'page.tsx'), 'utf8'),
+    readFile(path.join(root, 'lib', 'trips-repository.ts'), 'utf8'),
     readFile(path.join(root, 'app', 'admin', 'abastecimentos', 'page.tsx'), 'utf8'),
     readFile(path.join(root, 'app', 'admin', 'despesas', 'page.tsx'), 'utf8'),
     readFile(path.join(root, 'components', 'maintenances', 'maintenances-page.tsx'), 'utf8'),
   ])
 
   assert.match(trips, /\{trip\.vehicleFleetCode\}/)
+  assert.match(tripRepository, /\.from\('veiculos'\)/)
+  assert.match(tripRepository, /\.select\('id,codigo_frota'\)/)
   assert.match(refuelings, /\{refueling\.vehicleFleetCode\}/)
   assert.match(expenses, /\{expense\.vehicleFleetCode\}/)
   assert.match(maintenances, /\{item\.vehicleFleetCode\}/)
+})
+
+test('tabela de viagens protege colunas numéricas e explicita os marcos de tempo', async () => {
+  const page = await readFile(
+    path.join(root, 'app', 'admin', 'viagens', 'page.tsx'),
+    'utf8',
+  )
+
+  assert.match(page, /table-fixed/)
+  assert.match(page, />Saída<\/span>/)
+  assert.match(page, />Chegada<\/span>/)
+  assert.match(page, /Duração:/)
+  assert.match(page, />Início<\/span>/)
+  assert.match(page, />Final<\/span>/)
+  assert.match(page, /truncate tabular-nums/)
 })
 
 test('migration de responsabilidade administrativa cobre RLS e dashboard', async () => {

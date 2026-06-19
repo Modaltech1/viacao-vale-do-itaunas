@@ -155,13 +155,13 @@ export default function TripsPage() {
             <Table className="min-w-[980px] table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[24%]">Rota</TableHead>
-                  <TableHead className="w-[14%]">Motorista</TableHead>
-                  <TableHead className="w-[16%]">Veículo</TableHead>
+                  <TableHead className="w-[22%]">Rota</TableHead>
+                  <TableHead className="w-[12%]">Motorista</TableHead>
+                  <TableHead className="w-[14%]">Veículo</TableHead>
                   <TableHead className="w-[19%]">Saída / chegada</TableHead>
-                  <TableHead className="w-[12%]">KM</TableHead>
+                  <TableHead className="w-[17%]">KM</TableHead>
                   <TableHead className="w-[9%]">Status</TableHead>
-                  <TableHead className="w-[6%]" />
+                  <TableHead className="w-[7%]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -198,22 +198,59 @@ export default function TripsPage() {
                             </p>
                           ) : null}
                         </TableCell>
-                        <TableCell>
-                          <p className="truncate tabular-nums">
-                            {compactDateTime(trip.startedAt)} / {compactDateTime(trip.finishedAt ?? undefined)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatTripDuration(trip.startedAt, trip.finishedAt)}
-                            {trip.finishedAt ? ' de viagem' : ' até agora'}
-                          </p>
+                        <TableCell className="overflow-hidden">
+                          <div className="space-y-1 text-sm">
+                            <p className="flex min-w-0 gap-2">
+                              <span className="w-14 shrink-0 text-xs text-muted-foreground">Saída</span>
+                              <span className="truncate tabular-nums" title={compactDateTime(trip.startedAt)}>
+                                {compactDateTime(trip.startedAt)}
+                              </span>
+                            </p>
+                            <p className="flex min-w-0 gap-2">
+                              <span className="w-14 shrink-0 text-xs text-muted-foreground">Chegada</span>
+                              <span
+                                className="truncate tabular-nums"
+                                title={trip.finishedAt ? compactDateTime(trip.finishedAt) : 'Em andamento'}
+                              >
+                                {trip.finishedAt ? compactDateTime(trip.finishedAt) : 'Em andamento'}
+                              </span>
+                            </p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              Duração: {formatTripDuration(trip.startedAt, trip.finishedAt)}
+                              {!trip.finishedAt ? ' até agora' : ''}
+                            </p>
+                          </div>
                         </TableCell>
-                        <TableCell>
-                          <p>{number(trip.initialKm)} / {trip.finalKm == null ? '—' : number(trip.finalKm)}</p>
+                        <TableCell className="overflow-hidden">
+                          <div className="space-y-1 text-sm">
+                            <p className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2">
+                              <span className="text-xs text-muted-foreground">Início</span>
+                              <span className="truncate tabular-nums" title={number(trip.initialKm)}>
+                                {number(trip.initialKm)}
+                              </span>
+                            </p>
+                            <p className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2">
+                              <span className="text-xs text-muted-foreground">Final</span>
+                              <span
+                                className="truncate tabular-nums"
+                                title={trip.finalKm == null ? 'Não informado' : number(trip.finalKm)}
+                              >
+                                {trip.finalKm == null ? '—' : number(trip.finalKm)}
+                              </span>
+                            </p>
+                          </div>
                           {trip.totalKm != null ? (
-                            <p className="text-xs text-muted-foreground">{number(trip.totalKm)} km rodados</p>
+                            <p
+                              className="truncate text-xs text-muted-foreground"
+                              title={`${number(trip.totalKm)} km rodados`}
+                            >
+                              {number(trip.totalKm)} km rodados
+                            </p>
                           ) : null}
                         </TableCell>
-                        <TableCell><StatusBadge type="trip" value={trip.status} /></TableCell>
+                        <TableCell className="overflow-hidden">
+                          <StatusBadge type="trip" value={trip.status} />
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button variant="link" size="sm" className="px-0" asChild>
                             <Link href={`/admin/viagens/${trip.id}`}>Detalhes</Link>

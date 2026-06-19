@@ -470,3 +470,92 @@ export function ConcludeTripDialog({
     </Dialog>
   )
 }
+
+export function RemoveTripDialog({
+  open,
+  onOpenChange,
+  trip,
+  onRemoved,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  trip: TripDetails
+  onRemoved: () => void | Promise<void>
+}) {
+  const [reason, setReason] = useState('')
+  const [removing, setRemoving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!open) return
+    setReason('')
+    setError('')
+  }, [open])
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setRemoving(true)
+    setError('')
+
+    try {
+      const response = await fetch(`/api/admin/viagens/${trip.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Não foi possível remover a viagem.')
+
+      await onRemoved()
+      onOpenChange(false)
+    } catch (removeError) {
+      setError(removeError instanceof Error ? removeError.message : 'Não foi possível remover a viagem.')
+    } finally {
+      setRemoving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[560px]">
+        <DialogHeader>
+          <DialogTitle>Remover viagem</DialogTitle>
+          <DialogDescription>
+            Esta ação é definitiva. Abastecimentos e despesas da viagem também serão removidos,
+            e as peças consumidas nessas despesas retornarão ao estoque.
+          </DialogDescription>
+        </DialogHeader>
+
+        {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="trip-removal-reason">Motivo da remoção</Label>
+            <Textarea
+              id="trip-removal-reason"
+              rows={3}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder="Descreva por que esta viagem deve ser removida"
+              minLength={5}
+              required
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={removing}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={removing || reason.trim().length < 5}
+            >
+              {removing ? 'Removendo...' : 'Remover viagem'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

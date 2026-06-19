@@ -74,6 +74,15 @@ export function parseConcludeTripPayload(body: Record<string, unknown>) {
   }
 }
 
+export function parseRemoveTripPayload(body: Record<string, unknown>) {
+  const reason = String(body.reason ?? '').trim()
+  if (reason.length < 5) {
+    throw new Error('Informe um motivo com pelo menos 5 caracteres para remover a viagem.')
+  }
+
+  return { reason }
+}
+
 export function tripErrorResponse(error: unknown, fallback: string, status = 400) {
   const message = error instanceof Error ? error.message : fallback
   const normalized = message.toLowerCase()

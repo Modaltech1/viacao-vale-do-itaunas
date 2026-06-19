@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import {
   Button,
@@ -15,23 +16,25 @@ import {
   TableHeader,
   TableRow,
 } from '@prodexy/ui'
-import { DollarSign, Edit3, Fuel, Gauge, Route, SquareCheckBig, Timer } from 'lucide-react'
+import { DollarSign, Edit3, Fuel, Gauge, Route, SquareCheckBig, Timer, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
 import { MetricCard } from '@/components/shared/metric-card'
 import { Section } from '@/components/shared/section'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
-import { ConcludeTripDialog, TripDialog } from '@/components/trips/trip-dialogs'
+import { ConcludeTripDialog, RemoveTripDialog, TripDialog } from '@/components/trips/trip-dialogs'
 import { brl, dateTime, formatTripDuration, number } from '@/lib/format'
 import type { TripDetails, TripFormOptions } from '@/types/trip'
 
 const emptyOptions: TripFormOptions = { drivers: [], vehicles: [] }
 
 export function TripDetailsPage({ tripId }: { tripId: string }) {
+  const router = useRouter()
   const [trip, setTrip] = useState<TripDetails | null>(null)
   const [options, setOptions] = useState<TripFormOptions>(emptyOptions)
   const [editOpen, setEditOpen] = useState(false)
   const [concludeOpen, setConcludeOpen] = useState(false)
+  const [removeOpen, setRemoveOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -99,6 +102,14 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
         backHref="/admin/viagens"
         backLabel="Voltar para viagens"
       >
+        <Button
+          variant="outline"
+          className="gap-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => setRemoveOpen(true)}
+        >
+          <Trash2 className="size-4" />
+          Remover viagem
+        </Button>
         <Button variant="outline" className="gap-2" onClick={() => setEditOpen(true)}>
           <Edit3 className="size-4" />
           Editar viagem
@@ -272,6 +283,12 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
         options={options}
         trip={trip}
         onSaved={loadTrip}
+      />
+      <RemoveTripDialog
+        open={removeOpen}
+        onOpenChange={setRemoveOpen}
+        trip={trip}
+        onRemoved={() => router.replace('/admin/viagens')}
       />
       {trip.status === 'em_andamento' ? (
         <ConcludeTripDialog
