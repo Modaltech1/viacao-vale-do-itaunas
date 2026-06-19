@@ -3,6 +3,11 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normalizeOptionalText } from '@/lib/driver-utils'
+import {
+  vehicleDocumentCodes,
+  vehicleDocumentDefinitions,
+  type VehicleDocumentCode,
+} from '@/lib/vehicle-documents'
 import type { VehicleStatus } from '@/types/fleet'
 
 const vehicleStatuses: VehicleStatus[] = [
@@ -12,8 +17,6 @@ const vehicleStatuses: VehicleStatus[] = [
   'reservado',
   'indisponivel',
 ]
-
-const documentCodes = ['documentacao', 'tacografo', 'ceturb'] as const
 
 export type VehiclePayload = {
   type: string
@@ -34,7 +37,7 @@ export type VehiclePayload = {
     estimatedKm: number | null
     notes: string | null
   } | null
-  documentDates: Record<(typeof documentCodes)[number], string>
+  documentDates: Record<VehicleDocumentCode, string>
   driverIds: string[]
   principalDriverId: string | null
 }
@@ -70,11 +73,12 @@ export function parseVehiclePayload(body: Record<string, unknown>): VehiclePaylo
           notes: normalizeOptionalText(body.newRouteNotes),
         }
       : null,
-    documentDates: {
-      documentacao: String(body.documentationDueDate ?? '').trim(),
-      tacografo: String(body.tachographDueDate ?? '').trim(),
-      ceturb: String(body.ceturbDueDate ?? '').trim(),
-    },
+    documentDates: Object.fromEntries(
+      vehicleDocumentDefinitions.map(({ code, formField }) => [
+        code,
+        String(body[formField] ?? '').trim(),
+      ]),
+    ) as Record<VehicleDocumentCode, string>,
     driverIds,
     principalDriverId,
   }
@@ -115,7 +119,7 @@ function validateVehiclePayload(payload: VehiclePayload) {
   }
 
   if (Object.values(payload.documentDates).some((date) => !date)) {
-    throw new Error('Os vencimentos de documentação, tacógrafo e CETURB são obrigatórios.')
+    throw new Error('Os vencimentos de documentação, tacógrafo, CETURB e AET são obrigatórios.')
   }
 
   if (payload.principalDriverId && !payload.driverIds.includes(payload.principalDriverId)) {
@@ -267,17 +271,17 @@ export async function createVehicleDocuments(
   const { data: types, error: typesError } = await service
     .from('tipos_documento_veiculo')
     .select('id,codigo')
-    .in('codigo', [...documentCodes])
+    .in('codigo', vehicleDocumentCodes)
     .eq('ativo', true)
 
   if (typesError) throw typesError
-  if ((types?.length ?? 0) !== documentCodes.length) {
+  if ((types?.length ?? 0) !== vehicleDocumentCodes.length) {
     throw new Error('Os tipos de documento padrão não estão configurados no banco.')
   }
 
   const typeByCode = new Map((types ?? []).map((type) => [type.codigo, type.id]))
   const { error } = await service.from('veiculo_documentos').insert(
-    documentCodes.map((code) => ({
+    vehicleDocumentCodes.map((code) => ({
       veiculo_id: vehicleId,
       tipo_documento_id: typeByCode.get(code),
       vencimento_em: dates[code],
@@ -307,7 +311,7 @@ export async function renewChangedVehicleDocuments(
   const inserted: string[] = []
 
   try {
-    for (const code of documentCodes) {
+    for (const code of vehicleDocumentCodes) {
       const current = currentDocuments?.find((document) => document.tipo_codigo === code)
       if (!current) {
         const { data: type, error: typeError } = await service

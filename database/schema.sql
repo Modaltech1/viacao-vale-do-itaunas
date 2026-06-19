@@ -4538,10 +4538,12 @@ insert into public.tipos_documento_veiculo (codigo, nome, dias_alerta)
 values
   ('documentacao', 'Documentação/CRLV', 30),
   ('tacografo', 'Tacógrafo', 30),
-  ('ceturb', 'CETURB', 45)
+  ('ceturb', 'CETURB', 45),
+  ('aet', 'AET', 30)
 on conflict (codigo) do update set
   nome = excluded.nome,
   dias_alerta = excluded.dias_alerta,
+  ativo = true,
   atualizado_em = now();
 
 -- Serviços base. Óleo e pneus são categorias de serviço, não módulos isolados.

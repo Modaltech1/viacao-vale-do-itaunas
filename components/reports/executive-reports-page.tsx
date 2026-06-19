@@ -57,6 +57,7 @@ import { ProgressBar } from '@/components/shared/progress-bar'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, number } from '@/lib/format'
+import { vehicleDocumentLabel } from '@/lib/vehicle-documents'
 import type { ReportData, ReportDelta, ReportInsight } from '@/types/report'
 
 const chartColors = ['#0ea5e9', '#f59e0b', '#10b981', '#ef4444', '#64748b']
@@ -827,10 +828,7 @@ function riskLabel(value: string) {
     manutencao_aberta: 'Manutenção aberta',
     veiculo_status: 'Situação do veículo',
     cnh: 'CNH',
-    documentacao: 'Documentação',
-    tacografo: 'Tacógrafo',
-    ceturb: 'CETURB',
     manual: 'Manual',
   }
-  return labels[value] ?? value.replaceAll('_', ' ')
+  return labels[value] ?? vehicleDocumentLabel(value)
 }

@@ -226,11 +226,35 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'veiculos_permitidos',
     'motoristas_permitidos',
     'auditoria_select_global',
+    "('aet', 'AET', 30)",
   ]
 
   for (const fragment of requiredFragments) {
     assert.ok(schema.includes(fragment), `Invariante ausente: ${fragment}`)
   }
+})
+
+test('AET integra o catálogo documental, formulário e alertas operacionais', async () => {
+  const [migration, definitions, vehicleDialog, vehicleDetails, reports, pendings] = await Promise.all([
+    readFile(
+      path.join(root, 'database', 'migrations', '20260618_add_aet_vehicle_document.sql'),
+      'utf8',
+    ),
+    readFile(path.join(root, 'lib', 'vehicle-documents.ts'), 'utf8'),
+    readFile(path.join(root, 'components', 'vehicles', 'vehicle-dialog.tsx'), 'utf8'),
+    readFile(path.join(root, 'components', 'vehicles', 'vehicle-details-page.tsx'), 'utf8'),
+    readFile(path.join(root, 'components', 'reports', 'executive-reports-page.tsx'), 'utf8'),
+    readFile(path.join(root, 'components', 'pendings', 'pendings-page.tsx'), 'utf8'),
+  ])
+
+  assert.match(migration, /values \('aet', 'AET', 30\)/)
+  assert.match(migration, /on conflict \(codigo\) do update/)
+  assert.match(definitions, /code: 'aet'/)
+  assert.match(definitions, /formField: 'aetDueDate'/)
+  assert.match(vehicleDialog, /vehicleDocumentDefinitions\.map/)
+  assert.match(vehicleDetails, /vehicleDocumentDefinitions\.map/)
+  assert.match(reports, /vehicleDocumentLabel\(value\)/)
+  assert.match(pendings, /vehicleDocumentLabel\(type\)/)
 })
 
 test('migration de responsabilidade administrativa cobre RLS e dashboard', async () => {

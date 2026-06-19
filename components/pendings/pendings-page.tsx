@@ -24,6 +24,7 @@ import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { date, number } from '@/lib/format'
+import { vehicleDocumentLabel } from '@/lib/vehicle-documents'
 import type {
   PendingFormOptions,
   PendingListItem,
@@ -261,13 +262,10 @@ function typeLabel(type: string) {
     manutencao_aberta: 'Manutenção aberta',
     veiculo_status: 'Situação do veículo',
     cnh: 'CNH',
-    documentacao: 'Documentação',
-    tacografo: 'Tacógrafo',
-    ceturb: 'CETURB',
     manual: 'Geral',
     operacional: 'Operacional',
     seguranca: 'Segurança',
     outros: 'Outros',
   }
-  return labels[type] ?? type.replaceAll('_', ' ')
+  return labels[type] ?? vehicleDocumentLabel(type)
 }

@@ -28,6 +28,7 @@ import { TablePagination, useTablePagination } from '@/components/shared/table-p
 import { VehicleDialog, VehicleDriversDialog } from '@/components/vehicles/vehicle-dialog'
 import { brl, dateTime, number } from '@/lib/format'
 import { vehicleStatusLabel } from '@/lib/status'
+import { vehicleDocumentDefinitions } from '@/lib/vehicle-documents'
 import type { VehicleDetails, VehicleFormOptions } from '@/types/vehicle'
 
 const emptyOptions: VehicleFormOptions = { routes: [], drivers: [] }
@@ -262,18 +263,13 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                 <CardTitle>Vencimentos</CardTitle>
               </CardHeader>
               <CardContent className="divide-y text-sm">
-                {(['documentacao', 'tacografo', 'ceturb'] as const).map((code) => {
+                {vehicleDocumentDefinitions.map(({ code, label }) => {
                   const document = vehicle.documents.find((item) => item.code === code)
-                  const fallbackLabel = code === 'documentacao'
-                    ? 'Documentação / CRLV'
-                    : code === 'tacografo'
-                      ? 'Tacógrafo'
-                      : 'CETURB'
 
                   return (
                     <div key={code} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
                       <span>
-                        <span className="block font-medium">{document?.name ?? fallbackLabel}</span>
+                        <span className="block font-medium">{document?.name ?? label}</span>
                         <span className="text-muted-foreground">{formatDateOnly(document?.dueDate)}</span>
                       </span>
                       {document

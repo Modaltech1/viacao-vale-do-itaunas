@@ -26,6 +26,7 @@ import type {
   VehicleListItem,
 } from '@/types/vehicle'
 import type { VehicleStatus } from '@/types/fleet'
+import { vehicleDocumentDefinitions } from '@/lib/vehicle-documents'
 
 type EditableVehicle = VehicleListItem | VehicleDetails
 
@@ -57,6 +58,7 @@ const emptyForm: VehicleFormValues = {
   documentationDueDate: '',
   tachographDueDate: '',
   ceturbDueDate: '',
+  aetDueDate: '',
   driverIds: [],
   principalDriverId: '',
 }
@@ -88,6 +90,7 @@ function formFromVehicle(vehicle?: EditableVehicle | null): VehicleFormValues {
     documentationDueDate: documentDate(vehicle, 'documentacao'),
     tachographDueDate: documentDate(vehicle, 'tacografo'),
     ceturbDueDate: documentDate(vehicle, 'ceturb'),
+    aetDueDate: documentDate(vehicle, 'aet'),
     driverIds: vehicle.drivers.map((driver) => driver.id),
     principalDriverId: vehicle.drivers.find((driver) => driver.principal)?.id ?? '',
   }
@@ -387,37 +390,19 @@ export function VehicleDialog({
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="vehicle-documentation">Documentação / CRLV</Label>
-                <Input
-                  id="vehicle-documentation"
-                  type="date"
-                  value={form.documentationDueDate}
-                  onChange={updateField('documentationDueDate')}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="vehicle-tachograph">Tacógrafo</Label>
-                <Input
-                  id="vehicle-tachograph"
-                  type="date"
-                  value={form.tachographDueDate}
-                  onChange={updateField('tachographDueDate')}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="vehicle-ceturb">CETURB</Label>
-                <Input
-                  id="vehicle-ceturb"
-                  type="date"
-                  value={form.ceturbDueDate}
-                  onChange={updateField('ceturbDueDate')}
-                  required
-                />
-              </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {vehicleDocumentDefinitions.map(({ code, label, formField }) => (
+                <div key={code} className="space-y-2">
+                  <Label htmlFor={`vehicle-${code}`}>{label}</Label>
+                  <Input
+                    id={`vehicle-${code}`}
+                    type="date"
+                    value={form[formField]}
+                    onChange={updateField(formField)}
+                    required
+                  />
+                </div>
+              ))}
             </div>
           </section>
 

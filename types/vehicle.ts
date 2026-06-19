@@ -6,6 +6,7 @@ import type {
   TripStatus,
   VehicleStatus,
 } from '@/types/fleet'
+import type { VehicleDocumentCode } from '@/lib/vehicle-documents'
 
 export type VehicleRoute = {
   id: string
@@ -37,7 +38,7 @@ export type VehicleDriverOption = {
 
 export type VehicleDocument = {
   id: string
-  code: 'documentacao' | 'tacografo' | 'ceturb'
+  code: VehicleDocumentCode
   name: string
   number: string
   issuedAt: string | null
@@ -159,6 +160,7 @@ export type VehicleFormValues = {
   documentationDueDate: string
   tachographDueDate: string
   ceturbDueDate: string
+  aetDueDate: string
   driverIds: string[]
   principalDriverId: string
 }

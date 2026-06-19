@@ -145,6 +145,7 @@ test('veículo aceita múltiplos motoristas e valida o principal', () => {
     documentationDueDate: '2027-01-01',
     tachographDueDate: '2027-01-01',
     ceturbDueDate: '2027-01-01',
+    aetDueDate: '2027-01-01',
     driverIds: ['driver-a', 'driver-b', 'driver-a'],
     principalDriverId: 'driver-b',
   })
@@ -153,14 +154,29 @@ test('veículo aceita múltiplos motoristas e valida o principal', () => {
   assert.equal(payload.plate, 'ABC-1D23')
   assert.deepEqual(payload.driverIds, ['driver-a', 'driver-b'])
   assert.equal(payload.principalDriverId, 'driver-b')
+  assert.equal(payload.documentDates.aet, '2027-01-01')
   throwsMessage(() => parseVehiclePayload({
     ...payload,
     documentationDueDate: '2027-01-01',
     tachographDueDate: '2027-01-01',
     ceturbDueDate: '2027-01-01',
+    aetDueDate: '2027-01-01',
     driverIds: ['driver-a'],
     principalDriverId: 'driver-b',
   }), 'motorista principal')
+
+  throwsMessage(() => parseVehiclePayload({
+    type: 'Ônibus',
+    brand: 'Mercedes',
+    model: 'Apache VIP',
+    fleetCode: 'FROTA-08',
+    plate: 'DEF-4G56',
+    status: 'ativo',
+    currentKm: '1000',
+    documentationDueDate: '2027-01-01',
+    tachographDueDate: '2027-01-01',
+    ceturbDueDate: '2027-01-01',
+  }), 'AET')
 })
 
 test('serviço converte periodicidade para o formato persistido', () => {
