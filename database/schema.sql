@@ -543,7 +543,7 @@ create table if not exists public.viagens (
   atualizado_por uuid references public.perfis(id) on delete set null,
   constraint viagens_status_check check (status in ('em_andamento', 'concluida', 'cancelada')),
   constraint viagens_km_inicial_check check (km_inicial >= 0),
-  constraint viagens_km_final_check check (km_final is null or km_final >= km_inicial),
+  constraint viagens_km_final_check check (km_final is null or km_final > km_inicial),
   constraint viagens_datas_check check (chegou_em is null or chegou_em >= saiu_em),
   constraint viagens_concluida_check check ((status <> 'concluida') or (chegou_em is not null and km_final is not null)),
   constraint viagens_em_andamento_check check ((status <> 'em_andamento') or (chegou_em is null and km_final is null and cancelado_em is null)),
@@ -627,6 +627,19 @@ begin
     if new.motorista_id <> v_viagem.motorista_id or new.veiculo_id <> v_viagem.veiculo_id then
       raise exception 'Abastecimento incompatível com motorista/veículo da viagem';
     end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+create or replace function public.validar_distancia_positiva_viagem()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.km_final is not null and new.km_final <= new.km_inicial then
+    raise exception 'KM final deve ser maior que o KM inicial da viagem';
   end if;
 
   return new;
@@ -972,6 +985,11 @@ drop trigger if exists impedir_regressao_km_veiculo_trg on public.veiculos;
 create trigger impedir_regressao_km_veiculo_trg
   before update of km_atual on public.veiculos
   for each row execute function public.impedir_regressao_km_veiculo();
+
+drop trigger if exists validar_distancia_positiva_viagem_trg on public.viagens;
+create trigger validar_distancia_positiva_viagem_trg
+  before insert or update of status, km_inicial, km_final on public.viagens
+  for each row execute function public.validar_distancia_positiva_viagem();
 
 drop trigger if exists sincronizar_abastecimento_trg on public.abastecimentos;
 create trigger sincronizar_abastecimento_trg
@@ -1455,7 +1473,11 @@ begin
     where viagem_id = p_viagem_id
       and cancelado_em is null;
 
-  if p_km_final < greatest(v_viagem.km_inicial, coalesce(v_ultimo_km_abastecimento, v_viagem.km_inicial)) then
+  if p_km_final <= v_viagem.km_inicial then
+    raise exception 'KM final deve ser maior que o KM inicial da viagem';
+  end if;
+
+  if v_ultimo_km_abastecimento is not null and p_km_final < v_ultimo_km_abastecimento then
     raise exception 'KM final não pode ser menor que o último KM registrado na viagem';
   end if;
 
@@ -1687,7 +1709,11 @@ begin
     where viagem_id = p_viagem_id
       and cancelado_em is null;
 
-  if p_km_final < greatest(v_viagem_antes.km_inicial, coalesce(v_ultimo_km_abastecimento, v_viagem_antes.km_inicial)) then
+  if p_km_final <= v_viagem_antes.km_inicial then
+    raise exception 'KM final deve ser maior que o KM inicial da viagem';
+  end if;
+
+  if v_ultimo_km_abastecimento is not null and p_km_final < v_ultimo_km_abastecimento then
     raise exception 'KM final nao pode ser menor que o ultimo KM registrado na viagem';
   end if;
 

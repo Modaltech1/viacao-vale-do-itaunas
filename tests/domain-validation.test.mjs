@@ -19,6 +19,7 @@ import {
   formatTripDuration,
   tripDurationMinutes,
 } from '@/lib/format'
+import { tripFinalKmMinimum, tripFinalKmSuggestion } from '@/lib/trip-km'
 import {
   parseMaintenancePayload,
   isMaintenanceEditable,
@@ -339,6 +340,13 @@ test('viagens validam criação, edição e conclusão', () => {
     startedAt: '2026-06-06T08:00',
     initialKm: '0',
   }), 'obrigatórios')
+})
+
+test('encerramento de viagem exige avanço real do odômetro', () => {
+  assert.equal(tripFinalKmMinimum(23000, 23000), 23000.01)
+  assert.equal(tripFinalKmSuggestion(23000, 23000), '')
+  assert.equal(tripFinalKmMinimum(23000, 23200), 23200)
+  assert.equal(tripFinalKmSuggestion(23000, 23200), '23200')
 })
 
 test('abastecimento calcula total e respeita a relação da viagem', () => {

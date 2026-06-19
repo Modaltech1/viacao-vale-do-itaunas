@@ -24,6 +24,7 @@ import type {
   ExpenseFormValues,
   RefuelingFormValues,
 } from '@/types/driver-portal'
+import { tripFinalKmMinimum, tripFinalKmSuggestion } from '@/lib/trip-km'
 
 type OperationDialogProps = {
   open: boolean
@@ -306,11 +307,12 @@ export function EndTripDialog({
   const [form, setForm] = useState<EndTripFormValues>({ finalKm: '', notes: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const minimumFinalKm = tripFinalKmMinimum(trip.initialKm, trip.latestRecordedKm)
 
   useEffect(() => {
     if (!open) return
     setForm({
-      finalKm: trip.latestRecordedKm.toString(),
+      finalKm: tripFinalKmSuggestion(trip.initialKm, trip.latestRecordedKm),
       notes: '',
     })
     setError('')
@@ -344,7 +346,7 @@ export function EndTripDialog({
         <DialogHeader>
           <DialogTitle>Encerrar viagem</DialogTitle>
           <DialogDescription>
-            O KM final concluirá a viagem e atualizará a quilometragem atual do veículo.
+            O KM final deve ser maior que o inicial e atualizará a quilometragem atual do veículo.
           </DialogDescription>
         </DialogHeader>
 
@@ -356,7 +358,7 @@ export function EndTripDialog({
             <Input
               id="end-trip-km"
               type="number"
-              min={trip.latestRecordedKm}
+              min={minimumFinalKm}
               step="0.01"
               value={form.finalKm}
               onChange={(event) => {

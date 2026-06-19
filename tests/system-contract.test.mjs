@@ -197,6 +197,7 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'viagens_veiculo_em_andamento_uniq',
     'fn_iniciar_viagem',
     'fn_concluir_viagem',
+    'validar_distancia_positiva_viagem',
     'fn_corrigir_viagem_concluida',
     'fn_remover_viagem',
     'fn_km_referencia_atual_veiculo',
@@ -251,6 +252,34 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
   for (const fragment of requiredFragments) {
     assert.ok(schema.includes(fragment), `Invariante ausente: ${fragment}`)
   }
+})
+
+test('viagens concluídas exigem distância estritamente positiva em toda a stack', async () => {
+  const [migration, driverDialog, adminDialog, kmRules] = await Promise.all([
+    readFile(
+      path.join(root, 'database', 'migrations', '20260619_require_positive_trip_distance.sql'),
+      'utf8',
+    ),
+    readFile(path.join(root, 'components', 'driver', 'driver-operation-dialogs.tsx'), 'utf8'),
+    readFile(path.join(root, 'components', 'trips', 'trip-dialogs.tsx'), 'utf8'),
+    readFile(path.join(root, 'lib', 'trip-km.ts'), 'utf8'),
+  ])
+
+  for (const fragment of [
+    'viagens_km_final_check',
+    'km_final > km_inicial',
+    'validar_distancia_positiva_viagem',
+    'new.km_final <= new.km_inicial',
+    'KM final deve ser maior que o KM inicial da viagem',
+  ]) {
+    assert.ok(migration.includes(fragment), `Migration de distância positiva sem ${fragment}`)
+  }
+
+  assert.match(driverDialog, /tripFinalKmMinimum/)
+  assert.match(driverDialog, /tripFinalKmSuggestion/)
+  assert.match(adminDialog, /tripFinalKmMinimum/)
+  assert.match(adminDialog, /tripFinalKmSuggestion/)
+  assert.match(kmRules, /latestRecordedKm > initialKm/)
 })
 
 test('remoção de viagem é transacional, recompõe estoque e preserva auditoria', async () => {

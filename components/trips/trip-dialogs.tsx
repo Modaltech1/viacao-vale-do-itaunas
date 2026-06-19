@@ -25,6 +25,7 @@ import type {
   TripFormValues,
   TripListItem,
 } from '@/types/trip'
+import { tripFinalKmMinimum, tripFinalKmSuggestion } from '@/lib/trip-km'
 
 function localDateTime(value = new Date().toISOString()) {
   const date = new Date(value)
@@ -91,7 +92,7 @@ export function TripDialog({
     && !selectedVehicle.linkedDriverIds.includes(form.driverId),
   )
   const minimumFinalKm = trip
-    ? Math.max(
+    ? tripFinalKmMinimum(
         trip.initialKm,
         'latestRecordedKm' in trip ? trip.latestRecordedKm : trip.initialKm,
       )
@@ -363,12 +364,13 @@ export function ConcludeTripDialog({
   })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const minimumFinalKm = tripFinalKmMinimum(trip.initialKm, trip.latestRecordedKm)
 
   useEffect(() => {
     if (!open) return
     setForm({
       finishedAt: localDateTime(),
-      finalKm: trip.latestRecordedKm.toString(),
+      finalKm: tripFinalKmSuggestion(trip.initialKm, trip.latestRecordedKm),
       notes: trip.notes,
     })
     setError('')
@@ -406,7 +408,7 @@ export function ConcludeTripDialog({
         <DialogHeader>
           <DialogTitle>Concluir viagem</DialogTitle>
           <DialogDescription>
-            O encerramento atualizará o KM atual do veículo de forma transacional.
+            O KM final deve ser maior que o inicial e atualizará o veículo de forma transacional.
           </DialogDescription>
         </DialogHeader>
 
@@ -432,7 +434,7 @@ export function ConcludeTripDialog({
               <Input
                 id="trip-final-km"
                 type="number"
-                min={trip.latestRecordedKm}
+                min={minimumFinalKm}
                 step="0.01"
                 value={form.finalKm}
                 onChange={(event) => setForm((current) => ({
