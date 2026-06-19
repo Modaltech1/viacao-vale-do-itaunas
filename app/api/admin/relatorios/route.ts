@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getReportData } from '@/lib/reports-repository'
-import { requireAdmin } from '@/lib/supabase-server'
+import { requireGlobalAdmin } from '@/lib/supabase-server'
 
 function requiredDate(value: string | null, label: string) {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -10,7 +10,7 @@ function requiredDate(value: string | null, label: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin()
+  const auth = await requireGlobalAdmin()
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   try {

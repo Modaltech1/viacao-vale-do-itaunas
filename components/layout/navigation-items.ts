@@ -58,7 +58,10 @@ export const adminNavigation: NavigationItem[] = [
   item('services', '/admin/servicos'),
   item('parts', '/admin/pecas'),
   item('pendings', '/admin/pendencias'),
-  item('reports', '/admin/relatorios'),
+  {
+    ...item('reports', '/admin/relatorios'),
+    globalOnly: true,
+  },
   {
     ...item('administrators', '/admin/administradores'),
     globalOnly: true,
