@@ -25,6 +25,8 @@ import type {
   TripFormValues,
   TripListItem,
 } from '@/types/trip'
+import { KmInput } from '@/components/shared/km-input'
+import { kmInputValue } from '@/lib/km'
 import { tripFinalKmMinimum, tripFinalKmSuggestion } from '@/lib/trip-km'
 
 function localDateTime(value = new Date().toISOString()) {
@@ -73,9 +75,9 @@ export function TripDialog({
           origin: trip.origin,
           destination: trip.destination,
           startedAt: localDateTime(trip.startedAt),
-          initialKm: trip.initialKm.toString(),
+          initialKm: kmInputValue(trip.initialKm),
           finishedAt: trip.finishedAt ? localDateTime(trip.finishedAt) : '',
-          finalKm: trip.finalKm?.toString() ?? '',
+          finalKm: kmInputValue(trip.finalKm),
           notes: trip.notes,
         }
       : { ...emptyTripForm, startedAt: localDateTime() })
@@ -113,7 +115,7 @@ export function TripDialog({
       vehicleId,
       origin: vehicle?.routeOrigin ?? '',
       destination: vehicle?.routeDestination ?? '',
-      initialKm: vehicle?.currentKm.toString() ?? '',
+      initialKm: kmInputValue(vehicle?.currentKm),
     }))
   }
 
@@ -272,13 +274,13 @@ export function TripDialog({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="trip-admin-initial-km">KM inicial</Label>
-                  <Input
+                  <KmInput
                     id="trip-admin-initial-km"
-                    type="number"
-                    min={selectedVehicle?.currentKm ?? 0}
-                    step="0.01"
+                    minValue={selectedVehicle?.currentKm ?? 0}
                     value={form.initialKm}
-                    onChange={updateField('initialKm')}
+                    onValueChange={(initialKm) => {
+                      setForm((current) => ({ ...current, initialKm }))
+                    }}
                     required
                   />
                 </div>
@@ -307,13 +309,13 @@ export function TripDialog({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="trip-admin-final-km">KM final</Label>
-                    <Input
+                    <KmInput
                       id="trip-admin-final-km"
-                      type="number"
-                      min={minimumFinalKm}
-                      step="0.01"
+                      minValue={minimumFinalKm}
                       value={form.finalKm}
-                      onChange={updateField('finalKm')}
+                      onValueChange={(finalKm) => {
+                        setForm((current) => ({ ...current, finalKm }))
+                      }}
                       required
                     />
                   </div>
@@ -431,15 +433,13 @@ export function ConcludeTripDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="trip-final-km">KM final</Label>
-              <Input
+              <KmInput
                 id="trip-final-km"
-                type="number"
-                min={minimumFinalKm}
-                step="0.01"
+                minValue={minimumFinalKm}
                 value={form.finalKm}
-                onChange={(event) => setForm((current) => ({
+                onValueChange={(finalKm) => setForm((current) => ({
                   ...current,
-                  finalKm: event.target.value,
+                  finalKm,
                 }))}
                 required
               />

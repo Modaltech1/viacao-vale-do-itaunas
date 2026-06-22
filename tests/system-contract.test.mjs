@@ -282,6 +282,68 @@ test('viagens concluídas exigem distância estritamente positiva em toda a stac
   assert.match(kmRules, /latestRecordedKm > initialKm/)
 })
 
+test('quilometragem usa décimos sem agrupamento em toda a stack', async () => {
+  const [migration, schema, kmRules, kmInput] = await Promise.all([
+    readFile(
+      path.join(root, 'database', 'migrations', '20260622_km_tenths_precision.sql'),
+      'utf8',
+    ),
+    readFile(path.join(root, 'database', 'schema.sql'), 'utf8'),
+    readFile(path.join(root, 'lib', 'km.ts'), 'utf8'),
+    readFile(path.join(root, 'components', 'shared', 'km-input.tsx'), 'utf8'),
+  ])
+
+  for (const fragment of [
+    'rotas_km_estimado_decimos_check',
+    'veiculos_km_atual_decimos_check',
+    'servicos_periodicidade_km_decimos_check',
+    'veiculo_servico_programacoes_km_decimos_check',
+    'viagens_km_decimos_check',
+    'abastecimentos_km_decimos_check',
+    'manutencoes_km_decimos_check',
+    'pendencias_manuais_km_decimos_check',
+  ]) {
+    assert.ok(migration.includes(fragment), `Migration de KM sem ${fragment}`)
+    assert.ok(schema.includes(fragment), `Schema de KM sem ${fragment}`)
+  }
+
+  assert.match(kmRules, /value\.toFixed\(fractionDigits\)/)
+  assert.doesNotMatch(kmRules, /toLocaleString/)
+  assert.match(kmRules, /\^\\d\+\\\.\\d\$/)
+  assert.match(kmInput, /inputMode="decimal"/)
+  assert.match(kmInput, /normalizeKmInput/)
+  assert.match(kmInput, /pattern="\[0-9\]\+\\\.\[0-9\]"/)
+
+  const formFiles = [
+    'app/driver/page.tsx',
+    'components/driver/driver-operation-dialogs.tsx',
+    'components/maintenances/maintenance-dialog.tsx',
+    'components/pendings/pending-dialog.tsx',
+    'components/refuelings/refueling-dialog.tsx',
+    'components/services/service-dialog.tsx',
+    'components/trips/trip-dialogs.tsx',
+    'components/vehicles/vehicle-dialog.tsx',
+  ]
+  for (const file of formFiles) {
+    const source = await readFile(path.join(root, file), 'utf8')
+    assert.match(source, /<KmInput\b/, `${file} não usa a entrada compartilhada de KM`)
+  }
+
+  const serviceFiles = [
+    'lib/driver-portal-service.ts',
+    'lib/maintenances-service.ts',
+    'lib/pendings-service.ts',
+    'lib/refuelings-service.ts',
+    'lib/services-service.ts',
+    'lib/trips-service.ts',
+    'lib/vehicles-service.ts',
+  ]
+  for (const file of serviceFiles) {
+    const source = await readFile(path.join(root, file), 'utf8')
+    assert.match(source, /parse(?:Optional)?KmValue/, `${file} não valida KM no domínio`)
+  }
+})
+
 test('remoção de viagem é transacional, recompõe estoque e preserva auditoria', async () => {
   const [migration, route, details, dialogs] = await Promise.all([
     readFile(

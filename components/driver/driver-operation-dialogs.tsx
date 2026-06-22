@@ -24,6 +24,8 @@ import type {
   ExpenseFormValues,
   RefuelingFormValues,
 } from '@/types/driver-portal'
+import { KmInput } from '@/components/shared/km-input'
+import { kmInputValue } from '@/lib/km'
 import { tripFinalKmMinimum, tripFinalKmSuggestion } from '@/lib/trip-km'
 
 type OperationDialogProps = {
@@ -61,7 +63,7 @@ export function RefuelingDialog({
     if (!open) return
     setForm({
       ...emptyRefueling,
-      registeredKm: trip.latestRecordedKm.toString(),
+      registeredKm: kmInputValue(trip.latestRecordedKm),
     })
     setError('')
   }, [open, trip])
@@ -110,13 +112,13 @@ export function RefuelingDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="refueling-km">KM atual</Label>
-              <Input
+              <KmInput
                 id="refueling-km"
-                type="number"
-                min={trip.initialKm}
-                step="0.01"
+                minValue={trip.initialKm}
                 value={form.registeredKm}
-                onChange={updateField('registeredKm')}
+                onValueChange={(registeredKm) => {
+                  setForm((current) => ({ ...current, registeredKm }))
+                }}
                 required
               />
             </div>
@@ -355,14 +357,12 @@ export function EndTripDialog({
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="end-trip-km">KM final</Label>
-            <Input
+            <KmInput
               id="end-trip-km"
-              type="number"
-              min={minimumFinalKm}
-              step="0.01"
+              minValue={minimumFinalKm}
               value={form.finalKm}
-              onChange={(event) => {
-                setForm((current) => ({ ...current, finalKm: event.target.value }))
+              onValueChange={(finalKm) => {
+                setForm((current) => ({ ...current, finalKm }))
               }}
               required
             />

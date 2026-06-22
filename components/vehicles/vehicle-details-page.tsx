@@ -27,6 +27,7 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { VehicleDialog, VehicleDriversDialog } from '@/components/vehicles/vehicle-dialog'
 import { brl, dateTime, number } from '@/lib/format'
+import { formatKm } from '@/lib/km'
 import { vehicleStatusLabel } from '@/lib/status'
 import { vehicleDocumentDefinitions } from '@/lib/vehicle-documents'
 import type { VehicleDetails, VehicleFormOptions } from '@/types/vehicle'
@@ -141,12 +142,12 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
       </PageHeader>
 
       <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard title="KM atual" value={number(vehicle.currentKm)} icon={Gauge} />
+        <MetricCard title="KM atual" value={formatKm(vehicle.currentKm)} icon={Gauge} />
         {isAdmin ? (
           <>
             <MetricCard
               title="Consumo médio"
-              value={vehicle.averageConsumption == null ? 'Sem dados' : `${number(vehicle.averageConsumption, 2)} km/L`}
+              value={vehicle.averageConsumption == null ? 'Sem dados' : `${formatKm(vehicle.averageConsumption, 2)} km/L`}
               icon={Fuel}
             />
             <MetricCard
@@ -245,7 +246,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                       <b>KM estimado:</b>{' '}
                       {vehicle.route.estimatedKm == null
                         ? 'Não informado'
-                        : `${number(vehicle.route.estimatedKm)} km`}
+                        : `${formatKm(vehicle.route.estimatedKm)} km`}
                     </p>
                     {vehicle.route.notes ? <p><b>Observações:</b> {vehicle.route.notes}</p> : null}
                     <p className="text-muted-foreground">
@@ -306,7 +307,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                     <TableCell>{dateTime(trip.startedAt)}</TableCell>
                     <TableCell>{dateTime(trip.finishedAt ?? undefined)}</TableCell>
                     <TableCell>
-                      {number(trip.initialKm)} / {trip.finalKm == null ? '—' : number(trip.finalKm)}
+                      {formatKm(trip.initialKm)} / {trip.finalKm == null ? '—' : formatKm(trip.finalKm)}
                     </TableCell>
                     <TableCell><StatusBadge type="trip" value={trip.status} /></TableCell>
                     <TableCell className="text-right">
@@ -342,7 +343,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                 {vehicle.refuelings.length ? refuelingPagination.pageItems.map((refueling) => (
                   <TableRow key={refueling.id}>
                     <TableCell>{dateTime(refueling.registeredAt)}</TableCell>
-                    <TableCell>{number(refueling.registeredKm)}</TableCell>
+                    <TableCell>{formatKm(refueling.registeredKm)}</TableCell>
                     <TableCell>{refueling.fuelType}</TableCell>
                     <TableCell>{number(refueling.liters, 1)}</TableCell>
                     <TableCell>
@@ -427,12 +428,12 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                     <TableCell>{schedule.category}</TableCell>
                     <TableCell>
                       {schedule.lastDoneKm != null
-                        ? `${number(schedule.lastDoneKm)} km`
+                        ? `${formatKm(schedule.lastDoneKm)} km`
                         : formatDateOnly(schedule.lastDoneAt)}
                     </TableCell>
                     <TableCell>
                       {schedule.nextDueKm != null
-                        ? `${number(schedule.nextDueKm)} km`
+                        ? `${formatKm(schedule.nextDueKm)} km`
                         : formatDateOnly(schedule.nextDueAt)}
                     </TableCell>
                     <TableCell>
@@ -466,7 +467,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                         <p className="mt-1 text-xs text-muted-foreground">
                           {pending.dueDate ? `Vencimento: ${formatDateOnly(pending.dueDate)}` : ''}
                           {pending.dueDate && pending.dueKm != null ? ' · ' : ''}
-                          {pending.dueKm != null ? `Vencimento: ${number(pending.dueKm)} km` : ''}
+                          {pending.dueKm != null ? `Vencimento: ${formatKm(pending.dueKm)} km` : ''}
                         </p>
                       ) : null}
                     </div>

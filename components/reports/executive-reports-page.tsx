@@ -57,6 +57,7 @@ import { ProgressBar } from '@/components/shared/progress-bar'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, number } from '@/lib/format'
+import { formatKm } from '@/lib/km'
 import { vehicleDocumentLabel } from '@/lib/vehicle-documents'
 import type { ReportData, ReportDelta, ReportInsight } from '@/types/report'
 
@@ -292,8 +293,8 @@ export function ExecutiveReportsPage() {
             />
             <ExecutiveMetric
               title="KM produzidos"
-              value={number(report.metrics.totalKm)}
-              subtitle={`${number(report.metrics.averageTripKm ?? 0)} km por viagem concluída`}
+              value={formatKm(report.metrics.totalKm)}
+              subtitle={`${formatKm(report.metrics.averageTripKm ?? 0)} km por viagem concluída`}
               icon={Route}
               delta={report.metrics.deltas.totalKm}
             />
@@ -301,7 +302,7 @@ export function ExecutiveReportsPage() {
               title="Eficiência de combustível"
               value={report.metrics.fuelEfficiency == null
                 ? 'Sem base'
-                : `${number(report.metrics.fuelEfficiency, 2)} km/L`}
+                : `${formatKm(report.metrics.fuelEfficiency, 2)} km/L`}
               subtitle={report.metrics.averageFuelPrice == null
                 ? 'Preço médio indisponível'
                 : `${brl(report.metrics.averageFuelPrice)} por litro`}
@@ -338,9 +339,9 @@ export function ExecutiveReportsPage() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={12} />
                       <YAxis yAxisId="cost" tickLine={false} axisLine={false} fontSize={12} width={72} tickFormatter={compactMoney} />
-                      <YAxis yAxisId="km" orientation="right" tickLine={false} axisLine={false} fontSize={12} width={48} tickFormatter={(value) => `${number(value)} km`} />
+                      <YAxis yAxisId="km" orientation="right" tickLine={false} axisLine={false} fontSize={12} width={48} tickFormatter={(value) => `${formatKm(value)} km`} />
                       <Tooltip formatter={(value, name) => (
-                        name === 'km' ? `${number(Number(value))} km` : brl(Number(value))
+                        name === 'km' ? `${formatKm(Number(value))} km` : brl(Number(value))
                       )} />
                       <Legend />
                       <Area yAxisId="cost" type="monotone" dataKey="fuel" name="Combustível" stackId="cost" stroke="#0ea5e9" fill="#0ea5e9" fillOpacity={0.45} />
@@ -396,7 +397,7 @@ export function ExecutiveReportsPage() {
                       </div>
                       <ProgressBar value={vehicle.totalCost} max={Math.max(topVehicleCost, 1)} />
                       <p className="text-xs text-muted-foreground">
-                        {number(vehicle.km)} km · {vehicle.trips} viagem(ns) · consumo {vehicle.consumption == null ? 'sem base' : `${number(vehicle.consumption, 2)} km/L`}
+                        {formatKm(vehicle.km)} km · {vehicle.trips} viagem(ns) · consumo {vehicle.consumption == null ? 'sem base' : `${formatKm(vehicle.consumption, 2)} km/L`}
                       </p>
                     </div>
                   ))}
@@ -488,8 +489,8 @@ export function ExecutiveReportsPage() {
                           </TableCell>
                           <TableCell>{driver.trips}</TableCell>
                           <TableCell>{number(driver.completionRate, 1)}%</TableCell>
-                          <TableCell>{number(driver.km)}</TableCell>
-                          <TableCell>{driver.averageTripKm == null ? '—' : `${number(driver.averageTripKm)} km`}</TableCell>
+                          <TableCell>{formatKm(driver.km)}</TableCell>
+                          <TableCell>{driver.averageTripKm == null ? '—' : `${formatKm(driver.averageTripKm)} km`}</TableCell>
                           <TableCell>{brl(driver.fuelCost)}</TableCell>
                           <TableCell>{brl(driver.expenseCost)}</TableCell>
                         </TableRow>
@@ -655,7 +656,7 @@ export function ExecutiveReportsPage() {
                           <TableRow key={route.name}>
                             <TableCell className="font-medium">{route.name}</TableCell>
                             <TableCell>{route.trips}</TableCell>
-                            <TableCell>{number(route.km)}</TableCell>
+                            <TableCell>{formatKm(route.km)}</TableCell>
                             <TableCell>{brl(route.totalCost)}</TableCell>
                             <TableCell>{route.costPerKm == null ? '—' : brl(route.costPerKm)}</TableCell>
                           </TableRow>

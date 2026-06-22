@@ -19,6 +19,8 @@ import {
   Switch,
   Textarea,
 } from '@prodexy/ui'
+import { KmInput } from '@/components/shared/km-input'
+import { kmInputValue } from '@/lib/km'
 import type { MaintenanceType } from '@/types/fleet'
 import {
   serviceCategories,
@@ -55,7 +57,7 @@ function formFromService(service?: ServiceListItem | null): ServiceFormValues {
     periodicityType: service.periodicityType,
     periodicityValue:
       service.periodicityType === 'km'
-        ? service.periodicityKm?.toString() ?? ''
+        ? kmInputValue(service.periodicityKm)
         : service.periodicityType === 'tempo'
           ? service.periodicityDays?.toString() ?? ''
           : '',
@@ -237,7 +239,10 @@ export function ServiceDialog({
                     setForm((current) => ({
                       ...current,
                       periodicityType: value,
-                      periodicityValue: value === 'nenhuma' ? '' : current.periodicityValue,
+                      periodicityValue:
+                        value === current.periodicityType
+                          ? current.periodicityValue
+                          : '',
                     }))
                   }}
                 >
@@ -255,15 +260,27 @@ export function ServiceDialog({
               {form.periodicityType !== 'nenhuma' ? (
                 <div className="space-y-2">
                   <Label htmlFor="service-periodicity">{periodicityLabel}</Label>
-                  <Input
-                    id="service-periodicity"
-                    type="number"
-                    min="1"
-                    step={form.periodicityType === 'tempo' ? '1' : '0.01'}
-                    value={form.periodicityValue}
-                    onChange={updateField('periodicityValue')}
-                    required
-                  />
+                  {form.periodicityType === 'km' ? (
+                    <KmInput
+                      id="service-periodicity"
+                      minValue={0.1}
+                      value={form.periodicityValue}
+                      onValueChange={(periodicityValue) => {
+                        setForm((current) => ({ ...current, periodicityValue }))
+                      }}
+                      required
+                    />
+                  ) : (
+                    <Input
+                      id="service-periodicity"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={form.periodicityValue}
+                      onChange={updateField('periodicityValue')}
+                      required
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="flex items-end">

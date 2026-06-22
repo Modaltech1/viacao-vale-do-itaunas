@@ -19,6 +19,13 @@ import {
   formatTripDuration,
   tripDurationMinutes,
 } from '@/lib/format'
+import {
+  formatKm,
+  hasOneDecimalKmPrecision,
+  kmInputValue,
+  normalizeKmInput,
+  parseKmValue,
+} from '@/lib/km'
 import { tripFinalKmMinimum, tripFinalKmSuggestion } from '@/lib/trip-km'
 import {
   parseMaintenancePayload,
@@ -141,6 +148,21 @@ test('situação da CNH diferencia vencida, próxima e em dia', () => {
   assert.equal(getDriverLicenseStatus(null), 'vencido')
 })
 
+test('quilometragem usa ponto decimal sem separador de milhar', () => {
+  assert.equal(formatKm(34567), '34567.0')
+  assert.equal(formatKm(1231231234.2), '1231231234.2')
+  assert.equal(formatKm(10.26), '10.3')
+  assert.equal(kmInputValue(1000), '1000.0')
+  assert.equal(normalizeKmInput('1.000,29'), '1.0')
+  assert.equal(normalizeKmInput('abc1000,29'), '1000.2')
+  assert.equal(parseKmValue('1000.2', 'KM'), 1000.2)
+  assert.equal(hasOneDecimalKmPrecision(1000.2), true)
+  assert.equal(hasOneDecimalKmPrecision(1000.25), false)
+  throwsMessage(() => parseKmValue('1000', 'KM'), 'uma casa decimal')
+  throwsMessage(() => parseKmValue('1.000,2', 'KM'), 'uma casa decimal')
+  throwsMessage(() => parseKmValue('1000.25', 'KM'), 'uma casa decimal')
+})
+
 test('veículo aceita múltiplos motoristas e valida o principal', () => {
   const payload = parseVehiclePayload({
     type: 'Caminhão',
@@ -150,7 +172,7 @@ test('veículo aceita múltiplos motoristas e valida o principal', () => {
     plate: 'abc-1d23',
     year: '2024',
     status: 'ativo',
-    currentKm: '12.500',
+    currentKm: '12500.0',
     documentationDueDate: '2027-01-01',
     tachographDueDate: '2027-01-01',
     ceturbDueDate: '2027-01-01',
@@ -166,6 +188,7 @@ test('veículo aceita múltiplos motoristas e valida o principal', () => {
   assert.equal(payload.documentDates.aet, '2027-01-01')
   throwsMessage(() => parseVehiclePayload({
     ...payload,
+    currentKm: kmInputValue(payload.currentKm),
     documentationDueDate: '2027-01-01',
     tachographDueDate: '2027-01-01',
     ceturbDueDate: '2027-01-01',
@@ -181,7 +204,7 @@ test('veículo aceita múltiplos motoristas e valida o principal', () => {
     fleetCode: 'FROTA-08',
     plate: 'DEF-4G56',
     status: 'ativo',
-    currentKm: '1000',
+    currentKm: '1000.0',
     documentationDueDate: '2027-01-01',
     tachographDueDate: '2027-01-01',
     ceturbDueDate: '2027-01-01',
@@ -194,7 +217,7 @@ test('serviço converte periodicidade para o formato persistido', () => {
     category: 'Óleo',
     suggestedMaintenanceType: 'preventiva',
     periodicityType: 'km',
-    periodicityValue: '10000',
+    periodicityValue: '10000.0',
     defaultValue: '180.50',
     active: true,
   })
@@ -220,7 +243,7 @@ test('manutenção exige relações e valores operacionais válidos', () => {
     maintenanceType: 'corretiva',
     cause: 'Falha no sistema de freios',
     openedAt: '2026-06-06T10:00',
-    vehicleKm: '25000',
+    vehicleKm: '25000.0',
     responsibleMechanicId: 'mechanic-1',
     status: 'aberta',
     services: [
@@ -248,10 +271,12 @@ test('manutenção exige relações e valores operacionais válidos', () => {
   assert.equal(isMaintenanceEditable('concluida'), false)
   throwsMessage(() => parseMaintenancePayload({
     ...payload,
+    vehicleKm: kmInputValue(payload.vehicleKm),
     services: [],
   }), 'pelo menos um serviço')
   throwsMessage(() => parseMaintenancePayload({
     ...payload,
+    vehicleKm: kmInputValue(payload.vehicleKm),
     services: [
       { serviceId: 'service-1', appliedValue: 10 },
       { serviceId: 'service-1', appliedValue: 20 },
@@ -259,6 +284,7 @@ test('manutenção exige relações e valores operacionais válidos', () => {
   }), 'mesmo serviço')
   throwsMessage(() => parseMaintenancePayload({
     ...payload,
+    vehicleKm: kmInputValue(payload.vehicleKm),
     parts: [
       { partId: 'part-1', quantity: 1, unitValue: 10 },
       { partId: 'part-1', quantity: 1, unitValue: 10 },
@@ -266,15 +292,18 @@ test('manutenção exige relações e valores operacionais válidos', () => {
   }), 'mesma peça')
   throwsMessage(() => parseMaintenancePayload({
     ...payload,
+    vehicleKm: kmInputValue(payload.vehicleKm),
     status: 'concluida',
   }), 'data de conclusão')
   throwsMessage(() => parseMaintenancePayload({
     ...payload,
+    vehicleKm: kmInputValue(payload.vehicleKm),
     status: 'concluida',
     completedAt: '2026-06-06T09:00',
   }), 'anterior à abertura')
   throwsMessage(() => parseMaintenancePayload({
     ...payload,
+    vehicleKm: kmInputValue(payload.vehicleKm),
     status: 'concluida',
     completedAt: '2999-06-06T11:00',
   }), 'futuro')
@@ -318,35 +347,35 @@ test('viagens validam criação, edição e conclusão', () => {
     origin: 'Vitória/ES',
     destination: 'São Mateus/ES',
     startedAt: '2026-06-06T08:00',
-    initialKm: '23000',
+    initialKm: '23000.0',
   })
   assert.equal(created.initialKm, 23000)
   const updated = parseUpdateTripPayload({
     origin: 'A',
     destination: 'B',
     finishedAt: '2026-06-06T12:00',
-    finalKm: '23200',
+    finalKm: '23200.0',
   })
   assert.equal(updated.destination, 'B')
   assert.equal(updated.finalKm, 23200)
   assert.equal(parseUpdateTripPayload({ origin: 'A', destination: 'B', finalKm: '' }).finalKm, null)
   assert.equal(parseConcludeTripPayload({
     finishedAt: '2026-06-06T12:00',
-    finalKm: '23200',
+    finalKm: '23200.0',
   }).finalKm, 23200)
   assert.equal(parseRemoveTripPayload({ reason: 'Lançamento duplicado' }).reason, 'Lançamento duplicado')
   throwsMessage(() => parseRemoveTripPayload({ reason: 'x' }), 'pelo menos 5 caracteres')
   throwsMessage(() => parseCreateTripPayload({
     startedAt: '2026-06-06T08:00',
-    initialKm: '0',
+    initialKm: '0.0',
   }), 'obrigatórios')
 })
 
 test('encerramento de viagem exige avanço real do odômetro', () => {
-  assert.equal(tripFinalKmMinimum(23000, 23000), 23000.01)
+  assert.equal(tripFinalKmMinimum(23000, 23000), 23000.1)
   assert.equal(tripFinalKmSuggestion(23000, 23000), '')
   assert.equal(tripFinalKmMinimum(23000, 23200), 23200)
-  assert.equal(tripFinalKmSuggestion(23000, 23200), '23200')
+  assert.equal(tripFinalKmSuggestion(23000, 23200), '23200.0')
 })
 
 test('abastecimento calcula total e respeita a relação da viagem', () => {
@@ -355,7 +384,7 @@ test('abastecimento calcula total e respeita a relação da viagem', () => {
     vehicleId: 'vehicle-form',
     driverId: 'driver-form',
     registeredAt: '2026-06-06T10:00',
-    registeredKm: '23200',
+    registeredKm: '23200.0',
     fuelType: 'Diesel S10',
     liters: '100',
     unitValue: '6.199',
@@ -369,6 +398,7 @@ test('abastecimento calcula total e respeita a relação da viagem', () => {
   assert.equal(row.valor_total, 619.9)
   throwsMessage(() => parseRefuelingPayload({
     ...payload,
+    registeredKm: kmInputValue(payload.registeredKm),
     fuelType: 'Querosene',
   }), 'combustível inválido')
 })
@@ -412,10 +442,10 @@ test('portal do motorista valida os quatro fluxos operacionais', () => {
     vehicleId: 'vehicle-1',
     origin: 'A',
     destination: 'B',
-    initialKm: '10',
+    initialKm: '10.0',
   }).initialKm, 10)
   assert.equal(parseDriverRefueling({
-    registeredKm: '20',
+    registeredKm: '20.0',
     fuelType: 'Diesel S10',
     liters: '5',
   }).liters, 5)
@@ -423,7 +453,7 @@ test('portal do motorista valida os quatro fluxos operacionais', () => {
     category: 'Alimentação',
     value: '25',
   }).value, 25)
-  assert.equal(parseEndTripPayload({ finalKm: '30' }).finalKm, 30)
+  assert.equal(parseEndTripPayload({ finalKm: '30.0' }).finalKm, 30)
 })
 
 test('pendência manual exige título, severidade e vínculo operacional', () => {

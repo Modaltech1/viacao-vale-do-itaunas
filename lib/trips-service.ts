@@ -2,19 +2,7 @@ import 'server-only'
 
 import { NextResponse } from 'next/server'
 import { normalizeOptionalText } from '@/lib/driver-utils'
-
-function nonNegativeNumber(value: unknown, label: string) {
-  const rawValue = String(value ?? '').trim()
-  if (!rawValue) {
-    throw new Error(`${label} deve ser maior ou igual a zero.`)
-  }
-
-  const parsed = Number(rawValue.replace(',', '.'))
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error(`${label} deve ser maior ou igual a zero.`)
-  }
-  return parsed
-}
+import { parseKmValue, parseOptionalKmValue } from '@/lib/km'
 
 function requiredDate(value: unknown, label: string) {
   const rawValue = String(value ?? '').trim()
@@ -23,11 +11,6 @@ function requiredDate(value: unknown, label: string) {
   const date = new Date(rawValue)
   if (Number.isNaN(date.getTime())) throw new Error(`${label} inválida.`)
   return date.toISOString()
-}
-
-function optionalNonNegativeNumber(value: unknown, label: string) {
-  if (String(value ?? '').trim() === '') return null
-  return nonNegativeNumber(value, label)
 }
 
 function optionalDate(value: unknown, label: string) {
@@ -42,7 +25,7 @@ export function parseCreateTripPayload(body: Record<string, unknown>) {
     origin: String(body.origin ?? '').trim(),
     destination: String(body.destination ?? '').trim(),
     startedAt: requiredDate(body.startedAt, 'Data de saída'),
-    initialKm: nonNegativeNumber(body.initialKm, 'O KM inicial'),
+    initialKm: parseKmValue(body.initialKm, 'O KM inicial'),
     notes: normalizeOptionalText(body.notes),
   }
 
@@ -61,7 +44,7 @@ export function parseUpdateTripPayload(body: Record<string, unknown>) {
     origin,
     destination,
     finishedAt: optionalDate(body.finishedAt, 'Data de chegada'),
-    finalKm: optionalNonNegativeNumber(body.finalKm, 'O KM final'),
+    finalKm: parseOptionalKmValue(body.finalKm, 'O KM final'),
     notes: normalizeOptionalText(body.notes),
   }
 }
@@ -69,7 +52,7 @@ export function parseUpdateTripPayload(body: Record<string, unknown>) {
 export function parseConcludeTripPayload(body: Record<string, unknown>) {
   return {
     finishedAt: requiredDate(body.finishedAt, 'Data de chegada'),
-    finalKm: nonNegativeNumber(body.finalKm, 'O KM final'),
+    finalKm: parseKmValue(body.finalKm, 'O KM final'),
     notes: normalizeOptionalText(body.notes),
   }
 }

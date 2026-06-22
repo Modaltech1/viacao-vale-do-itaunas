@@ -3,6 +3,7 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normalizeOptionalText } from '@/lib/driver-utils'
+import { parseKmValue, parseOptionalKmValue } from '@/lib/km'
 import {
   vehicleDocumentCodes,
   vehicleDocumentDefinitions,
@@ -44,9 +45,7 @@ export type VehiclePayload = {
 
 export function parseVehiclePayload(body: Record<string, unknown>): VehiclePayload {
   const yearText = String(body.year ?? '').trim()
-  const currentKmText = String(body.currentKm ?? '0').replace(',', '.')
   const routeIdText = String(body.routeId ?? '').trim()
-  const estimatedKmText = String(body.newRouteEstimatedKm ?? '').replace(',', '.').trim()
   const driverIds = Array.isArray(body.driverIds)
     ? [...new Set(body.driverIds.map((id) => String(id).trim()).filter(Boolean))]
     : []
@@ -60,7 +59,7 @@ export function parseVehiclePayload(body: Record<string, unknown>): VehiclePaylo
     plate: String(body.plate ?? '').trim().toUpperCase(),
     year: yearText ? Number(yearText) : null,
     status: String(body.status ?? 'ativo') as VehicleStatus,
-    currentKm: Number(currentKmText),
+    currentKm: parseKmValue(body.currentKm ?? '0.0', 'A quilometragem atual'),
     capacity: normalizeOptionalText(body.capacity),
     notes: normalizeOptionalText(body.notes),
     routeId: routeIdText && routeIdText !== 'new' ? routeIdText : null,
@@ -69,7 +68,7 @@ export function parseVehiclePayload(body: Record<string, unknown>): VehiclePaylo
           name: String(body.newRouteName ?? '').trim(),
           origin: String(body.newRouteOrigin ?? '').trim(),
           destination: String(body.newRouteDestination ?? '').trim(),
-          estimatedKm: estimatedKmText ? Number(estimatedKmText) : null,
+          estimatedKm: parseOptionalKmValue(body.newRouteEstimatedKm, 'O KM estimado da rota'),
           notes: normalizeOptionalText(body.newRouteNotes),
         }
       : null,

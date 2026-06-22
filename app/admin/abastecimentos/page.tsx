@@ -20,6 +20,7 @@ import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, dateTime, number } from '@/lib/format'
+import { formatKm } from '@/lib/km'
 import {
   fuelTypes,
   type RefuelingListItem,
@@ -217,7 +218,7 @@ export default function RefuelingsPage() {
                         </p>
                       </TableCell>
                       <TableCell>{refueling.driverName}</TableCell>
-                      <TableCell>{number(refueling.registeredKm)}</TableCell>
+                      <TableCell>{formatKm(refueling.registeredKm)}</TableCell>
                       <TableCell>{refueling.fuelType}</TableCell>
                       <TableCell>{number(refueling.liters, 1)} L</TableCell>
                       <TableCell>

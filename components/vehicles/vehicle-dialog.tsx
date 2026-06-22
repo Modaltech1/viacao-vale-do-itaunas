@@ -26,6 +26,8 @@ import type {
   VehicleListItem,
 } from '@/types/vehicle'
 import type { VehicleStatus } from '@/types/fleet'
+import { KmInput } from '@/components/shared/km-input'
+import { kmInputValue } from '@/lib/km'
 import { vehicleDocumentDefinitions } from '@/lib/vehicle-documents'
 
 type EditableVehicle = VehicleListItem | VehicleDetails
@@ -46,7 +48,7 @@ const emptyForm: VehicleFormValues = {
   plate: '',
   year: '',
   status: 'ativo',
-  currentKm: '0',
+  currentKm: '0.0',
   capacity: '',
   notes: '',
   routeId: '',
@@ -78,7 +80,7 @@ function formFromVehicle(vehicle?: EditableVehicle | null): VehicleFormValues {
     plate: vehicle.plate,
     year: vehicle.year?.toString() ?? '',
     status: vehicle.status,
-    currentKm: vehicle.currentKm.toString(),
+    currentKm: kmInputValue(vehicle.currentKm),
     capacity: vehicle.capacity,
     notes: vehicle.notes,
     routeId: vehicle.route?.id ?? '',
@@ -253,13 +255,13 @@ export function VehicleDialog({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="vehicle-km">KM atual</Label>
-                <Input
+                <KmInput
                   id="vehicle-km"
-                  type="number"
-                  min="0"
-                  step="0.01"
+                  minValue={0}
                   value={form.currentKm}
-                  onChange={updateField('currentKm')}
+                  onValueChange={(currentKm) => {
+                    setForm((current) => ({ ...current, currentKm }))
+                  }}
                   required
                 />
               </div>
@@ -360,13 +362,13 @@ export function VehicleDialog({
                 <div className="grid gap-4 sm:grid-cols-[180px_1fr]">
                   <div className="space-y-2">
                     <Label htmlFor="route-km">KM estimado</Label>
-                    <Input
+                    <KmInput
                       id="route-km"
-                      type="number"
-                      min="0"
-                      step="0.01"
+                      minValue={0}
                       value={form.newRouteEstimatedKm}
-                      onChange={updateField('newRouteEstimatedKm')}
+                      onValueChange={(newRouteEstimatedKm) => {
+                        setForm((current) => ({ ...current, newRouteEstimatedKm }))
+                      }}
                     />
                   </div>
                   <div className="space-y-2">

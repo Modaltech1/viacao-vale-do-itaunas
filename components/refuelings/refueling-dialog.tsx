@@ -18,7 +18,9 @@ import {
   SelectValue,
   Textarea,
 } from '@prodexy/ui'
+import { KmInput } from '@/components/shared/km-input'
 import { brl } from '@/lib/format'
+import { kmInputValue } from '@/lib/km'
 import {
   fuelTypes,
   type RefuelingFormValues,
@@ -63,7 +65,7 @@ function formFromRefueling(refueling?: RefuelingListItem | null): RefuelingFormV
     vehicleId: refueling.vehicleId,
     driverId: refueling.driverId ?? '',
     registeredAt: localDateTime(refueling.registeredAt),
-    registeredKm: refueling.registeredKm.toString(),
+    registeredKm: kmInputValue(refueling.registeredKm),
     fuelType: refueling.fuelType,
     liters: refueling.liters.toString(),
     unitValue: refueling.unitValue?.toString() ?? '',
@@ -131,7 +133,7 @@ export function RefuelingDialog({
       tripId,
       vehicleId: trip.vehicleId,
       driverId: trip.driverId,
-      registeredKm: trip.latestRecordedKm.toString(),
+      registeredKm: kmInputValue(trip.latestRecordedKm),
     }))
   }
 
@@ -140,7 +142,7 @@ export function RefuelingDialog({
     setForm((current) => ({
       ...current,
       vehicleId,
-      registeredKm: vehicle?.currentKm.toString() ?? current.registeredKm,
+      registeredKm: vehicle ? kmInputValue(vehicle.currentKm) : current.registeredKm,
     }))
   }
 
@@ -302,13 +304,13 @@ export function RefuelingDialog({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="refueling-km-admin">KM registrado</Label>
-                <Input
+                <KmInput
                   id="refueling-km-admin"
-                  type="number"
-                  min="0"
-                  step="0.01"
+                  minValue={0}
                   value={form.registeredKm}
-                  onChange={updateField('registeredKm')}
+                  onValueChange={(registeredKm) => {
+                    setForm((current) => ({ ...current, registeredKm }))
+                  }}
                   required
                 />
               </div>

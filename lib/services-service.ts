@@ -2,6 +2,7 @@ import 'server-only'
 
 import { NextResponse } from 'next/server'
 import { normalizeOptionalText } from '@/lib/driver-utils'
+import { parseKmValue } from '@/lib/km'
 import type { MaintenanceType } from '@/types/fleet'
 import {
   serviceCategories,
@@ -27,7 +28,11 @@ export type ServicePayload = {
 export function parseServicePayload(body: Record<string, unknown>): ServicePayload {
   const periodicityType = String(body.periodicityType ?? 'nenhuma') as ServicePeriodicityType
   const periodicityValueText = String(body.periodicityValue ?? '').replace(',', '.').trim()
-  const periodicityValue = periodicityValueText ? Number(periodicityValueText) : null
+  const periodicityValue = periodicityType === 'km'
+    ? parseKmValue(body.periodicityValue, 'A periodicidade em KM')
+    : periodicityValueText
+      ? Number(periodicityValueText)
+      : null
   const defaultValueText = String(body.defaultValue ?? '').replace(',', '.').trim()
 
   const payload: ServicePayload = {

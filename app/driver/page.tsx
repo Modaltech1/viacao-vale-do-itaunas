@@ -30,7 +30,9 @@ import {
   RefuelingDialog,
 } from '@/components/driver/driver-operation-dialogs'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { KmInput } from '@/components/shared/km-input'
 import { brl, dateTime, maskCpf, number } from '@/lib/format'
+import { formatKm, kmInputValue } from '@/lib/km'
 import type {
   DriverPortalData,
   DriverPortalVehicle,
@@ -54,7 +56,7 @@ function startFormForVehicle(vehicle?: DriverPortalVehicle | null): StartTripFor
     vehicleId: vehicle.id,
     origin: vehicle.route?.origin ?? '',
     destination: vehicle.route?.destination ?? '',
-    initialKm: vehicle.currentKm.toString(),
+    initialKm: kmInputValue(vehicle.currentKm),
     notes: '',
   }
 }
@@ -212,7 +214,7 @@ export default function DriverPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Último KM registrado</p>
-                  <p className="mt-1 font-medium">{number(currentTrip.latestRecordedKm)}</p>
+                  <p className="mt-1 font-medium">{formatKm(currentTrip.latestRecordedKm)}</p>
                 </div>
                 <div className="col-span-2">
                   <p className="text-xs text-muted-foreground">Veículo</p>
@@ -257,7 +259,7 @@ export default function DriverPage() {
                       </span>
                       <span className="text-right">
                         <span className="block">{number(item.liters, 1)} L</span>
-                        <span className="text-xs text-muted-foreground">KM {number(item.registeredKm)}</span>
+                        <span className="text-xs text-muted-foreground">KM {formatKm(item.registeredKm)}</span>
                       </span>
                     </div>
                   ))}
@@ -338,14 +340,12 @@ export default function DriverPage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="trip-initial-km">KM inicial</Label>
-                  <Input
+                  <KmInput
                     id="trip-initial-km"
-                    type="number"
-                    min={selectedVehicle?.currentKm ?? 0}
-                    step="0.01"
+                    minValue={selectedVehicle?.currentKm ?? 0}
                     value={startForm.initialKm}
-                    onChange={(event) => {
-                      setStartForm((current) => ({ ...current, initialKm: event.target.value }))
+                    onValueChange={(initialKm) => {
+                      setStartForm((current) => ({ ...current, initialKm }))
                     }}
                     required
                   />
@@ -432,7 +432,7 @@ export default function DriverPage() {
             <div>
               <p className="text-xl font-bold">{selectedVehicle.fleetCode}</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                {selectedVehicle.brand} {selectedVehicle.model} · Placa {selectedVehicle.plate} · KM {number(selectedVehicle.currentKm)}
+                {selectedVehicle.brand} {selectedVehicle.model} · Placa {selectedVehicle.plate} · KM {formatKm(selectedVehicle.currentKm)}
               </p>
               <div className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
                 <MapPin className="mt-0.5 size-4 shrink-0" />

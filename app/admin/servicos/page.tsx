@@ -20,10 +20,11 @@ import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, number } from '@/lib/format'
+import { formatKm } from '@/lib/km'
 import { serviceCategories, type ServiceListItem } from '@/types/service'
 
 function periodicityLabel(service: ServiceListItem) {
-  if (service.periodicityType === 'km') return `${number(service.periodicityKm ?? 0)} km`
+  if (service.periodicityType === 'km') return `${formatKm(service.periodicityKm ?? 0)} km`
   if (service.periodicityType === 'tempo') return `${number(service.periodicityDays ?? 0)} dias`
   return 'Sem recorrência'
 }

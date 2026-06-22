@@ -21,6 +21,7 @@ import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, dateTime, number } from '@/lib/format'
+import { formatKm } from '@/lib/km'
 import type {
   MaintenanceFormOptions,
   MaintenanceListItem,
@@ -213,7 +214,7 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
                           : 'Sem peças'}
                       </TableCell>
                       <TableCell>{dateTime(item.openedAt)}</TableCell>
-                      <TableCell>{item.vehicleKm == null ? '—' : number(item.vehicleKm)}</TableCell>
+                      <TableCell>{item.vehicleKm == null ? '—' : formatKm(item.vehicleKm)}</TableCell>
                       <TableCell>{item.responsibleMechanicName}</TableCell>
                       {isAdmin ? <TableCell>{brl(item.totalValue)}</TableCell> : null}
                       <TableCell><StatusBadge type="maintenance" value={item.status} /></TableCell>

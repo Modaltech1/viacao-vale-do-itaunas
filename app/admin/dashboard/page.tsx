@@ -18,6 +18,7 @@ import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { brl, number } from '@/lib/format'
+import { formatKm } from '@/lib/km'
 import type { DashboardData } from '@/types/dashboard'
 
 type Period = 'mes_atual' | 'ultimos_30' | 'trimestre' | 'ano_atual' | 'personalizado'
@@ -189,7 +190,7 @@ export default function AdminDashboardPage() {
             />
             <MetricCard
               title="KM rodados"
-              value={number(metrics?.totalKm ?? 0)}
+              value={formatKm(metrics?.totalKm ?? 0)}
               subtitle={periodLabel}
               icon={Gauge}
             />
@@ -203,7 +204,7 @@ export default function AdminDashboardPage() {
               title="Consumo médio"
               value={metrics?.averageConsumption == null
                 ? 'Sem dados'
-                : `${number(metrics.averageConsumption, 2)} km/L`}
+                : `${formatKm(metrics.averageConsumption, 2)} km/L`}
               subtitle={periodLabel}
               icon={Gauge}
             />
@@ -292,7 +293,7 @@ export default function AdminDashboardPage() {
                             {vehicle.label}
                           </Link>
                           <p className="text-sm text-muted-foreground">
-                            KM atual: {number(vehicle.currentKm)}
+                            KM atual: {formatKm(vehicle.currentKm)}
                           </p>
                         </div>
                         <StatusBadge type="vehicle" value={vehicle.status} />

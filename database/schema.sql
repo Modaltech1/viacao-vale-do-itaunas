@@ -340,7 +340,8 @@ create table if not exists public.rotas (
   atualizado_em timestamptz not null default now(),
   criado_por uuid references public.perfis(id) on delete set null,
   atualizado_por uuid references public.perfis(id) on delete set null,
-  constraint rotas_km_estimado_check check (km_estimado is null or km_estimado >= 0)
+  constraint rotas_km_estimado_check check (km_estimado is null or km_estimado >= 0),
+  constraint rotas_km_estimado_decimos_check check (km_estimado is null or km_estimado = round(km_estimado, 1))
 );
 
 create table if not exists public.veiculos (
@@ -366,6 +367,7 @@ create table if not exists public.veiculos (
   atualizado_por uuid references public.perfis(id) on delete set null,
   constraint veiculos_status_operacional_check check (status_operacional in ('ativo', 'em_manutencao', 'inativo', 'reservado', 'indisponivel')),
   constraint veiculos_km_atual_check check (km_atual >= 0),
+  constraint veiculos_km_atual_decimos_check check (km_atual = round(km_atual, 1)),
   constraint veiculos_ano_check check (ano is null or ano between 1950 and 2100)
 );
 
@@ -472,6 +474,7 @@ create table if not exists public.servicos (
   constraint servicos_tipo_manutencao_sugerido_check check (tipo_manutencao_sugerido in ('preventiva', 'corretiva')),
   constraint servicos_tipo_periodicidade_check check (tipo_periodicidade in ('km', 'tempo', 'nenhuma')),
   constraint servicos_valor_padrao_check check (valor_padrao >= 0),
+  constraint servicos_periodicidade_km_decimos_check check (periodicidade_km is null or periodicidade_km = round(periodicidade_km, 1)),
   constraint servicos_periodicidade_check check (
     (tipo_periodicidade = 'km' and periodicidade_km is not null and periodicidade_km > 0 and periodicidade_dias is null) or
     (tipo_periodicidade = 'tempo' and periodicidade_dias is not null and periodicidade_dias > 0 and periodicidade_km is null) or
@@ -507,7 +510,13 @@ create table if not exists public.veiculo_servico_programacoes (
     (periodicidade_tipo_snapshot = 'nenhuma' and periodicidade_km_snapshot is null and periodicidade_dias_snapshot is null)
   ),
   constraint veiculo_servico_programacoes_ultimo_km_check check (ultimo_realizado_km is null or ultimo_realizado_km >= 0),
-  constraint veiculo_servico_programacoes_proximo_km_check check (proximo_vencimento_km is null or proximo_vencimento_km >= 0)
+  constraint veiculo_servico_programacoes_proximo_km_check check (proximo_vencimento_km is null or proximo_vencimento_km >= 0),
+  constraint veiculo_servico_programacoes_km_decimos_check check (
+    (periodicidade_km_snapshot is null or periodicidade_km_snapshot = round(periodicidade_km_snapshot, 1))
+    and (ultimo_realizado_km is null or ultimo_realizado_km = round(ultimo_realizado_km, 1))
+    and (proximo_vencimento_km is null or proximo_vencimento_km = round(proximo_vencimento_km, 1))
+    and km_alerta = round(km_alerta, 1)
+  )
 );
 
 create unique index if not exists veiculo_servico_programacoes_uniq
@@ -544,6 +553,11 @@ create table if not exists public.viagens (
   constraint viagens_status_check check (status in ('em_andamento', 'concluida', 'cancelada')),
   constraint viagens_km_inicial_check check (km_inicial >= 0),
   constraint viagens_km_final_check check (km_final is null or km_final > km_inicial),
+  constraint viagens_km_decimos_check check (
+    km_inicial = round(km_inicial, 1)
+    and (km_final is null or km_final = round(km_final, 1))
+    and (km_estimado_snapshot is null or km_estimado_snapshot = round(km_estimado_snapshot, 1))
+  ),
   constraint viagens_datas_check check (chegou_em is null or chegou_em >= saiu_em),
   constraint viagens_concluida_check check ((status <> 'concluida') or (chegou_em is not null and km_final is not null)),
   constraint viagens_em_andamento_check check ((status <> 'em_andamento') or (chegou_em is null and km_final is null and cancelado_em is null)),
@@ -579,6 +593,7 @@ create table if not exists public.abastecimentos (
   constraint abastecimentos_combustivel_check check (tipo_combustivel in ('Diesel S10', 'Diesel S500', 'ARLA', 'Gasolina', 'Etanol')),
   constraint abastecimentos_litros_check check (litros > 0),
   constraint abastecimentos_km_check check (km_registrado >= 0),
+  constraint abastecimentos_km_decimos_check check (km_registrado = round(km_registrado, 1)),
   constraint abastecimentos_valores_check check ((valor_unitario is null or valor_unitario >= 0) and (valor_total is null or valor_total >= 0))
 );
 
@@ -698,6 +713,7 @@ create table if not exists public.manutencoes (
   constraint manutencoes_tipo_check check (tipo_manutencao in ('preventiva', 'corretiva')),
   constraint manutencoes_status_check check (status in ('aberta', 'em_andamento', 'concluida', 'cancelada')),
   constraint manutencoes_km_check check (km_veiculo is null or km_veiculo >= 0),
+  constraint manutencoes_km_decimos_check check (km_veiculo is null or km_veiculo = round(km_veiculo, 1)),
   constraint manutencoes_valor_check check (valor_total_informado is null or valor_total_informado >= 0),
   constraint manutencoes_datas_check check (
     (iniciado_em is null or iniciado_em >= aberto_em) and
@@ -937,6 +953,7 @@ create table if not exists public.pendencias_manuais (
   atualizado_por uuid references public.perfis(id) on delete set null,
   constraint pendencias_manuais_severidade_check check (severidade in ('baixa', 'atencao', 'critica')),
   constraint pendencias_manuais_status_check check (status in ('aberta', 'resolvida', 'cancelada')),
+  constraint pendencias_manuais_km_decimos_check check (vencimento_km is null or vencimento_km = round(vencimento_km, 1)),
   constraint pendencias_manuais_resolvida_check check ((status <> 'resolvida') or resolvida_em is not null)
 );
 

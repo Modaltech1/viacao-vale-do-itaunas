@@ -2,6 +2,7 @@ import 'server-only'
 
 import { NextResponse } from 'next/server'
 import { normalizeOptionalText } from '@/lib/driver-utils'
+import { parseKmValue } from '@/lib/km'
 import { fuelTypes, type FuelType } from '@/types/refueling'
 
 function optionalNonNegativeNumber(value: unknown, label: string) {
@@ -35,7 +36,7 @@ export function parseRefuelingPayload(body: Record<string, unknown>) {
     vehicleId: String(body.vehicleId ?? '').trim(),
     driverId: normalizeOptionalText(body.driverId),
     registeredAt: registeredAt.toISOString(),
-    registeredKm: optionalNonNegativeNumber(body.registeredKm, 'O KM registrado'),
+    registeredKm: parseKmValue(body.registeredKm, 'O KM registrado'),
     fuelType,
     liters: positiveNumber(body.liters, 'A quantidade de litros'),
     unitValue: optionalNonNegativeNumber(body.unitValue, 'O valor unitário'),
@@ -44,8 +45,6 @@ export function parseRefuelingPayload(body: Record<string, unknown>) {
   }
 
   if (!payload.vehicleId) throw new Error('O veículo é obrigatório.')
-  if (payload.registeredKm == null) throw new Error('O KM registrado é obrigatório.')
-
   return payload
 }
 

@@ -21,6 +21,7 @@ import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { number } from '@/lib/format'
+import { formatKm } from '@/lib/km'
 import type { DriverListItem, DriverVehicleOption } from '@/types/driver'
 
 export default function DriversPage() {
@@ -108,7 +109,7 @@ export default function DriversPage() {
           icon={BadgeAlert}
           tone="danger"
         />
-        <MetricCard title="KM total" value={number(totalKm)} icon={Gauge} />
+        <MetricCard title="KM total" value={formatKm(totalKm)} icon={Gauge} />
       </div>
 
       <Card>
@@ -177,7 +178,7 @@ export default function DriversPage() {
                       <TableCell>
                         <StatusBadge type="document" value={driver.licenseStatus} />
                       </TableCell>
-                      <TableCell>{number(driver.totalKm)}</TableCell>
+                      <TableCell>{formatKm(driver.totalKm)}</TableCell>
                       <TableCell>{number(driver.totalLiters, 1)}</TableCell>
                       <TableCell>
                         <StatusBadge

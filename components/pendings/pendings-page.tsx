@@ -24,6 +24,7 @@ import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { date, number } from '@/lib/format'
+import { formatKm } from '@/lib/km'
 import { vehicleDocumentLabel } from '@/lib/vehicle-documents'
 import type {
   PendingFormOptions,
@@ -196,8 +197,8 @@ export function PendingsPage({ mode }: { mode: PendingMode }) {
                             <p className="mt-2 text-xs text-muted-foreground">
                               {typeLabel(item.type)}
                               {item.dueDate ? ` · Data ${date(item.dueDate)}` : ''}
-                              {item.dueKm != null ? ` · Vencimento ${number(item.dueKm)} km` : ''}
-                              {item.currentKm != null ? ` · KM atual ${number(item.currentKm)}` : ''}
+                              {item.dueKm != null ? ` · Vencimento ${formatKm(item.dueKm)} km` : ''}
+                              {item.currentKm != null ? ` · KM atual ${formatKm(item.currentKm)}` : ''}
                             </p>
                           </div>
 

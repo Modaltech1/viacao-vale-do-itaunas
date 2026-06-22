@@ -27,6 +27,7 @@ import { Section } from '@/components/shared/section'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, dateTime, maskCpf, number } from '@/lib/format'
+import { formatKm } from '@/lib/km'
 import type { DriverDetails, DriverVehicleOption } from '@/types/driver'
 
 function formatDateOnly(value: string) {
@@ -122,7 +123,7 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
 
       <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <MetricCard title="Viagens" value={driver.tripsCount} />
-        <MetricCard title="KM rodados" value={number(driver.totalKm)} />
+        <MetricCard title="KM rodados" value={formatKm(driver.totalKm)} />
         <MetricCard title="Litros registrados" value={number(driver.totalLiters, 1)} />
         <MetricCard title="Despesas" value={brl(driver.totalExpenses)} />
         <MetricCard
@@ -185,7 +186,7 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
                   {vehicle.principal ? <StatusBadge type="raw" value="ativo" label="Principal" /> : null}
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Placa {vehicle.plate} · KM atual: {number(vehicle.currentKm)}
+                  Placa {vehicle.plate} · KM atual: {formatKm(vehicle.currentKm)}
                 </p>
                 <div className="mt-2">
                   <StatusBadge type="vehicle" value={vehicle.status} />
@@ -225,7 +226,7 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
                     <TableCell>{trip.vehicle}</TableCell>
                     <TableCell>{dateTime(trip.startedAt)}</TableCell>
                     <TableCell>{dateTime(trip.finishedAt ?? undefined)}</TableCell>
-                    <TableCell>{trip.finalKm == null ? '—' : number(trip.finalKm - trip.initialKm)}</TableCell>
+                    <TableCell>{trip.finalKm == null ? '—' : formatKm(trip.finalKm - trip.initialKm)}</TableCell>
                     <TableCell><StatusBadge type="trip" value={trip.status} /></TableCell>
                   </TableRow>
                 )) : (
@@ -257,7 +258,7 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
                     <TableCell>{refueling.vehicle}</TableCell>
                     <TableCell>{refueling.fuelType}</TableCell>
                     <TableCell>{number(refueling.liters, 1)}</TableCell>
-                    <TableCell>{number(refueling.registeredKm)}</TableCell>
+                    <TableCell>{formatKm(refueling.registeredKm)}</TableCell>
                     <TableCell>{refueling.totalValue == null ? '—' : brl(refueling.totalValue)}</TableCell>
                   </TableRow>
                 )) : (

@@ -21,6 +21,7 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { TripDialog } from '@/components/trips/trip-dialogs'
 import { compactDateTime, formatTripDuration, number } from '@/lib/format'
+import { formatKm } from '@/lib/km'
 import type { TripFormOptions, TripListItem } from '@/types/trip'
 
 const emptyOptions: TripFormOptions = { drivers: [], vehicles: [] }
@@ -113,7 +114,7 @@ export default function TripsPage() {
           icon={CheckCircle2}
           tone="success"
         />
-        <MetricCard title="KM rodados" value={number(totalKm)} icon={Gauge} />
+        <MetricCard title="KM rodados" value={formatKm(totalKm)} icon={Gauge} />
       </div>
 
       <Card>
@@ -225,26 +226,26 @@ export default function TripsPage() {
                           <div className="space-y-1 text-sm">
                             <p className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2">
                               <span className="text-xs text-muted-foreground">Início</span>
-                              <span className="truncate tabular-nums" title={number(trip.initialKm)}>
-                                {number(trip.initialKm)}
+                              <span className="truncate tabular-nums" title={formatKm(trip.initialKm)}>
+                                {formatKm(trip.initialKm)}
                               </span>
                             </p>
                             <p className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2">
                               <span className="text-xs text-muted-foreground">Final</span>
                               <span
                                 className="truncate tabular-nums"
-                                title={trip.finalKm == null ? 'Não informado' : number(trip.finalKm)}
+                                title={trip.finalKm == null ? 'Não informado' : formatKm(trip.finalKm)}
                               >
-                                {trip.finalKm == null ? '—' : number(trip.finalKm)}
+                                {trip.finalKm == null ? '—' : formatKm(trip.finalKm)}
                               </span>
                             </p>
                           </div>
                           {trip.totalKm != null ? (
                             <p
                               className="truncate text-xs text-muted-foreground"
-                              title={`${number(trip.totalKm)} km rodados`}
+                              title={`${formatKm(trip.totalKm)} km rodados`}
                             >
-                              {number(trip.totalKm)} km rodados
+                              {formatKm(trip.totalKm)} km rodados
                             </p>
                           ) : null}
                         </TableCell>

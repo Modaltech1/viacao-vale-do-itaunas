@@ -3,6 +3,7 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normalizeOptionalText } from '@/lib/driver-utils'
+import { parseKmValue } from '@/lib/km'
 import type { MaintenanceStatus, MaintenanceType } from '@/types/fleet'
 
 const maintenanceTypes: MaintenanceType[] = ['preventiva', 'corretiva']
@@ -37,7 +38,6 @@ export function parseMaintenancePayload(
   body: Record<string, unknown>,
   forcedMechanicId?: string,
 ): MaintenancePayload {
-  const vehicleKmText = String(body.vehicleKm ?? '').replace(',', '.').trim()
   const parts = Array.isArray(body.parts)
     ? body.parts.map((item) => {
         const row = item as Record<string, unknown>
@@ -64,7 +64,7 @@ export function parseMaintenancePayload(
     cause: String(body.cause ?? '').trim(),
     openedAt: String(body.openedAt ?? '').trim(),
     completedAt: normalizeOptionalText(body.completedAt),
-    vehicleKm: Number(vehicleKmText),
+    vehicleKm: parseKmValue(body.vehicleKm, 'O KM do veículo'),
     responsibleMechanicId: forcedMechanicId ?? String(body.responsibleMechanicId ?? '').trim(),
     status: String(body.status ?? 'aberta') as MaintenancePayload['status'],
     notes: normalizeOptionalText(body.notes),

@@ -24,6 +24,7 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { ConcludeTripDialog, RemoveTripDialog, TripDialog } from '@/components/trips/trip-dialogs'
 import { brl, dateTime, formatTripDuration, number } from '@/lib/format'
+import { formatKm } from '@/lib/km'
 import type { TripDetails, TripFormOptions } from '@/types/trip'
 
 const emptyOptions: TripFormOptions = { drivers: [], vehicles: [] }
@@ -134,12 +135,12 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
           subtitle={trip.finishedAt ? 'Duração total' : 'Tempo decorrido'}
           icon={Timer}
         />
-        <MetricCard title="KM rodados" value={trip.totalKm == null ? '—' : number(trip.totalKm)} icon={Gauge} />
+        <MetricCard title="KM rodados" value={trip.totalKm == null ? '—' : formatKm(trip.totalKm)} icon={Gauge} />
         <MetricCard title="Litros" value={number(trip.fuelLiters, 1)} icon={Fuel} />
         <MetricCard title="Custo total" value={brl(totalCost)} icon={DollarSign} />
         <MetricCard
           title="Consumo médio"
-          value={consumption == null ? '—' : `${number(consumption, 2)} km/L`}
+          value={consumption == null ? '—' : `${formatKm(consumption, 2)} km/L`}
           icon={Gauge}
         />
       </div>
@@ -178,7 +179,7 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
             <div className="flex justify-between gap-4 py-3">
               <span className="text-muted-foreground">KM inicial / final</span>
               <span className="text-right font-medium">
-                {number(trip.initialKm)} / {trip.finalKm == null ? '—' : number(trip.finalKm)}
+                {formatKm(trip.initialKm)} / {trip.finalKm == null ? '—' : formatKm(trip.finalKm)}
               </span>
             </div>
             <div className="flex items-center justify-between gap-4 py-3 last:pb-0">
@@ -200,7 +201,7 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
               <p><b>Rota:</b> {trip.routeName || 'Informada diretamente na viagem'}</p>
               <p className="mt-2">
                 <b>KM estimado:</b>{' '}
-                {trip.estimatedKm == null ? 'Não informado' : `${number(trip.estimatedKm)} km`}
+                {trip.estimatedKm == null ? 'Não informado' : `${formatKm(trip.estimatedKm)} km`}
               </p>
               {trip.temporaryVehicle ? (
                 <p className="mt-3 border-l-2 border-amber-500 pl-3 text-amber-700">
@@ -229,7 +230,7 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
               {trip.refuelings.length ? refuelingPagination.pageItems.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>{dateTime(item.registeredAt)}</TableCell>
-                  <TableCell>{number(item.registeredKm)}</TableCell>
+                  <TableCell>{formatKm(item.registeredKm)}</TableCell>
                   <TableCell>{item.fuelType}</TableCell>
                   <TableCell>{number(item.liters, 1)} L</TableCell>
                   <TableCell>{item.totalValue == null ? 'Pendente' : brl(item.totalValue)}</TableCell>

@@ -20,7 +20,7 @@ import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { VehicleDialog } from '@/components/vehicles/vehicle-dialog'
-import { number } from '@/lib/format'
+import { formatKm } from '@/lib/km'
 import type { VehicleFormOptions, VehicleListItem } from '@/types/vehicle'
 
 type VehiclePageMode = 'admin' | 'mechanic'
@@ -233,7 +233,7 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
                               : 'Sem motorista'}
                           </TableCell>
                         ) : null}
-                        <TableCell>{number(vehicle.currentKm)}</TableCell>
+                        <TableCell>{formatKm(vehicle.currentKm)}</TableCell>
                         <TableCell>
                           {isAdmin ? (
                             ceturb

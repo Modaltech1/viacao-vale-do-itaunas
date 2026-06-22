@@ -20,7 +20,9 @@ import {
 } from '@prodexy/ui'
 import { ServiceUsageEditor } from '@/components/maintenances/service-usage-editor'
 import { PartUsageEditor } from '@/components/parts/part-usage-editor'
+import { KmInput } from '@/components/shared/km-input'
 import { brl } from '@/lib/format'
+import { formatKm, kmInputValue } from '@/lib/km'
 import type {
   MaintenanceFormOptions,
   MaintenanceFormValues,
@@ -57,7 +59,7 @@ function emptyForm(
     cause: '',
     openedAt: localDateTime(),
     completedAt: '',
-    vehicleKm: vehicle?.currentKm.toString() ?? '',
+    vehicleKm: kmInputValue(vehicle?.currentKm),
     responsibleMechanicId: options.currentMechanicId ?? '',
     status: 'aberta',
     notes: '',
@@ -76,7 +78,7 @@ function formFromMaintenance(
     cause: maintenance.cause,
     openedAt: localDateTime(maintenance.openedAt),
     completedAt: maintenance.completedAt ? localDateTime(maintenance.completedAt) : '',
-    vehicleKm: maintenance.vehicleKm?.toString() ?? '',
+    vehicleKm: kmInputValue(maintenance.vehicleKm),
     responsibleMechanicId:
       maintenance.responsibleMechanicId ?? options.currentMechanicId ?? '',
     status: maintenance.status === 'concluida'
@@ -164,7 +166,7 @@ export function MaintenanceDialog({
     setForm((current) => ({
       ...current,
       vehicleId,
-      vehicleKm: vehicle?.currentKm.toString() ?? current.vehicleKm,
+      vehicleKm: vehicle ? kmInputValue(vehicle.currentKm) : current.vehicleKm,
     }))
   }
 
@@ -229,7 +231,7 @@ export function MaintenanceDialog({
                   <SelectContent>
                     {options.vehicles.map((vehicle) => (
                       <SelectItem key={vehicle.id} value={vehicle.id}>
-                        {vehicle.label} · KM {vehicle.currentKm.toLocaleString('pt-BR')}
+                        {vehicle.label} · KM {formatKm(vehicle.currentKm)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -292,13 +294,13 @@ export function MaintenanceDialog({
               ) : null}
               <div className="space-y-2">
                 <Label htmlFor="maintenance-km">KM do veículo</Label>
-                <Input
+                <KmInput
                   id="maintenance-km"
-                  type="number"
-                  min="0"
-                  step="0.01"
+                  minValue={0}
                   value={form.vehicleKm}
-                  onChange={updateField('vehicleKm')}
+                  onValueChange={(vehicleKm) => {
+                    setForm((current) => ({ ...current, vehicleKm }))
+                  }}
                   required
                 />
               </div>

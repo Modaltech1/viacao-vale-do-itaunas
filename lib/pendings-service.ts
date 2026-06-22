@@ -3,6 +3,7 @@ import 'server-only'
 import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normalizeOptionalText } from '@/lib/driver-utils'
+import { parseOptionalKmValue } from '@/lib/km'
 import type { Severity } from '@/types/fleet'
 import type {
   PendingInteractionAction,
@@ -34,7 +35,6 @@ export function parsePendingPayload(
   body: Record<string, unknown>,
   forcedMechanicId?: string,
 ): PendingPayload {
-  const dueKmText = String(body.dueKm ?? '').replace(',', '.').trim()
   const payload: PendingPayload = {
     title: String(body.title ?? '').trim(),
     description: normalizeOptionalText(body.description),
@@ -46,7 +46,7 @@ export function parsePendingPayload(
     serviceId: normalizeOptionalText(body.serviceId),
     maintenanceId: normalizeOptionalText(body.maintenanceId),
     dueDate: normalizeOptionalText(body.dueDate),
-    dueKm: dueKmText ? Number(dueKmText) : null,
+    dueKm: parseOptionalKmValue(body.dueKm, 'O vencimento em KM'),
   }
 
   if (!payload.title) throw new Error('O título da pendência é obrigatório.')

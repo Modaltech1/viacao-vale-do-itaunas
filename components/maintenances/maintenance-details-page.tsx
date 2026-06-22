@@ -23,6 +23,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { brl, dateTime, number } from '@/lib/format'
+import { formatKm } from '@/lib/km'
 import type {
   MaintenanceDetails,
   MaintenanceFormOptions,
@@ -163,7 +164,7 @@ export function MaintenanceDetailsPage({
                 : 'Aberta'}
           icon={Wrench}
         />
-        <MetricCard title="KM registrado" value={maintenance.vehicleKm == null ? '—' : number(maintenance.vehicleKm)} icon={Gauge} />
+        <MetricCard title="KM registrado" value={maintenance.vehicleKm == null ? '—' : formatKm(maintenance.vehicleKm)} icon={Gauge} />
         <MetricCard title="Serviços" value={brl(maintenance.servicesValue)} icon={ClipboardList} />
         <MetricCard title="Peças" value={brl(maintenance.partsValue)} icon={Package} />
         <MetricCard title="Custo total" value={brl(maintenance.totalValue)} icon={Wrench} />

@@ -18,6 +18,7 @@ import {
   SelectValue,
   Textarea,
 } from '@prodexy/ui'
+import { KmInput } from '@/components/shared/km-input'
 import type {
   PendingFormOptions,
   PendingFormValues,
@@ -209,13 +210,13 @@ export function PendingDialog({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="pending-due-km">Vencimento por KM</Label>
-                <Input
+                <KmInput
                   id="pending-due-km"
-                  type="number"
-                  min="0"
-                  step="0.01"
+                  minValue={0}
                   value={form.dueKm}
-                  onChange={updateField('dueKm')}
+                  onValueChange={(dueKm) => {
+                    setForm((current) => ({ ...current, dueKm }))
+                  }}
                 />
               </div>
             </div>
