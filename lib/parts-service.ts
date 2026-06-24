@@ -1,7 +1,7 @@
 import 'server-only'
 
-import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { apiErrorResponse } from '@/lib/error-response'
 import { normalizeOptionalText } from '@/lib/driver-utils'
 import {
   partCategories,
@@ -91,18 +91,11 @@ export async function savePart(
 }
 
 export function partErrorResponse(error: unknown, fallback: string, status = 400) {
-  const message = error instanceof Error ? error.message : fallback
-  const normalized = message.toLowerCase()
-
-  if (
-    normalized.includes('pecas_codigo_normalizado_uniq')
-    || normalized.includes('duplicate')
-  ) {
-    return NextResponse.json(
-      { error: 'Já existe uma peça cadastrada com esse código.' },
-      { status: 409 },
-    )
-  }
-
-  return NextResponse.json({ error: message || fallback }, { status })
+  return apiErrorResponse(error, fallback, status, [
+    {
+      includes: ['pecas_codigo_normalizado_uniq', 'duplicate'],
+      message: 'Já existe uma peça cadastrada com esse código.',
+      status: 409,
+    },
+  ])
 }

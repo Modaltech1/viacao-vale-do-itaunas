@@ -19,6 +19,7 @@ import {
   formatTripDuration,
   tripDurationMinutes,
 } from '@/lib/format'
+import { resolveUserFacingError } from '@/lib/error-messages'
 import {
   formatKm,
   hasOneDecimalKmPrecision,
@@ -30,6 +31,7 @@ import { tripFinalKmMinimum, tripFinalKmSuggestion } from '@/lib/trip-km'
 import {
   parseMaintenancePayload,
   isMaintenanceEditable,
+  parseRemoveMaintenancePayload,
 } from '@/lib/maintenances-service'
 import { parsePartPayload } from '@/lib/parts-service'
 import { parsePendingPayload } from '@/lib/pendings-service'
@@ -69,6 +71,51 @@ test('autorização direciona e restringe cada papel', () => {
   assert.equal(canAccessPath('motorista', '/admin/veiculos'), false)
   assert.equal(canAccessPath('mecanico', '/mechanic/manutencoes/1'), true)
   assert.equal(canAccessPath('motorista', '/driver'), true)
+})
+
+test('mensagens de erro operacionais nao vazam detalhes tecnicos', () => {
+  const cases = [
+    resolveUserFacingError(
+      new Error('Invalid API key'),
+      'Nao foi possivel salvar.',
+    ),
+    resolveUserFacingError(
+      new Error('new row violates check constraint "viagens_km_final_check"'),
+      'Nao foi possivel salvar.',
+    ),
+    resolveUserFacingError(
+      new Error('KM atual nao pode ser menor que o ultimo evento operacional do veiculo (1325880)'),
+      'Nao foi possivel salvar.',
+    ),
+    resolveUserFacingError(
+      new Error('duplicate key value violates unique constraint "veiculos_codigo_frota_normalizado_uniq"'),
+      'Nao foi possivel salvar.',
+      400,
+      [{
+        includes: ['veiculos_codigo_frota_normalizado_uniq'],
+        message: 'Ja existe um veiculo cadastrado com esse codigo de frota.',
+        status: 409,
+      }],
+    ),
+    resolveUserFacingError(
+      new Error('Operacao fora da responsabilidade do administrador'),
+      'Nao foi possivel salvar.',
+    ),
+  ]
+
+  assert.equal(cases[0].message, 'O sistema não conseguiu acessar o banco de dados. Avise o suporte.')
+  assert.equal(cases[0].status, 500)
+  assert.equal(cases[1].message, 'O KM final deve ser maior que o KM inicial.')
+  assert.equal(cases[2].message, 'O KM atual não pode ser menor que o último registro operacional do veículo. Revise viagens, abastecimentos ou manutenções.')
+  assert.equal(cases[2].status, 409)
+  assert.equal(cases[3].message, 'Ja existe um veiculo cadastrado com esse codigo de frota.')
+  assert.equal(cases[3].status, 409)
+  assert.equal(cases[4].message, 'Você não tem permissão para fazer esta ação.')
+  assert.equal(cases[4].status, 403)
+
+  for (const item of cases) {
+    assert.doesNotMatch(item.message, /constraint|duplicate key|invalid api key|supabase|service_role/i)
+  }
 })
 
 test('escopo administrativo diferencia acesso global e responsabilidade direta', () => {
@@ -365,6 +412,8 @@ test('viagens validam criação, edição e conclusão', () => {
   }).finalKm, 23200)
   assert.equal(parseRemoveTripPayload({ reason: 'Lançamento duplicado' }).reason, 'Lançamento duplicado')
   throwsMessage(() => parseRemoveTripPayload({ reason: 'x' }), 'pelo menos 5 caracteres')
+  assert.equal(parseRemoveMaintenancePayload({ reason: 'Registro duplicado' }).reason, 'Registro duplicado')
+  throwsMessage(() => parseRemoveMaintenancePayload({ reason: 'x' }), 'pelo menos 5 caracteres')
   throwsMessage(() => parseCreateTripPayload({
     startedAt: '2026-06-06T08:00',
     initialKm: '0.0',

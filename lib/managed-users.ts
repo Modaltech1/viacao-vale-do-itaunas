@@ -1,7 +1,7 @@
 import 'server-only'
 
-import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { apiErrorResponse } from '@/lib/error-response'
 import type { UserRole } from '@/lib/auth'
 import type { AdminLevel } from '@/lib/admin-scope'
 
@@ -16,35 +16,13 @@ type ManagedUserInput = {
 }
 
 export function managedUserErrorResponse(error: unknown, entity: string, fallback: string, status = 400) {
-  const message = error instanceof Error ? error.message : fallback
-  const normalized = message.toLowerCase()
-  const explicitStatus =
-    typeof error === 'object'
-    && error !== null
-    && 'status' in error
-    && typeof error.status === 'number'
-      ? error.status
-      : null
-
-  if (normalized.includes('invalid api key')) {
-    return NextResponse.json(
-      { error: 'A configuração server-side do Supabase está inválida.' },
-      { status: 500 },
-    )
-  }
-
-  if (
-    normalized.includes('duplicate')
-    || normalized.includes('already registered')
-    || normalized.includes('already exists')
-  ) {
-    return NextResponse.json(
-      { error: `Já existe um usuário ou ${entity} com esses dados.` },
-      { status: 409 },
-    )
-  }
-
-  return NextResponse.json({ error: message || fallback }, { status: explicitStatus ?? status })
+  return apiErrorResponse(error, fallback, status, [
+    {
+      includes: ['duplicate', 'already registered', 'already exists'],
+      message: `Já existe um usuário ou ${entity} com esses dados.`,
+      status: 409,
+    },
+  ])
 }
 
 export async function createManagedUser(

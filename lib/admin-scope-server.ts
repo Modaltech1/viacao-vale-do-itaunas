@@ -77,3 +77,26 @@ export async function assertAdminTripAccess(
 
   await assertAdminVehicleAccess(client, access, data.veiculo_id)
 }
+
+export async function assertAdminMaintenanceAccess(
+  client: SupabaseClient,
+  access: AdminAccess,
+  maintenanceId: string,
+) {
+  if (access.isGlobal) return
+
+  const { data, error } = await client
+    .from('manutencoes')
+    .select('veiculo_id')
+    .eq('id', maintenanceId)
+    .maybeSingle<{ veiculo_id: string }>()
+
+  if (error) throw error
+  if (!data) {
+    const notFound = new Error('Manutenção não encontrada.')
+    Object.assign(notFound, { status: 404 })
+    throw notFound
+  }
+
+  await assertAdminVehicleAccess(client, access, data.veiculo_id)
+}

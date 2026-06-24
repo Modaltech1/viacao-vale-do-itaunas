@@ -1,7 +1,7 @@
 import 'server-only'
 
-import { NextResponse } from 'next/server'
 import { normalizeOptionalText } from '@/lib/driver-utils'
+import { apiErrorResponse } from '@/lib/error-response'
 import { parseKmValue } from '@/lib/km'
 import { fuelTypes, type FuelType } from '@/types/refueling'
 
@@ -72,36 +72,16 @@ export function refuelingPayloadToDatabase(
 }
 
 export function refuelingErrorResponse(error: unknown, fallback: string, status = 400) {
-  const message = error instanceof Error ? error.message : fallback
-  const normalized = message.toLowerCase()
-  const explicitStatus =
-    typeof error === 'object'
-    && error !== null
-    && 'status' in error
-    && typeof error.status === 'number'
-      ? error.status
-      : null
-
-  if (normalized.includes('invalid api key')) {
-    return NextResponse.json(
-      { error: 'A configuração server-side do Supabase está inválida.' },
-      { status: 500 },
-    )
-  }
-
-  if (normalized.includes('incompatível com motorista/veículo')) {
-    return NextResponse.json(
-      { error: 'O motorista e o veículo precisam corresponder à viagem selecionada.' },
-      { status: 400 },
-    )
-  }
-
-  if (normalized.includes('violates check constraint')) {
-    return NextResponse.json(
-      { error: 'Os dados do abastecimento não respeitam as regras de KM, litros ou valores.' },
-      { status: 400 },
-    )
-  }
-
-  return NextResponse.json({ error: message || fallback }, { status: explicitStatus ?? status })
+  return apiErrorResponse(error, fallback, status, [
+    {
+      includes: ['incompatível com motorista/veículo', 'incompativel com motorista/veiculo'],
+      message: 'O motorista e o veículo precisam corresponder à viagem selecionada.',
+      status: 400,
+    },
+    {
+      includes: ['abastecimentos_km_check', 'abastecimentos_litros_check', 'abastecimentos_valores_check'],
+      message: 'Revise o KM, os litros e os valores do abastecimento.',
+      status: 400,
+    },
+  ])
 }

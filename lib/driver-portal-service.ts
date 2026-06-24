@@ -1,7 +1,7 @@
 import 'server-only'
 
-import { NextResponse } from 'next/server'
 import { normalizeOptionalText } from '@/lib/driver-utils'
+import { apiErrorResponse } from '@/lib/error-response'
 import { parseKmValue } from '@/lib/km'
 
 const fuelTypes = ['Diesel S10', 'Diesel S500', 'ARLA', 'Gasolina', 'Etanol'] as const
@@ -60,22 +60,5 @@ export function parseEndTripPayload(body: Record<string, unknown>) {
 }
 
 export function driverPortalErrorResponse(error: unknown, fallback: string, status = 400) {
-  const message = error instanceof Error ? error.message : fallback
-  const normalized = message.toLowerCase()
-
-  if (normalized.includes('invalid api key')) {
-    return NextResponse.json(
-      { error: 'A configuração server-side do Supabase está inválida.' },
-      { status: 500 },
-    )
-  }
-
-  if (normalized.includes('duplicate key') || normalized.includes('já possui viagem')) {
-    return NextResponse.json(
-      { error: 'Já existe uma viagem em andamento para este motorista ou veículo.' },
-      { status: 409 },
-    )
-  }
-
-  return NextResponse.json({ error: message || fallback }, { status })
+  return apiErrorResponse(error, fallback, status)
 }

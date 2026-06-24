@@ -1,7 +1,7 @@
 import 'server-only'
 
-import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { apiErrorResponse } from '@/lib/error-response'
 import { normalizeOptionalText } from '@/lib/driver-utils'
 import { expenseCategories, type ExpenseCategory } from '@/types/expense'
 
@@ -90,32 +90,16 @@ export async function saveExpense(
 }
 
 export function expenseErrorResponse(error: unknown, fallback: string, status = 400) {
-  const message = error instanceof Error ? error.message : fallback
-  const normalized = message.toLowerCase()
-
-  if (normalized.includes('invalid api key')) {
-    return NextResponse.json(
-      { error: 'A configuração server-side do Supabase está inválida.' },
-      { status: 500 },
-    )
-  }
-
-  if (normalized.includes('incompatível com motorista/veículo')) {
-    return NextResponse.json(
-      { error: 'O motorista e o veículo precisam corresponder à viagem selecionada.' },
-      { status: 400 },
-    )
-  }
-
-  if (normalized.includes('violates check constraint')) {
-    return NextResponse.json(
-      { error: 'A categoria ou o valor da despesa não respeita as regras do sistema.' },
-      { status: 400 },
-    )
-  }
-  if (normalized.includes('estoque insuficiente')) {
-    return NextResponse.json({ error: message }, { status: 409 })
-  }
-
-  return NextResponse.json({ error: message || fallback }, { status })
+  return apiErrorResponse(error, fallback, status, [
+    {
+      includes: ['incompatível com motorista/veículo', 'incompativel com motorista/veiculo'],
+      message: 'O motorista e o veículo precisam corresponder à viagem selecionada.',
+      status: 400,
+    },
+    {
+      includes: ['despesas_viagem_categoria_check'],
+      message: 'A categoria da despesa não é válida para este lançamento.',
+      status: 400,
+    },
+  ])
 }

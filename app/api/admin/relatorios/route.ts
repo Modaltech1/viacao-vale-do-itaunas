@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { apiErrorResponse } from '@/lib/error-response'
 import { getReportData } from '@/lib/reports-repository'
 import { requireGlobalAdmin } from '@/lib/supabase-server'
 
@@ -39,7 +40,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ report })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Não foi possível gerar o relatório.'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return apiErrorResponse(error, 'Não foi possível gerar o relatório.', 500)
   }
 }

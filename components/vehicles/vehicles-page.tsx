@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import {
   Button,
   Card,
@@ -18,6 +17,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TableDetailsButton } from '@/components/shared/table-details-button'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { VehicleDialog } from '@/components/vehicles/vehicle-dialog'
 import { formatKm } from '@/lib/km'
@@ -252,9 +252,7 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
                           <StatusBadge type="vehicle" value={vehicle.status} />
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="link" asChild>
-                            <Link href={`${basePath}/${vehicle.id}`}>Detalhes →</Link>
-                          </Button>
+                          <TableDetailsButton href={`${basePath}/${vehicle.id}`} />
                         </TableCell>
                       </TableRow>
                     )

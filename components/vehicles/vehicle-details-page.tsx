@@ -24,6 +24,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { MetricCard } from '@/components/shared/metric-card'
 import { Section } from '@/components/shared/section'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TableDetailsButton } from '@/components/shared/table-details-button'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { VehicleDialog, VehicleDriversDialog } from '@/components/vehicles/vehicle-dialog'
 import { brl, dateTime, number } from '@/lib/format'
@@ -311,9 +312,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                     </TableCell>
                     <TableCell><StatusBadge type="trip" value={trip.status} /></TableCell>
                     <TableCell className="text-right">
-                      <Button variant="link" asChild>
-                        <Link href={`/admin/viagens/${trip.id}`}>Detalhes →</Link>
-                      </Button>
+                      <TableDetailsButton href={`/admin/viagens/${trip.id}`} />
                     </TableCell>
                   </TableRow>
                 )) : (
@@ -389,9 +388,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                     <TableCell><StatusBadge type="maintenance" value={maintenance.status} /></TableCell>
                     {isAdmin ? (
                       <TableCell className="text-right">
-                        <Button variant="link" asChild>
-                          <Link href={`/admin/manutencoes/${maintenance.id}`}>Detalhes →</Link>
-                        </Button>
+                        <TableDetailsButton href={`/admin/manutencoes/${maintenance.id}`} />
                       </TableCell>
                     ) : null}
                   </TableRow>

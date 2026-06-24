@@ -10,7 +10,7 @@ function getSupabaseConfig() {
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
   if (!url || !publishableKey) {
-    throw new Error('As variáveis públicas do Supabase não foram configuradas.')
+    throw new Error('Configuração do banco ausente. Avise o suporte.')
   }
 
   return { url, publishableKey }
@@ -39,7 +39,7 @@ export function createSupabaseServiceClient() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!serviceRoleKey) {
-    throw new Error('A variável SUPABASE_SERVICE_ROLE_KEY não foi configurada.')
+    throw new Error('Configuração de acesso ao banco ausente. Avise o suporte.')
   }
 
   return createClient(url, serviceRoleKey, {
@@ -57,7 +57,7 @@ export async function requireAdmin() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return { ok: false as const, status: 401, error: 'Sessão não encontrada.' }
+    return { ok: false as const, status: 401, error: 'Entre novamente para continuar.' }
   }
 
   const { data: profile } = await supabase
@@ -67,7 +67,7 @@ export async function requireAdmin() {
     .single<{ papel: string; ativo: boolean; nivel_admin: string | null }>()
 
   if (!profile || !profile.ativo || profile.papel !== 'admin') {
-    return { ok: false as const, status: 403, error: 'Acesso permitido apenas para administradores.' }
+    return { ok: false as const, status: 403, error: 'Você não tem acesso à área administrativa.' }
   }
 
   return {
@@ -86,7 +86,7 @@ export async function requireGlobalAdmin() {
     return {
       ok: false as const,
       status: 403,
-      error: 'Acesso permitido apenas para administradores globais.',
+      error: 'Apenas administradores globais podem acessar esta área.',
     }
   }
 
@@ -100,7 +100,7 @@ export async function requireDriver() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return { ok: false as const, status: 401, error: 'Sessão não encontrada.' }
+    return { ok: false as const, status: 401, error: 'Entre novamente para continuar.' }
   }
 
   const { data: profile } = await supabase
@@ -110,7 +110,7 @@ export async function requireDriver() {
     .single<{ papel: string; ativo: boolean }>()
 
   if (!profile || !profile.ativo || profile.papel !== 'motorista') {
-    return { ok: false as const, status: 403, error: 'Acesso permitido apenas para motoristas.' }
+    return { ok: false as const, status: 403, error: 'Você não tem acesso ao portal do motorista.' }
   }
 
   const { data: driver } = await supabase
@@ -124,7 +124,7 @@ export async function requireDriver() {
     return {
       ok: false as const,
       status: 403,
-      error: 'O cadastro profissional do motorista não está ativo.',
+      error: 'Seu cadastro de motorista não está ativo. Fale com o administrador.',
     }
   }
 
@@ -138,7 +138,7 @@ export async function requireMechanic() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return { ok: false as const, status: 401, error: 'Sessão não encontrada.' }
+    return { ok: false as const, status: 401, error: 'Entre novamente para continuar.' }
   }
 
   const { data: profile } = await supabase
@@ -148,7 +148,7 @@ export async function requireMechanic() {
     .single<{ papel: string; ativo: boolean }>()
 
   if (!profile || !profile.ativo || profile.papel !== 'mecanico') {
-    return { ok: false as const, status: 403, error: 'Acesso permitido apenas para mecânicos.' }
+    return { ok: false as const, status: 403, error: 'Você não tem acesso ao portal do mecânico.' }
   }
 
   const { data: mechanic } = await supabase
@@ -162,7 +162,7 @@ export async function requireMechanic() {
     return {
       ok: false as const,
       status: 403,
-      error: 'O cadastro profissional do mecânico não está ativo.',
+      error: 'Seu cadastro de mecânico não está ativo. Fale com o administrador.',
     }
   }
 

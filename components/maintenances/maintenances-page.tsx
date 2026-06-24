@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
 import {
   Button,
   Card,
@@ -19,6 +18,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TableDetailsButton } from '@/components/shared/table-details-button'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, dateTime, number } from '@/lib/format'
 import { formatKm } from '@/lib/km'
@@ -219,9 +219,7 @@ export function MaintenancesPage({ mode }: { mode: MaintenanceMode }) {
                       {isAdmin ? <TableCell>{brl(item.totalValue)}</TableCell> : null}
                       <TableCell><StatusBadge type="maintenance" value={item.status} /></TableCell>
                       <TableCell className="text-right">
-                        <Button variant="link" asChild>
-                          <Link href={`${detailsBase}/${item.id}`}>Detalhes →</Link>
-                        </Button>
+                        <TableDetailsButton href={`${detailsBase}/${item.id}`} />
                       </TableCell>
                     </TableRow>
                   ))

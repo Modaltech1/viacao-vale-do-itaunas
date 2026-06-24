@@ -1,7 +1,7 @@
 import 'server-only'
 
-import { NextResponse } from 'next/server'
 import { normalizeOptionalText } from '@/lib/driver-utils'
+import { apiErrorResponse } from '@/lib/error-response'
 import { parseKmValue, parseOptionalKmValue } from '@/lib/km'
 
 function requiredDate(value: unknown, label: string) {
@@ -67,32 +67,5 @@ export function parseRemoveTripPayload(body: Record<string, unknown>) {
 }
 
 export function tripErrorResponse(error: unknown, fallback: string, status = 400) {
-  const message = error instanceof Error ? error.message : fallback
-  const normalized = message.toLowerCase()
-  const explicitStatus =
-    typeof error === 'object'
-    && error !== null
-    && 'status' in error
-    && typeof error.status === 'number'
-      ? error.status
-      : null
-
-  if (normalized.includes('invalid api key')) {
-    return NextResponse.json(
-      { error: 'A configuração server-side do Supabase está inválida.' },
-      { status: 500 },
-    )
-  }
-
-  if (
-    normalized.includes('já possui viagem')
-    || normalized.includes('duplicate key')
-  ) {
-    return NextResponse.json(
-      { error: 'O motorista ou o veículo já possui uma viagem em andamento.' },
-      { status: 409 },
-    )
-  }
-
-  return NextResponse.json({ error: message || fallback }, { status: explicitStatus ?? status })
+  return apiErrorResponse(error, fallback, status)
 }

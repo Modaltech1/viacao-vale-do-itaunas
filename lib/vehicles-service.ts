@@ -1,8 +1,8 @@
 import 'server-only'
 
-import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normalizeOptionalText } from '@/lib/driver-utils'
+import { apiErrorResponse } from '@/lib/error-response'
 import { parseKmValue, parseOptionalKmValue } from '@/lib/km'
 import {
   vehicleDocumentCodes,
@@ -400,30 +400,16 @@ export async function renewChangedVehicleDocuments(
 }
 
 export function vehicleErrorResponse(error: unknown, fallback: string, status = 400) {
-  const message = error instanceof Error ? error.message : fallback
-  const normalized = message.toLowerCase()
-  const explicitStatus =
-    typeof error === 'object'
-    && error !== null
-    && 'status' in error
-    && typeof error.status === 'number'
-      ? error.status
-      : null
-
-  if (normalized.includes('veiculos_codigo_frota_normalizado_uniq')) {
-    return NextResponse.json({ error: 'Já existe um veículo cadastrado com esse código de frota.' }, { status: 409 })
-  }
-
-  if (normalized.includes('duplicate') || normalized.includes('veiculos_placa_normalizada_uniq')) {
-    return NextResponse.json({ error: 'Já existe um veículo cadastrado com essa placa.' }, { status: 409 })
-  }
-
-  if (normalized.includes('invalid api key')) {
-    return NextResponse.json(
-      { error: 'A configuração server-side do Supabase está inválida.' },
-      { status: 500 },
-    )
-  }
-
-  return NextResponse.json({ error: message || fallback }, { status: explicitStatus ?? status })
+  return apiErrorResponse(error, fallback, status, [
+    {
+      includes: ['veiculos_codigo_frota_normalizado_uniq'],
+      message: 'Já existe um veículo cadastrado com esse código de frota.',
+      status: 409,
+    },
+    {
+      includes: ['veiculos_placa_normalizada_uniq'],
+      message: 'Já existe um veículo cadastrado com essa placa.',
+      status: 409,
+    },
+  ])
 }

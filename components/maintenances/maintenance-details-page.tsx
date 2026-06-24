@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   Button,
   Card,
@@ -17,8 +18,8 @@ import {
   Label,
   Textarea,
 } from '@prodexy/ui'
-import { Ban, CircleCheckBig, ClipboardList, Edit3, Gauge, Package, Wrench } from 'lucide-react'
-import { MaintenanceDialog } from '@/components/maintenances/maintenance-dialog'
+import { Ban, CircleCheckBig, ClipboardList, Edit3, Gauge, Package, Trash2, Wrench } from 'lucide-react'
+import { MaintenanceDialog, RemoveMaintenanceDialog } from '@/components/maintenances/maintenance-dialog'
 import { PageHeader } from '@/components/layout/page-header'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
@@ -46,9 +47,11 @@ export function MaintenanceDetailsPage({
   maintenanceId: string
   mode: MaintenanceMode
 }) {
+  const router = useRouter()
   const [maintenance, setMaintenance] = useState<MaintenanceDetails | null>(null)
   const [options, setOptions] = useState<MaintenanceFormOptions>(emptyOptions)
   const [editOpen, setEditOpen] = useState(false)
+  const [removeOpen, setRemoveOpen] = useState(false)
   const [action, setAction] = useState<'conclude' | 'cancel' | null>(null)
   const [reason, setReason] = useState('')
   const [acting, setActing] = useState(false)
@@ -149,6 +152,16 @@ export function MaintenanceDetailsPage({
               </>
             ) : null}
           </>
+        ) : null}
+        {isAdmin ? (
+          <Button
+            variant="outline"
+            className="gap-2 text-destructive hover:text-destructive"
+            onClick={() => setRemoveOpen(true)}
+          >
+            <Trash2 className="size-4" />
+            Remover manutenção
+          </Button>
         ) : null}
       </PageHeader>
 
@@ -261,6 +274,15 @@ export function MaintenanceDetailsPage({
           options={options}
           maintenance={maintenance}
           onSaved={loadMaintenance}
+        />
+      ) : null}
+
+      {isAdmin ? (
+        <RemoveMaintenanceDialog
+          open={removeOpen}
+          onOpenChange={setRemoveOpen}
+          maintenance={maintenance}
+          onRemoved={() => router.replace('/admin/manutencoes')}
         />
       ) : null}
 

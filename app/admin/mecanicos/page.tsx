@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import {
   Button,
   Card,
@@ -19,6 +18,7 @@ import { MechanicDialog } from '@/components/mechanics/mechanic-dialog'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TableDetailsButton } from '@/components/shared/table-details-button'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl } from '@/lib/format'
 import type { MechanicListItem } from '@/types/mechanic'
@@ -192,9 +192,7 @@ export default function MechanicsPage() {
                         />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="link" asChild>
-                          <Link href={`/admin/mecanicos/${mechanic.id}`}>Detalhes →</Link>
-                        </Button>
+                        <TableDetailsButton href={`/admin/mecanicos/${mechanic.id}`} />
                       </TableCell>
                     </TableRow>
                   ))

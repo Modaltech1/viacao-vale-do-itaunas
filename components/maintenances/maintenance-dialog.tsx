@@ -398,3 +398,92 @@ export function MaintenanceDialog({
     </Dialog>
   )
 }
+
+export function RemoveMaintenanceDialog({
+  open,
+  onOpenChange,
+  maintenance,
+  onRemoved,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  maintenance: MaintenanceListItem
+  onRemoved: () => void | Promise<void>
+}) {
+  const [reason, setReason] = useState('')
+  const [removing, setRemoving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (!open) return
+    setReason('')
+    setError('')
+  }, [open])
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setRemoving(true)
+    setError('')
+
+    try {
+      const response = await fetch(`/api/admin/manutencoes/${maintenance.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Não foi possível remover a manutenção.')
+
+      await onRemoved()
+      onOpenChange(false)
+    } catch (removeError) {
+      setError(removeError instanceof Error ? removeError.message : 'Não foi possível remover a manutenção.')
+    } finally {
+      setRemoving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[560px]">
+        <DialogHeader>
+          <DialogTitle>Remover manutenção</DialogTitle>
+          <DialogDescription>
+            Esta ação é definitiva. Serviços e peças da manutenção serão removidos,
+            peças consumidas retornarão ao estoque e os vencimentos recorrentes serão recalculados.
+          </DialogDescription>
+        </DialogHeader>
+
+        {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
+
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="maintenance-removal-reason">Motivo da remoção</Label>
+            <Textarea
+              id="maintenance-removal-reason"
+              rows={3}
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder="Descreva por que esta manutenção deve ser removida"
+              minLength={5}
+              required
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={removing}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={removing || reason.trim().length < 5}
+            >
+              {removing ? 'Removendo...' : 'Remover manutenção'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

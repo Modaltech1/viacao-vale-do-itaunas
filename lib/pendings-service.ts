@@ -1,8 +1,8 @@
 import 'server-only'
 
-import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normalizeOptionalText } from '@/lib/driver-utils'
+import { apiErrorResponse } from '@/lib/error-response'
 import { parseOptionalKmValue } from '@/lib/km'
 import type { Severity } from '@/types/fleet'
 import type {
@@ -190,12 +190,5 @@ export async function interactWithPending(
 }
 
 export function pendingErrorResponse(error: unknown, fallback: string, status = 400) {
-  const message = error instanceof Error ? error.message : fallback
-  if (message.toLowerCase().includes('invalid api key')) {
-    return NextResponse.json(
-      { error: 'A configuração server-side do Supabase está inválida.' },
-      { status: 500 },
-    )
-  }
-  return NextResponse.json({ error: message || fallback }, { status })
+  return apiErrorResponse(error, fallback, status)
 }

@@ -21,6 +21,7 @@ import { MechanicDialog } from '@/components/mechanics/mechanic-dialog'
 import { MetricCard } from '@/components/shared/metric-card'
 import { Section } from '@/components/shared/section'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TableDetailsButton } from '@/components/shared/table-details-button'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, dateTime } from '@/lib/format'
 import type { MechanicDetails } from '@/types/mechanic'
@@ -162,9 +163,7 @@ export function MechanicDetailsPage({ mechanicId }: { mechanicId: string }) {
                 <TableCell>{brl(maintenance.value)}</TableCell>
                 <TableCell><StatusBadge type="maintenance" value={maintenance.status} /></TableCell>
                 <TableCell className="text-right">
-                  <Button variant="link" asChild>
-                    <Link href={`/admin/manutencoes/${maintenance.id}`}>Detalhes →</Link>
-                  </Button>
+                  <TableDetailsButton href={`/admin/manutencoes/${maintenance.id}`} />
                 </TableCell>
               </TableRow>
             )) : (

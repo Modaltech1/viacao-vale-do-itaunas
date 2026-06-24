@@ -1,7 +1,7 @@
 import 'server-only'
 
-import { NextResponse } from 'next/server'
 import { normalizeOptionalText } from '@/lib/driver-utils'
+import { apiErrorResponse } from '@/lib/error-response'
 import { parseKmValue } from '@/lib/km'
 import type { MaintenanceType } from '@/types/fleet'
 import {
@@ -106,22 +106,11 @@ export function servicePayloadToDatabase(payload: ServicePayload) {
 }
 
 export function serviceErrorResponse(error: unknown, fallback: string, status = 400) {
-  const message = error instanceof Error ? error.message : fallback
-  const normalized = message.toLowerCase()
-
-  if (normalized.includes('invalid api key')) {
-    return NextResponse.json(
-      { error: 'A configuração server-side do Supabase está inválida.' },
-      { status: 500 },
-    )
-  }
-
-  if (normalized.includes('violates check constraint')) {
-    return NextResponse.json(
-      { error: 'Os dados do serviço não respeitam as regras de categoria ou periodicidade.' },
-      { status: 400 },
-    )
-  }
-
-  return NextResponse.json({ error: message || fallback }, { status })
+  return apiErrorResponse(error, fallback, status, [
+    {
+      includes: ['servicos_categoria_check', 'servicos_periodicidade'],
+      message: 'Revise a categoria e a periodicidade do serviço.',
+      status: 400,
+    },
+  ])
 }

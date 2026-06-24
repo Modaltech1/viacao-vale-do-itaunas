@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { apiErrorResponse } from '@/lib/error-response'
 import { getDashboardData } from '@/lib/dashboard-repository'
 import { requireAdmin } from '@/lib/supabase-server'
 
@@ -33,7 +34,6 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ dashboard: data })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Não foi possível carregar o dashboard.'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return apiErrorResponse(error, 'Não foi possível carregar o dashboard.', 500)
   }
 }

@@ -228,6 +228,8 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'valor_padrao numeric(12,2)',
     'valor_aplicado numeric(12,2)',
     'p_servicos jsonb',
+    'fn_recalcular_programacao_servico_veiculo',
+    'fn_remover_manutencao',
     'fn_cancelar_manutencao',
     'validar_quantidade_peca_discreta',
     'Estoque insuficiente para a peça',
@@ -375,6 +377,46 @@ test('remoção de viagem é transacional, recompõe estoque e preserva auditori
   assert.match(details, /<RemoveTripDialog/)
   assert.match(details, /Remover viagem/)
   assert.match(dialogs, /peças consumidas nessas despesas retornarão ao estoque/)
+})
+
+test('remoção de manutenção é transacional, recompõe estoque e recalcula serviços', async () => {
+  const [migration, schema, route, service, details, dialogs] = await Promise.all([
+    readFile(
+      path.join(root, 'database', 'migrations', '20260624_remove_maintenance_transactionally.sql'),
+      'utf8',
+    ),
+    readFile(path.join(root, 'database', 'schema.sql'), 'utf8'),
+    readFile(path.join(root, 'app', 'api', 'admin', 'manutencoes', '[id]', 'route.ts'), 'utf8'),
+    readFile(path.join(root, 'lib', 'maintenances-service.ts'), 'utf8'),
+    readFile(path.join(root, 'components', 'maintenances', 'maintenance-details-page.tsx'), 'utf8'),
+    readFile(path.join(root, 'components', 'maintenances', 'maintenance-dialog.tsx'), 'utf8'),
+  ])
+
+  for (const fragment of [
+    'fn_remover_manutencao',
+    'fn_recalcular_programacao_servico_veiculo',
+    'admin_pode_acessar_veiculo',
+    'devolucao_cancelamento',
+    'delete from public.manutencao_pecas',
+    'delete from public.manutencao_servicos',
+    'delete from public.manutencao_mecanicos',
+    'delete from public.manutencoes',
+    'pendencias_manuais',
+    'pendencias_canceladas',
+    'auditoria_eventos',
+    'grant execute',
+  ]) {
+    assert.ok(migration.includes(fragment), `Migration de remoção de manutenção sem ${fragment}`)
+    assert.ok(schema.includes(fragment), `Schema de remoção de manutenção sem ${fragment}`)
+  }
+
+  assert.match(route, /export async function DELETE/)
+  assert.match(route, /assertAdminMaintenanceAccess/)
+  assert.match(service, /fn_remover_manutencao/)
+  assert.match(details, /<RemoveMaintenanceDialog/)
+  assert.match(details, /Remover manuten/)
+  assert.match(dialogs, /peças consumidas retornarão ao estoque/)
+  assert.match(dialogs, /vencimentos recorrentes serão recalculados/)
 })
 
 test('AET integra o catálogo documental, formulário e alertas operacionais', async () => {

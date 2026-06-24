@@ -1,8 +1,8 @@
 import 'server-only'
 
-import { NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { normalizeOptionalText } from '@/lib/driver-utils'
+import { apiErrorResponse } from '@/lib/error-response'
 import { parseKmValue } from '@/lib/km'
 import type { MaintenanceStatus, MaintenanceType } from '@/types/fleet'
 
@@ -74,6 +74,15 @@ export function parseMaintenancePayload(
 
   validateMaintenancePayload(payload)
   return payload
+}
+
+export function parseRemoveMaintenancePayload(body: Record<string, unknown>) {
+  const reason = String(body.reason ?? '').trim()
+  if (reason.length < 5) {
+    throw new Error('Informe um motivo com pelo menos 5 caracteres para remover a manutenção.')
+  }
+
+  return { reason }
 }
 
 function validateMaintenancePayload(payload: MaintenancePayload) {
@@ -191,6 +200,20 @@ export async function cancelMaintenance(
   if (error) throw error
 }
 
+export async function removeMaintenance(
+  client: SupabaseClient,
+  maintenanceId: string,
+  reason: string,
+) {
+  const { data, error } = await client.rpc('fn_remover_manutencao', {
+    p_manutencao_id: maintenanceId,
+    p_motivo: reason,
+  })
+
+  if (error) throw error
+  return data
+}
+
 export async function concludeMaintenance(
   sessionClient: SupabaseClient,
   maintenanceId: string,
@@ -202,19 +225,13 @@ export async function concludeMaintenance(
 }
 
 export function maintenanceErrorResponse(error: unknown, fallback: string, status = 400) {
-  const message = error instanceof Error ? error.message : fallback
-  const normalized = message.toLowerCase()
-
-  if (normalized.includes('estoque insuficiente')) {
-    return NextResponse.json({ error: message }, { status: 409 })
-  }
-  if (normalized.includes('duplicate')) {
-    return NextResponse.json(
-      { error: 'Já existe um vínculo duplicado nesta manutenção.' },
-      { status: 409 },
-    )
-  }
-  return NextResponse.json({ error: message || fallback }, { status })
+  return apiErrorResponse(error, fallback, status, [
+    {
+      includes: ['duplicate'],
+      message: 'Este item já foi adicionado nesta manutenção.',
+      status: 409,
+    },
+  ])
 }
 
 export function isMaintenanceEditable(status: MaintenanceStatus) {
