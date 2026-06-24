@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Button,
@@ -18,6 +17,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TableDetailsButton } from '@/components/shared/table-details-button'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { TripDialog } from '@/components/trips/trip-dialogs'
 import { compactDateTime, formatTripDuration, number } from '@/lib/format'
@@ -253,9 +253,7 @@ export default function TripsPage() {
                           <StatusBadge type="trip" value={trip.status} />
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="link" size="sm" className="px-0" asChild>
-                            <Link href={`/admin/viagens/${trip.id}`}>Detalhes</Link>
-                          </Button>
+                          <TableDetailsButton href={`/admin/viagens/${trip.id}`} />
                         </TableCell>
                       </TableRow>
                     )

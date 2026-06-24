@@ -190,6 +190,34 @@ test('todas as tabelas usam paginação compartilhada de dez registros', async (
   }
 })
 
+test('ações de detalhe em tabelas usam botão iconográfico compartilhado', async () => {
+  const detailsButton = await readFile(
+    path.join(root, 'components', 'shared', 'table-details-button.tsx'),
+    'utf8',
+  )
+  assert.match(detailsButton, /Eye/)
+  assert.match(detailsButton, /aria-label/)
+  assert.match(detailsButton, /sr-only/)
+
+  const detailActionFiles = [
+    'app/admin/despesas/page.tsx',
+    'app/admin/mecanicos/page.tsx',
+    'app/admin/motoristas/page.tsx',
+    'app/admin/viagens/page.tsx',
+    'components/maintenances/maintenances-page.tsx',
+    'components/mechanics/mechanic-details-page.tsx',
+    'components/vehicles/vehicle-details-page.tsx',
+    'components/vehicles/vehicles-page.tsx',
+  ]
+
+  for (const file of detailActionFiles) {
+    const source = await readFile(path.join(root, file), 'utf8')
+    assert.match(source, /TableDetailsButton/, `${file} não usa o botão de detalhes compartilhado`)
+    assert.doesNotMatch(source, />\s*Detalhes\s*(?:→)?\s*</, `${file} ainda usa texto de detalhes na tabela`)
+    assert.doesNotMatch(source, /variant="link"/, `${file} ainda usa link textual como ação de tabela`)
+  }
+})
+
 test('schema contém as invariantes centrais dos fluxos operacionais', async () => {
   const schema = await readFile(path.join(root, 'database', 'schema.sql'), 'utf8')
   const requiredFragments = [

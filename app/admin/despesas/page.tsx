@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
 import {
   Button,
   Card,
@@ -27,6 +26,7 @@ import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { brl, dateTime } from '@/lib/format'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { TableDetailsButton } from '@/components/shared/table-details-button'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import {
   expenseCategories,
@@ -302,9 +302,7 @@ export default function ExpensesPage() {
                     <StatusBadge type="maintenance" value={expense.status} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="link" asChild>
-                      <Link href={`/admin/manutencoes/${expense.id}`}>Detalhes →</Link>
-                    </Button>
+                    <TableDetailsButton href={`/admin/manutencoes/${expense.id}`} />
                   </TableCell>
                 </TableRow>
               )) : (

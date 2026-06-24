@@ -103,14 +103,6 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
         backHref="/admin/viagens"
         backLabel="Voltar para viagens"
       >
-        <Button
-          variant="outline"
-          className="gap-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
-          onClick={() => setRemoveOpen(true)}
-        >
-          <Trash2 className="size-4" />
-          Remover viagem
-        </Button>
         <Button variant="outline" className="gap-2" onClick={() => setEditOpen(true)}>
           <Edit3 className="size-4" />
           Editar viagem
@@ -121,6 +113,13 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
             Concluir viagem
           </Button>
         ) : null}
+        <Button
+          variant="outline"
+          className="gap-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => setRemoveOpen(true)}
+        >
+          <Trash2 className="size-4" />
+        </Button>
       </PageHeader>
 
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
