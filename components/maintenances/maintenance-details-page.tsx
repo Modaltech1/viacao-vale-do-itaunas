@@ -160,7 +160,6 @@ export function MaintenanceDetailsPage({
             onClick={() => setRemoveOpen(true)}
           >
             <Trash2 className="size-4" />
-            Remover manutenção
           </Button>
         ) : null}
       </PageHeader>
