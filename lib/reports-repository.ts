@@ -58,12 +58,19 @@ function maintenanceValue(row: DatabaseRow) {
   return toNumber(row.valor_total_realizado)
 }
 
+function sinisterValue(row: DatabaseRow) {
+  return Array.isArray(row.sinistro_custos)
+    ? row.sinistro_custos.reduce((total: number, cost: DatabaseRow) => total + toNumber(cost.valor_total), 0)
+    : 0
+}
+
 function reportMetrics(
   vehicles: DatabaseRow[],
   trips: DatabaseRow[],
   refuelings: DatabaseRow[],
   expenses: DatabaseRow[],
   maintenances: DatabaseRow[],
+  sinisters: DatabaseRow[],
   criticalPendings: number,
 ) {
   const completedTrips = trips.filter((trip) => trip.status === 'concluida')
@@ -77,7 +84,8 @@ function reportMetrics(
     0,
   )
   const expenseCost = sum(expenses, 'valor')
-  const totalCost = fuelCost + maintenanceCost + expenseCost
+  const sinisterCost = sinisters.reduce((total, sinister) => total + sinisterValue(sinister), 0)
+  const totalCost = fuelCost + maintenanceCost + expenseCost + sinisterCost
   const availableVehicles = vehicles.filter(
     (vehicle) => vehicle.status_operacional === 'ativo' || vehicle.status_operacional === 'reservado',
   ).length
@@ -135,7 +143,7 @@ function createTrend(period: Period): {
       const label = mode === 'month'
         ? new Intl.DateTimeFormat('pt-BR', { month: 'short', year: '2-digit', timeZone: 'UTC' }).format(cursor)
         : new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', timeZone: 'UTC' }).format(cursor)
-      points.set(key, { key, label, fuel: 0, maintenance: 0, expenses: 0, total: 0, km: 0 })
+      points.set(key, { key, label, fuel: 0, maintenance: 0, expenses: 0, sinisters: 0, total: 0, km: 0 })
     }
     cursor.setUTCDate(cursor.getUTCDate() + (mode === 'month' ? 32 : mode === 'week' ? 7 : 1))
     if (mode === 'month') cursor.setUTCDate(1)
@@ -239,6 +247,7 @@ export async function getReportData(
     refuelingRows,
     expenseRows,
     maintenanceRows,
+    sinisterRows,
     pendingRows,
     partRows,
     expensePartRows,
@@ -298,6 +307,14 @@ export async function getReportData(
     ),
     queryRows(
       client
+        .from('sinistros_operacionais')
+        .select('id,veiculo_id,motorista_id,data_ocorrencia,status,severidade,sinistro_custos(valor_total)')
+        .gte('data_ocorrencia', totalPeriod.start.toISOString())
+        .lt('data_ocorrencia', totalPeriod.endExclusive.toISOString())
+        .neq('status', 'cancelado'),
+    ),
+    queryRows(
+      client
         .from('vw_pendencias_operacionais')
         .select('chave,severidade,tipo,veiculo_id,motorista_id,servico_id,status')
         .eq('status', 'aberta'),
@@ -330,6 +347,10 @@ export async function getReportData(
     allowedVehicleIds.has(row.veiculo_id)
     && (!filters.driverId || row.motorista_id === filters.driverId)
   )
+  const filterSinister = (row: DatabaseRow) => (
+    allowedVehicleIds.has(row.veiculo_id)
+    && (!filters.driverId || row.motorista_id === filters.driverId)
+  )
   const filterMaintenance = (maintenance: DatabaseRow) => {
     if (!allowedVehicleIds.has(maintenance.veiculo_id)) return false
     if (filters.maintenanceType && maintenance.tipo_manutencao !== filters.maintenanceType) return false
@@ -344,6 +365,7 @@ export async function getReportData(
   const allRefuelings = refuelingRows.filter(filterOperation)
   const allExpenses = expenseRows.filter(filterOperation)
   const allMaintenances = maintenanceRows.filter(filterMaintenance)
+  const allSinisters = sinisterRows.filter(filterSinister)
   const currentTrips = allTrips.filter((row) => inPeriod(row.saiu_em, currentPeriod))
   const previousTrips = allTrips.filter((row) => inPeriod(row.saiu_em, previousPeriod))
   const currentRefuelings = allRefuelings.filter((row) => inPeriod(row.registrado_em, currentPeriod))
@@ -352,6 +374,8 @@ export async function getReportData(
   const previousExpenses = allExpenses.filter((row) => inPeriod(row.registrado_em, previousPeriod))
   const currentMaintenances = allMaintenances.filter((row) => inPeriod(row.aberto_em, currentPeriod))
   const previousMaintenances = allMaintenances.filter((row) => inPeriod(row.aberto_em, previousPeriod))
+  const currentSinisters = allSinisters.filter((row) => inPeriod(row.data_ocorrencia, currentPeriod))
+  const previousSinisters = allSinisters.filter((row) => inPeriod(row.data_ocorrencia, previousPeriod))
   const filteredVehicles = vehicleRows.filter((vehicle) => allowedVehicleIds.has(vehicle.id))
   const currentPendings = pendingRows.filter((pending) => (
     (!pending.veiculo_id || allowedVehicleIds.has(pending.veiculo_id))
@@ -366,6 +390,7 @@ export async function getReportData(
     currentRefuelings,
     currentExpenses,
     currentMaintenances,
+    currentSinisters,
     criticalPendings,
   )
   const previous = reportMetrics(
@@ -374,6 +399,7 @@ export async function getReportData(
     previousRefuelings,
     previousExpenses,
     previousMaintenances,
+    previousSinisters,
     0,
   )
 
@@ -393,6 +419,7 @@ export async function getReportData(
     const refuelings = currentRefuelings.filter((item) => item.veiculo_id === vehicle.id)
     const expenses = currentExpenses.filter((item) => item.veiculo_id === vehicle.id)
     const maintenances = currentMaintenances.filter((item) => item.veiculo_id === vehicle.id)
+    const sinisters = currentSinisters.filter((item) => item.veiculo_id === vehicle.id)
     const km = sum(completedTrips, 'km_total')
     const liters = refuelings
       .filter((item) => item.tipo_combustivel !== 'ARLA')
@@ -400,7 +427,8 @@ export async function getReportData(
     const fuelCost = sum(refuelings, 'valor_total')
     const maintenanceCost = maintenances.reduce((total, item) => total + maintenanceValue(item), 0)
     const expenseCost = sum(expenses, 'valor')
-    const totalCost = fuelCost + maintenanceCost + expenseCost
+    const sinisterCost = sinisters.reduce((total, item) => total + sinisterValue(item), 0)
+    const totalCost = fuelCost + maintenanceCost + expenseCost + sinisterCost
 
     return {
       id: vehicle.id,
@@ -412,6 +440,7 @@ export async function getReportData(
       fuelCost,
       maintenanceCost,
       expenseCost,
+      sinisterCost,
       totalCost,
       costPerKm: km > 0 ? totalCost / km : null,
       consumption: liters > 0 ? km / liters : null,
@@ -444,7 +473,7 @@ export async function getReportData(
   const trendBuilder = createTrend(currentPeriod)
   function addTrend(
     dateValue: string,
-    field: 'fuel' | 'maintenance' | 'expenses' | 'km',
+    field: 'fuel' | 'maintenance' | 'expenses' | 'sinisters' | 'km',
     value: number,
   ) {
     const point = trendBuilder.points.get(trendBuilder.bucket(dateValue))
@@ -455,6 +484,7 @@ export async function getReportData(
   currentRefuelings.forEach((item) => addTrend(item.registrado_em, 'fuel', toNumber(item.valor_total)))
   currentExpenses.forEach((item) => addTrend(item.registrado_em, 'expenses', toNumber(item.valor)))
   currentMaintenances.forEach((item) => addTrend(item.aberto_em, 'maintenance', maintenanceValue(item)))
+  currentSinisters.forEach((item) => addTrend(item.data_ocorrencia, 'sinisters', sinisterValue(item)))
   currentTrips
     .filter((item) => item.status === 'concluida')
     .forEach((item) => addTrend(item.saiu_em, 'km', toNumber(item.km_total)))
@@ -596,6 +626,7 @@ export async function getReportData(
     { name: 'Combustível', value: currentRefuelings.reduce((total, item) => total + toNumber(item.valor_total), 0) },
     { name: 'Manutenção', value: currentMaintenances.reduce((total, item) => total + maintenanceValue(item), 0) },
     { name: 'Despesas operacionais', value: currentExpenses.reduce((total, item) => total + toNumber(item.valor), 0) },
+    { name: 'Sinistros', value: currentSinisters.reduce((total, item) => total + sinisterValue(item), 0) },
   ]
 
   return {

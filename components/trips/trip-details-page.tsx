@@ -116,6 +116,8 @@ export function TripDetailsPage({ tripId }: { tripId: string }) {
         <Button
           variant="outline"
           className="gap-2 border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+          aria-label="Remover viagem"
+          title="Remover viagem"
           onClick={() => setRemoveOpen(true)}
         >
           <Trash2 className="size-4" />

@@ -7,6 +7,7 @@ import type {
   VehicleStatus,
 } from '@/types/fleet'
 import type { VehicleDocumentCode } from '@/lib/vehicle-documents'
+import type { SinisterListItem } from '@/types/sinister'
 
 export type VehicleRoute = {
   id: string
@@ -131,6 +132,7 @@ export type VehicleDetails = VehicleListItem & {
   trips: VehicleTrip[]
   refuelings: VehicleRefueling[]
   maintenances: VehicleMaintenance[]
+  sinisters: SinisterListItem[]
   serviceSchedules: VehicleServiceSchedule[]
   pendings: VehiclePending[]
 }

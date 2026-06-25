@@ -17,7 +17,7 @@ import {
   Pencil,
   Plus,
   ReceiptText,
-  Tags,
+  ShieldAlert,
   Utensils,
 } from 'lucide-react'
 import { ExpenseDialog } from '@/components/expenses/expense-dialog'
@@ -33,7 +33,9 @@ import {
   type ExpenseListItem,
   type ExpenseLookups,
   type MaintenanceExpenseItem,
+  type SinisterExpenseItem,
 } from '@/types/expense'
+import { sinisterStatusLabel } from '@/types/sinister'
 
 const emptyLookups: ExpenseLookups = {
   vehicles: [],
@@ -45,6 +47,7 @@ const emptyLookups: ExpenseLookups = {
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<ExpenseListItem[]>([])
   const [maintenanceExpenses, setMaintenanceExpenses] = useState<MaintenanceExpenseItem[]>([])
+  const [sinisterExpenses, setSinisterExpenses] = useState<SinisterExpenseItem[]>([])
   const [lookups, setLookups] = useState<ExpenseLookups>(emptyLookups)
   const [selectedExpense, setSelectedExpense] = useState<ExpenseListItem | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -66,6 +69,7 @@ export default function ExpensesPage() {
 
       setExpenses(result.items ?? [])
       setMaintenanceExpenses(result.maintenanceItems ?? [])
+      setSinisterExpenses(result.sinisterItems ?? [])
       setLookups(result.lookups ?? emptyLookups)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar as despesas.')
@@ -104,11 +108,14 @@ export default function ExpensesPage() {
     `${search}|${category}|${startDate}|${endDate}`,
   )
   const maintenanceExpensePagination = useTablePagination(maintenanceExpenses)
+  const sinisterExpensePagination = useTablePagination(sinisterExpenses)
 
   const metrics = useMemo(() => ({
     total: expenses.reduce((sum, expense) => sum + expense.value, 0)
-      + maintenanceExpenses.reduce((sum, expense) => sum + expense.value, 0),
+      + maintenanceExpenses.reduce((sum, expense) => sum + expense.value, 0)
+      + sinisterExpenses.reduce((sum, expense) => sum + expense.value, 0),
     maintenance: maintenanceExpenses.reduce((sum, expense) => sum + expense.value, 0),
+    sinister: sinisterExpenses.reduce((sum, expense) => sum + expense.value, 0),
     toll: expenses
       .filter((expense) => expense.category === 'Pedágio')
       .reduce((sum, expense) => sum + expense.value, 0),
@@ -116,7 +123,7 @@ export default function ExpensesPage() {
       .filter((expense) => expense.category === 'Alimentação')
       .reduce((sum, expense) => sum + expense.value, 0),
     categories: new Set(expenses.map((expense) => expense.category)).size,
-  }), [expenses, maintenanceExpenses])
+  }), [expenses, maintenanceExpenses, sinisterExpenses])
 
   function openNewExpense() {
     setSelectedExpense(null)
@@ -132,7 +139,7 @@ export default function ExpensesPage() {
     <>
       <PageHeader
         title="Despesas"
-        description="Custos operacionais de viagens e consumo de peças vinculado às manutenções."
+        description="Custos operacionais de viagens, manutenções e sinistros vinculados à frota."
       >
         <Button className="gap-2" onClick={openNewExpense}>
           <Plus className="size-4" />
@@ -143,8 +150,8 @@ export default function ExpensesPage() {
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard title="Total" value={brl(metrics.total)} icon={CircleDollarSign} />
         <MetricCard title="Manutenções" value={brl(metrics.maintenance)} icon={ReceiptText} />
+        <MetricCard title="Sinistros" value={brl(metrics.sinister)} icon={ShieldAlert} tone="danger" />
         <MetricCard title="Alimentação" value={brl(metrics.food)} icon={Utensils} />
-        <MetricCard title="Categorias utilizadas" value={metrics.categories} icon={Tags} />
       </div>
 
       <Card>
@@ -254,6 +261,65 @@ export default function ExpensesPage() {
             </Table>
           )}
           {!error && !loading ? <TablePagination {...expensePagination} /> : null}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-5">
+        <CardContent className="space-y-4 p-4">
+          <div>
+            <h2 className="font-semibold">Custos de sinistros</h2>
+            <p className="text-sm text-muted-foreground">
+              Valores registrados nos dossiês de avarias, acidentes e ocorrências operacionais.
+            </p>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data</TableHead>
+                <TableHead>Veículo</TableHead>
+                <TableHead className="w-[280px]">Sinistro</TableHead>
+                <TableHead>Itens</TableHead>
+                <TableHead>Valor</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    Carregando custos de sinistros...
+                  </TableCell>
+                </TableRow>
+              ) : sinisterExpenses.length ? sinisterExpensePagination.pageItems.map((expense) => (
+                <TableRow key={expense.id}>
+                  <TableCell className="whitespace-nowrap">{dateTime(expense.occurredAt)}</TableCell>
+                  <TableCell className="font-semibold">{expense.vehicleFleetCode}</TableCell>
+                  <TableCell className="max-w-[280px]">
+                    <p className="truncate" title={expense.description || 'Sem descrição'}>
+                      {expense.description || 'Sem descrição'}
+                    </p>
+                    <StatusBadge type="severity" value={expense.severity} />
+                  </TableCell>
+                  <TableCell>{expense.costsCount}</TableCell>
+                  <TableCell className="font-medium">{brl(expense.value)}</TableCell>
+                  <TableCell>
+                    <StatusBadge type="raw" value={expense.status} label={sinisterStatusLabel[expense.status]} />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <TableDetailsButton href={`/admin/sinistros/${expense.id}`} />
+                  </TableCell>
+                </TableRow>
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                    Nenhum custo de sinistro registrado.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          {!loading ? <TablePagination {...sinisterExpensePagination} /> : null}
         </CardContent>
       </Card>
 

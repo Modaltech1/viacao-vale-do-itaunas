@@ -11,6 +11,7 @@ export type DashboardMetrics = {
   refuelingCost: number
   maintenanceCost: number
   operatingExpenseCost: number
+  sinisterCost: number
   totalCost: number
   lowStockParts: number
   partsStockValue: number

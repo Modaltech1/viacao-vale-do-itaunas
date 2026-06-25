@@ -154,13 +154,15 @@ export function MaintenanceDetailsPage({
           </>
         ) : null}
         {isAdmin ? (
-          <Button
-            variant="outline"
-            className="gap-2 text-destructive hover:text-destructive"
-            onClick={() => setRemoveOpen(true)}
-          >
-            <Trash2 className="size-4" />
-          </Button>
+              <Button
+                variant="outline"
+                className="gap-2 text-destructive hover:text-destructive"
+                aria-label="Remover manutenção"
+                title="Remover manutenção"
+                onClick={() => setRemoveOpen(true)}
+              >
+                <Trash2 className="size-4" />
+              </Button>
         ) : null}
       </PageHeader>
 

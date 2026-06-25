@@ -9,6 +9,7 @@ import type {
   ExpenseListItem,
   ExpenseLookups,
   MaintenanceExpenseItem,
+  SinisterExpenseItem,
 } from '@/types/expense'
 
 export async function listExpenses(
@@ -16,9 +17,10 @@ export async function listExpenses(
 ): Promise<{
   items: ExpenseListItem[]
   maintenanceItems: MaintenanceExpenseItem[]
+  sinisterItems: SinisterExpenseItem[]
   lookups: ExpenseLookups
 }> {
-  const [expenses, expenseParts, maintenances, parts, baseLookups] = await Promise.all([
+  const [expenses, expenseParts, maintenances, sinisters, sinisterCosts, parts, baseLookups] = await Promise.all([
     queryRows(
       supabase
         .from('despesas_viagem')
@@ -38,6 +40,18 @@ export async function listExpenses(
         .select('id,veiculo_id,veiculo_codigo_frota,veiculo_placa,veiculo_marca,veiculo_modelo,causa,aberto_em,status,valor_total_realizado,pecas')
         .neq('status', 'cancelada')
         .order('aberto_em', { ascending: false }),
+    ),
+    queryRows(
+      supabase
+        .from('sinistros_operacionais')
+        .select('id,veiculo_id,data_ocorrencia,descricao,status,severidade')
+        .neq('status', 'cancelado')
+        .order('data_ocorrencia', { ascending: false }),
+    ),
+    queryRows(
+      supabase
+        .from('sinistro_custos')
+        .select('sinistro_id,valor_total'),
     ),
     queryRows(
       supabase
@@ -113,6 +127,22 @@ export async function listExpenses(
       partsCount: Array.isArray(maintenance.pecas) ? maintenance.pecas.length : 0,
       status: maintenance.status,
     })),
+    sinisterItems: sinisters.map((sinister) => {
+      const vehicle = vehicleById.get(sinister.veiculo_id)
+      const costs = sinisterCosts.filter((cost) => cost.sinistro_id === sinister.id)
+      return {
+        id: sinister.id,
+        vehicleId: sinister.veiculo_id,
+        vehicleFleetCode: vehicle?.fleetCode ?? 'Sem frota',
+        vehicleLabel: vehicle?.label ?? 'Veículo não encontrado',
+        description: sinister.descricao ?? '',
+        occurredAt: sinister.data_ocorrencia,
+        value: costs.reduce((total, cost) => total + toNumber(cost.valor_total), 0),
+        costsCount: costs.length,
+        status: sinister.status,
+        severity: sinister.severidade,
+      }
+    }),
     lookups,
   }
 }

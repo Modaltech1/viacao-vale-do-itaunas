@@ -156,6 +156,7 @@ test('todas as páginas de detalhe oferecem navegação contextual de retorno', 
     'components/vehicles/vehicle-details-page.tsx',
     'components/trips/trip-details-page.tsx',
     'components/maintenances/maintenance-details-page.tsx',
+    'components/sinisters/sinister-details-page.tsx',
   ]
 
   for (const file of detailComponents) {
@@ -206,6 +207,7 @@ test('ações de detalhe em tabelas usam botão iconográfico compartilhado', as
     'app/admin/viagens/page.tsx',
     'components/maintenances/maintenances-page.tsx',
     'components/mechanics/mechanic-details-page.tsx',
+    'app/admin/sinistros/page.tsx',
     'components/vehicles/vehicle-details-page.tsx',
     'components/vehicles/vehicles-page.tsx',
   ]
@@ -277,6 +279,12 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'motoristas_permitidos',
     'auditoria_select_global',
     "('aet', 'AET', 30)",
+    'create table if not exists public.sinistros_operacionais',
+    'create table if not exists public.sinistro_custos',
+    'fn_salvar_sinistro',
+    'sinistros_validar_escopo_trg',
+    'sinistros_select_contexto',
+    'sinistro_custos_select_contexto',
   ]
 
   for (const fragment of requiredFragments) {

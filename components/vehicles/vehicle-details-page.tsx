@@ -19,7 +19,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@prodexy/ui'
-import { CalendarClock, DollarSign, Edit3, Fuel, Gauge, TriangleAlert, Users } from 'lucide-react'
+import { CalendarClock, DollarSign, Edit3, Fuel, Gauge, Plus, TriangleAlert, Users } from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
 import { MetricCard } from '@/components/shared/metric-card'
 import { Section } from '@/components/shared/section'
@@ -31,6 +31,7 @@ import { brl, dateTime, number } from '@/lib/format'
 import { formatKm } from '@/lib/km'
 import { vehicleStatusLabel } from '@/lib/status'
 import { vehicleDocumentDefinitions } from '@/lib/vehicle-documents'
+import { sinisterStatusLabel, sinisterTypeLabel } from '@/types/sinister'
 import type { VehicleDetails, VehicleFormOptions } from '@/types/vehicle'
 
 const emptyOptions: VehicleFormOptions = { routes: [], drivers: [] }
@@ -91,6 +92,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
   const tripPagination = useTablePagination(vehicle?.trips ?? [])
   const refuelingPagination = useTablePagination(vehicle?.refuelings ?? [])
   const maintenancePagination = useTablePagination(vehicle?.maintenances ?? [])
+  const sinisterPagination = useTablePagination(vehicle?.sinisters ?? [])
   const servicePagination = useTablePagination(vehicle?.serviceSchedules ?? [])
 
   if (loading) {
@@ -187,6 +189,7 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
           {isAdmin ? <TabsTrigger value="viagens">Viagens</TabsTrigger> : null}
           {isAdmin ? <TabsTrigger value="abastecimentos">Abastecimentos</TabsTrigger> : null}
           <TabsTrigger value="manutencoes">Manutenções</TabsTrigger>
+          {isAdmin ? <TabsTrigger value="sinistros">Sinistros</TabsTrigger> : null}
           <TabsTrigger value="servicos">Serviços e pneus</TabsTrigger>
           <TabsTrigger value="pendencias">Pendências</TabsTrigger>
         </TabsList>
@@ -402,6 +405,73 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
             <TablePagination {...maintenancePagination} />
           </Section>
         </TabsContent>
+
+        {isAdmin ? (
+          <TabsContent value="sinistros">
+            <Section
+              title="Sinistros do veículo"
+              description="Avarias, acidentes e ocorrências operacionais registradas para este ativo."
+              action={(
+                <Button size="sm" className="gap-2" asChild>
+                  <Link href={`/admin/sinistros?newSinister=1&vehicleId=${vehicle.id}`}>
+                    <Plus className="size-4" />
+                    Novo sinistro
+                  </Link>
+                </Button>
+              )}
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Motorista</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {vehicle.sinisters.length ? sinisterPagination.pageItems.map((sinister) => (
+                    <TableRow key={sinister.id}>
+                      <TableCell className="whitespace-nowrap">{dateTime(sinister.occurredAt)}</TableCell>
+                      <TableCell>
+                        <p>{sinisterTypeLabel[sinister.type]}</p>
+                        <StatusBadge type="severity" value={sinister.severity} />
+                      </TableCell>
+                      <TableCell className="max-w-[360px]">
+                        <p className="truncate font-medium" title={sinister.description}>
+                          {sinister.description}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {sinister.location || 'Sem local informado'}
+                        </p>
+                      </TableCell>
+                      <TableCell className="max-w-[220px]">
+                        <p className="truncate" title={sinister.driverName}>{sinister.driverName}</p>
+                      </TableCell>
+                      <TableCell className="font-medium">{brl(sinister.totalCost)}</TableCell>
+                      <TableCell>
+                        <StatusBadge
+                          type="raw"
+                          value={sinister.status}
+                          label={sinisterStatusLabel[sinister.status]}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <TableDetailsButton href={`/admin/sinistros/${sinister.id}`} />
+                      </TableCell>
+                    </TableRow>
+                  )) : (
+                    <EmptyTableRow columns={7}>Nenhum sinistro registrado para este veículo.</EmptyTableRow>
+                  )}
+                </TableBody>
+              </Table>
+              <TablePagination {...sinisterPagination} />
+            </Section>
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="servicos">
           <Section

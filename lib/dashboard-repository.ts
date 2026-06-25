@@ -94,6 +94,26 @@ export async function getDashboardData(
   }
 
   const pendingRows = await queryRows(pendingQuery)
+  let sinisterQuery = supabase
+    .from('sinistros_operacionais')
+    .select('id,veiculo_id,motorista_id,status,data_ocorrencia,sinistro_custos(valor_total)')
+    .neq('status', 'cancelado')
+
+  if (filters.startDate) sinisterQuery = sinisterQuery.gte('data_ocorrencia', `${filters.startDate}T00:00:00.000Z`)
+  if (filters.endDate) sinisterQuery = sinisterQuery.lt('data_ocorrencia', `${filters.endDate}T23:59:59.999Z`)
+  if (filters.vehicleId) sinisterQuery = sinisterQuery.eq('veiculo_id', filters.vehicleId)
+  if (filters.driverId) sinisterQuery = sinisterQuery.eq('motorista_id', filters.driverId)
+
+  const sinisterRows = await queryRows(sinisterQuery)
+  const sinisterCost = sinisterRows.reduce((total, row) => (
+    total + (
+      Array.isArray(row.sinistro_custos)
+        ? row.sinistro_custos.reduce((sum: number, cost: Record<string, unknown>) => (
+            sum + toNumber(cost.valor_total)
+          ), 0)
+        : 0
+    )
+  ), 0)
   const severityOrder = { critica: 0, atencao: 1, baixa: 2 }
   const alerts: DashboardAlert[] = pendingRows
     .sort((a, b) => (
@@ -128,7 +148,8 @@ export async function getDashboardData(
       refuelingCost: toNumber(metrics.gasto_abastecimento),
       maintenanceCost: toNumber(metrics.gasto_manutencao),
       operatingExpenseCost: toNumber(metrics.gasto_despesas),
-      totalCost: toNumber(metrics.gasto_total),
+      sinisterCost,
+      totalCost: toNumber(metrics.gasto_total) + sinisterCost,
       lowStockParts: toNumber(metrics.pecas_estoque_baixo),
       partsStockValue: toNumber(metrics.valor_estoque_pecas),
     },

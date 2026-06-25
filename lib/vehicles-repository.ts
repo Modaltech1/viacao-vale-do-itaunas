@@ -3,6 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { queryRows, type DatabaseRow } from '@/lib/supabase-query'
 import { toNumber } from '@/lib/driver-utils'
+import { listSinisterCostsByVehicle, listVehicleSinisters } from '@/lib/sinisters-repository'
 import { vehicleLabel } from '@/lib/vehicle-label'
 import type {
   VehicleDetails,
@@ -99,15 +100,26 @@ export async function listVehicles(service: SupabaseClient): Promise<VehicleList
   if (!rows.length) return []
 
   const vehicleIds = rows.map((row) => row.id)
+  const [relations, sinisterCosts] = await Promise.all([
+    loadVehicleRelations(service, vehicleIds),
+    listSinisterCostsByVehicle(service),
+  ])
   const {
     assignments,
     drivers,
     profiles,
     documents,
     pendings,
-  } = await loadVehicleRelations(service, vehicleIds)
+  } = relations
   const driverById = new Map(drivers.map((driver) => [driver.id, driver]))
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]))
+  const sinisterCostByVehicle = new Map<string, number>()
+  sinisterCosts.forEach((cost) => {
+    sinisterCostByVehicle.set(
+      cost.vehicleId,
+      (sinisterCostByVehicle.get(cost.vehicleId) ?? 0) + cost.value,
+    )
+  })
 
   return rows.map((row) => {
     const vehicleDrivers: VehicleDriver[] = assignments
@@ -148,7 +160,7 @@ export async function listVehicles(service: SupabaseClient): Promise<VehicleList
       totalRefuelingCost: toNumber(row.custo_abastecimento_total),
       totalMaintenanceCost: toNumber(row.custo_manutencao_total),
       totalTravelExpenses: toNumber(row.custo_despesas_total),
-      totalOperationalCost: toNumber(row.custo_total_operacional),
+      totalOperationalCost: toNumber(row.custo_total_operacional) + (sinisterCostByVehicle.get(row.id) ?? 0),
       pendingCount: pendings.filter((pending) => pending.veiculo_id === row.id).length,
       criticalPendingCount: pendings.filter(
         (pending) => pending.veiculo_id === row.id && pending.severidade === 'critica',
@@ -238,7 +250,7 @@ export async function getVehicleDetails(
   const vehicle = vehicles.find((item) => item.id === vehicleId)
   if (!vehicle) return null
 
-  const [vehicleRows, trips, refuelings, maintenances, schedules, pendings] = await Promise.all([
+  const [vehicleRows, trips, refuelings, maintenances, sinisters, schedules, pendings] = await Promise.all([
     queryRows(
       service
         .from('veiculos')
@@ -272,6 +284,9 @@ export async function getVehicleDetails(
         .eq('veiculo_id', vehicleId)
         .order('aberto_em', { ascending: false }),
     ),
+    scope === 'admin'
+      ? listVehicleSinisters(service, vehicleId)
+      : Promise.resolve([]),
     queryRows(
       service
         .from('vw_servicos_programados_status')
@@ -336,6 +351,7 @@ export async function getVehicleDetails(
         ? maintenance.servicos.map((service: DatabaseRow) => service.nome).filter(Boolean)
         : [],
     })),
+    sinisters,
     serviceSchedules: schedules.map((schedule) => ({
       id: schedule.id,
       serviceName: schedule.servico_nome,

@@ -32,6 +32,7 @@ export type ReportTrendPoint = {
   fuel: number
   maintenance: number
   expenses: number
+  sinisters: number
   total: number
   km: number
 }
@@ -46,6 +47,7 @@ export type ReportVehicleRow = {
   fuelCost: number
   maintenanceCost: number
   expenseCost: number
+  sinisterCost: number
   totalCost: number
   costPerKm: number | null
   consumption: number | null

@@ -44,6 +44,19 @@ export type MaintenanceExpenseItem = {
   status: 'aberta' | 'em_andamento' | 'concluida' | 'cancelada'
 }
 
+export type SinisterExpenseItem = {
+  id: string
+  vehicleId: string
+  vehicleFleetCode: string
+  vehicleLabel: string
+  description: string
+  occurredAt: string
+  value: number
+  costsCount: number
+  status: 'aberto' | 'em_analise' | 'resolvido' | 'cancelado'
+  severity: 'baixa' | 'atencao' | 'critica'
+}
+
 export type ExpenseLookups = TravelOperationLookups & {
   parts: PartUsageOption[]
 }

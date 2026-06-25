@@ -347,6 +347,7 @@ export function ExecutiveReportsPage() {
                       <Area yAxisId="cost" type="monotone" dataKey="fuel" name="Combustível" stackId="cost" stroke="#0ea5e9" fill="#0ea5e9" fillOpacity={0.45} />
                       <Area yAxisId="cost" type="monotone" dataKey="maintenance" name="Manutenção" stackId="cost" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.45} />
                       <Area yAxisId="cost" type="monotone" dataKey="expenses" name="Despesas" stackId="cost" stroke="#64748b" fill="#64748b" fillOpacity={0.4} />
+                      <Area yAxisId="cost" type="monotone" dataKey="sinisters" name="Sinistros" stackId="cost" stroke="#dc2626" fill="#dc2626" fillOpacity={0.32} />
                       <Area yAxisId="km" type="monotone" dataKey="km" name="KM" stroke="#10b981" fill="transparent" strokeWidth={2.5} />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -418,7 +419,8 @@ export function ExecutiveReportsPage() {
                       <Legend />
                       <Bar dataKey="fuelCost" name="Combustível" stackId="cost" fill="#0ea5e9" />
                       <Bar dataKey="maintenanceCost" name="Manutenção" stackId="cost" fill="#f59e0b" />
-                      <Bar dataKey="expenseCost" name="Despesas" stackId="cost" fill="#64748b" radius={[0, 3, 3, 0]} />
+                      <Bar dataKey="expenseCost" name="Despesas" stackId="cost" fill="#64748b" />
+                      <Bar dataKey="sinisterCost" name="Sinistros" stackId="cost" fill="#dc2626" radius={[0, 3, 3, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </ChartCard>

@@ -40,6 +40,7 @@ import {
   refuelingPayloadToDatabase,
 } from '@/lib/refuelings-service'
 import { parseServicePayload, servicePayloadToDatabase } from '@/lib/services-service'
+import { parseSinisterPayload } from '@/lib/sinisters-service'
 import {
   parseConcludeTripPayload,
   parseCreateTripPayload,
@@ -484,6 +485,40 @@ test('despesa usa a relação da viagem e exige valor positivo', () => {
     registeredAt: '2026-06-06T10:00',
     parts: [],
   }), 'pelo menos uma peça')
+})
+
+test('sinistro operacional exige veiculo, descricao e custos validos', () => {
+  const payload = parseSinisterPayload({
+    vehicleId: 'vehicle-1',
+    driverId: 'driver-1',
+    occurredAt: '2026-06-06T10:00',
+    type: 'colisao',
+    severity: 'critica',
+    status: 'aberto',
+    description: 'Colisao lateral durante manobra.',
+    costs: [{
+      category: 'funilaria',
+      description: 'Reparo lateral',
+      quantity: '1',
+      unitValue: '1500,50',
+    }],
+  })
+
+  assert.equal(payload.vehicleId, 'vehicle-1')
+  assert.equal(payload.driverId, 'driver-1')
+  assert.equal(payload.costs[0].unitValue, 1500.5)
+  throwsMessage(() => parseSinisterPayload({
+    ...payload,
+    vehicleId: '',
+  }), 'veículo')
+  throwsMessage(() => parseSinisterPayload({
+    ...payload,
+    description: ' ',
+  }), 'Descreva')
+  throwsMessage(() => parseSinisterPayload({
+    ...payload,
+    costs: [{ category: 'funilaria', description: '', quantity: '1', unitValue: '10' }],
+  }), 'Descreva todos os custos')
 })
 
 test('portal do motorista valida os quatro fluxos operacionais', () => {
