@@ -265,7 +265,7 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'Estoque insuficiente para a peça',
     'vw_pendencias_operacionais',
     'codigo_frota text not null',
-    'veiculos_codigo_frota_normalizado_uniq',
+    'veiculos_codigo_frota_normalizado_idx',
     'veiculo_codigo_frota',
     'veiculos_placa_normalizada_uniq',
     'nivel_admin text',
@@ -290,6 +290,12 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
   for (const fragment of requiredFragments) {
     assert.ok(schema.includes(fragment), `Invariante ausente: ${fragment}`)
   }
+
+  assert.doesNotMatch(
+    schema,
+    /create\s+unique\s+index[^\r\n]*(?:\r?\n\s+[^\r\n]*){0,2}\r?\n\s+on public\.veiculos\(codigo_frota_normalizado\)/i,
+    'Frota nao pode ser tratada como identificador unico do veiculo',
+  )
 })
 
 test('viagens concluídas exigem distância estritamente positiva em toda a stack', async () => {
@@ -537,6 +543,33 @@ test('migration de responsabilidade administrativa cobre RLS e dashboard', async
   for (const fragment of requiredFragments) {
     assert.ok(migration.includes(fragment), `Migration sem ${fragment}`)
   }
+})
+
+test('migration permite codigo de frota repetido mantendo indice de busca', async () => {
+  const migration = await readFile(
+    path.join(
+      root,
+      'database',
+      'migrations',
+      '20260701_allow_duplicate_vehicle_fleet_codes.sql',
+    ),
+    'utf8',
+  )
+  const requiredFragments = [
+    'drop index if exists public.veiculos_codigo_frota_normalizado_uniq',
+    'create index if not exists veiculos_codigo_frota_normalizado_idx',
+    'on public.veiculos(codigo_frota_normalizado)',
+  ]
+
+  for (const fragment of requiredFragments) {
+    assert.ok(migration.includes(fragment), `Migration sem ${fragment}`)
+  }
+
+  assert.doesNotMatch(
+    migration,
+    /create\s+unique\s+index[^\r\n]*(?:\r?\n\s+[^\r\n]*){0,2}\r?\n\s+on public\.veiculos\(codigo_frota_normalizado\)/i,
+    'Nova regra nao pode recriar unicidade de frota',
+  )
 })
 
 test('migration de correcao de km de viagem preserva invariantes operacionais', async () => {

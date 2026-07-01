@@ -37,3 +37,7 @@ database/*
 !database/schema.sql
 !database/migrations/
 !database/migrations/*.sql
+
+
+# app
+vale_itaunas_driver_app/*

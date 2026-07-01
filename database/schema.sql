@@ -375,7 +375,7 @@ create unique index if not exists veiculos_placa_normalizada_uniq
   on public.veiculos(placa_normalizada)
   where placa_normalizada is not null and excluido_em is null;
 
-create unique index if not exists veiculos_codigo_frota_normalizado_uniq
+create index if not exists veiculos_codigo_frota_normalizado_idx
   on public.veiculos(codigo_frota_normalizado)
   where codigo_frota_normalizado is not null and excluido_em is null;
 

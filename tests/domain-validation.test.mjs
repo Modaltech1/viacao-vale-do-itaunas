@@ -89,12 +89,12 @@ test('mensagens de erro operacionais nao vazam detalhes tecnicos', () => {
       'Nao foi possivel salvar.',
     ),
     resolveUserFacingError(
-      new Error('duplicate key value violates unique constraint "veiculos_codigo_frota_normalizado_uniq"'),
+      new Error('duplicate key value violates unique constraint "veiculos_placa_normalizada_uniq"'),
       'Nao foi possivel salvar.',
       400,
       [{
-        includes: ['veiculos_codigo_frota_normalizado_uniq'],
-        message: 'Ja existe um veiculo cadastrado com esse codigo de frota.',
+        includes: ['veiculos_placa_normalizada_uniq'],
+        message: 'Ja existe um veiculo cadastrado com essa placa.',
         status: 409,
       }],
     ),
@@ -109,7 +109,7 @@ test('mensagens de erro operacionais nao vazam detalhes tecnicos', () => {
   assert.equal(cases[1].message, 'O KM final deve ser maior que o KM inicial.')
   assert.equal(cases[2].message, 'O KM atual não pode ser menor que o último registro operacional do veículo. Revise viagens, abastecimentos ou manutenções.')
   assert.equal(cases[2].status, 409)
-  assert.equal(cases[3].message, 'Ja existe um veiculo cadastrado com esse codigo de frota.')
+  assert.equal(cases[3].message, 'Ja existe um veiculo cadastrado com essa placa.')
   assert.equal(cases[3].status, 409)
   assert.equal(cases[4].message, 'Você não tem permissão para fazer esta ação.')
   assert.equal(cases[4].status, 403)

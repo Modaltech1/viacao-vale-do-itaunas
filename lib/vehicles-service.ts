@@ -402,11 +402,6 @@ export async function renewChangedVehicleDocuments(
 export function vehicleErrorResponse(error: unknown, fallback: string, status = 400) {
   return apiErrorResponse(error, fallback, status, [
     {
-      includes: ['veiculos_codigo_frota_normalizado_uniq'],
-      message: 'Já existe um veículo cadastrado com esse código de frota.',
-      status: 409,
-    },
-    {
       includes: ['veiculos_placa_normalizada_uniq'],
       message: 'Já existe um veículo cadastrado com essa placa.',
       status: 409,
