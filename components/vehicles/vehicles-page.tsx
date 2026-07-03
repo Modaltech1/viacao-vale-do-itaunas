@@ -185,17 +185,17 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
               </Button>
             </div>
           ) : (
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead>Frota</TableHead>
-                  <TableHead>Veículo</TableHead>
-                  <TableHead>Rota fixa</TableHead>
-                  {isAdmin ? <TableHead>Motoristas</TableHead> : null}
-                  <TableHead>KM atual</TableHead>
-                  <TableHead>{isAdmin ? 'CETURB' : 'Pendências'}</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead />
+                  <TableHead className="w-[9%]">Frota</TableHead>
+                  <TableHead className="w-[18%]">Veículo</TableHead>
+                  <TableHead className="w-[16%]">Rota fixa</TableHead>
+                  {isAdmin ? <TableHead className="w-[22%]">Motoristas</TableHead> : null}
+                  <TableHead className="w-[10%]">KM atual</TableHead>
+                  <TableHead className="w-[9%]">{isAdmin ? 'CETURB' : 'Pendências'}</TableHead>
+                  <TableHead className="w-[11%]">Status</TableHead>
+                  <TableHead className="w-[5%]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -211,30 +211,58 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
 
                     return (
                       <TableRow key={vehicle.id}>
-                        <TableCell>
-                          <p className="font-semibold">{vehicle.fleetCode}</p>
-                          <p className="text-xs text-muted-foreground">Placa {vehicle.plate}</p>
+                        <TableCell className="align-top">
+                          <p className="truncate font-semibold" title={vehicle.fleetCode}>{vehicle.fleetCode}</p>
+                          <p className="truncate text-xs text-muted-foreground" title={`Placa ${vehicle.plate}`}>
+                            Placa {vehicle.plate}
+                          </p>
                         </TableCell>
-                        <TableCell>
-                          {vehicle.brand} {vehicle.model}
-                          {vehicle.year ? ` · ${vehicle.year}` : ''}
-                          <br />
-                          <span className="text-xs text-muted-foreground">{vehicle.type}</span>
+                        <TableCell className="align-top">
+                          <p
+                            className="truncate"
+                            title={`${vehicle.brand} ${vehicle.model}${vehicle.year ? ` · ${vehicle.year}` : ''}`}
+                          >
+                            {vehicle.brand} {vehicle.model}
+                            {vehicle.year ? ` · ${vehicle.year}` : ''}
+                          </p>
+                          <span className="block truncate text-xs text-muted-foreground" title={vehicle.type}>
+                            {vehicle.type}
+                          </span>
                         </TableCell>
-                        <TableCell>
-                          {vehicle.route
-                            ? `${vehicle.route.origin} → ${vehicle.route.destination}`
-                            : 'Sem rota fixa'}
+                        <TableCell className="align-top">
+                          <p
+                            className="truncate"
+                            title={vehicle.route
+                              ? `${vehicle.route.origin} → ${vehicle.route.destination}`
+                              : 'Sem rota fixa'}
+                          >
+                            {vehicle.route
+                              ? `${vehicle.route.origin} → ${vehicle.route.destination}`
+                              : 'Sem rota fixa'}
+                          </p>
                         </TableCell>
                         {isAdmin ? (
-                          <TableCell>
-                            {vehicle.drivers.length
-                              ? vehicle.drivers.map((driver) => driver.name).join(', ')
-                              : 'Sem motorista'}
+                          <TableCell className="align-top">
+                            {vehicle.drivers.length ? (
+                              <div className="space-y-1">
+                                {vehicle.drivers.slice(0, 3).map((driver) => (
+                                  <p key={driver.id} className="truncate leading-tight" title={driver.name}>
+                                    {driver.name}
+                                  </p>
+                                ))}
+                                {vehicle.drivers.length > 3 ? (
+                                  <p className="text-xs text-muted-foreground">
+                                    +{vehicle.drivers.length - 3} motorista{vehicle.drivers.length - 3 > 1 ? 's' : ''}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">Sem motorista</span>
+                            )}
                           </TableCell>
                         ) : null}
-                        <TableCell>{formatKm(vehicle.currentKm)}</TableCell>
-                        <TableCell>
+                        <TableCell className="align-top tabular-nums">{formatKm(vehicle.currentKm)}</TableCell>
+                        <TableCell className="align-top">
                           {isAdmin ? (
                             ceturb
                               ? <StatusBadge type="document" value={ceturb.status} />
@@ -248,10 +276,10 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
                             </span>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="align-top">
                           <StatusBadge type="vehicle" value={vehicle.status} />
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right align-top">
                           <TableDetailsButton href={`${basePath}/${vehicle.id}`} />
                         </TableCell>
                       </TableRow>

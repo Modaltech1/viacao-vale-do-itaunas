@@ -93,8 +93,8 @@ export async function savePart(
 export function partErrorResponse(error: unknown, fallback: string, status = 400) {
   return apiErrorResponse(error, fallback, status, [
     {
-      includes: ['pecas_codigo_normalizado_uniq', 'duplicate'],
-      message: 'Já existe uma peça cadastrada com esse código.',
+      includes: ['pecas_admin_codigo_normalizado_uniq', 'pecas_codigo_normalizado_uniq', 'duplicate'],
+      message: 'Já existe uma peça com esse código para este responsável.',
       status: 409,
     },
   ])

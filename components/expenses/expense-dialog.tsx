@@ -97,6 +97,16 @@ export function ExpenseDialog({
     () => lookups.trips.find((trip) => trip.id === form.tripId) ?? null,
     [form.tripId, lookups.trips],
   )
+  const selectedVehicle = useMemo(
+    () => lookups.vehicles.find((vehicle) => vehicle.id === form.vehicleId) ?? null,
+    [form.vehicleId, lookups.vehicles],
+  )
+  const compatibleParts = useMemo(() => (
+    lookups.parts.filter((part) => (
+      !selectedVehicle
+      || part.ownerId === selectedVehicle.ownerId
+    ))
+  ), [lookups.parts, selectedVehicle?.ownerId])
 
   function updateField(
     field: 'value' | 'registeredAt' | 'notes' | 'receiptPath',
@@ -113,6 +123,7 @@ export function ExpenseDialog({
         tripId: '',
         vehicleId: '',
         driverId: '',
+        parts: [],
       }))
       return
     }
@@ -124,6 +135,11 @@ export function ExpenseDialog({
       tripId,
       vehicleId: trip.vehicleId,
       driverId: trip.driverId,
+      parts: current.parts.filter((part) => {
+        const vehicle = lookups.vehicles.find((item) => item.id === trip.vehicleId)
+        const option = lookups.parts.find((item) => item.id === part.partId)
+        return !vehicle || option?.ownerId === vehicle.ownerId
+      }),
     }))
   }
 
@@ -212,7 +228,15 @@ export function ExpenseDialog({
                     <Select
                       value={form.vehicleId}
                       onValueChange={(vehicleId) => {
-                        setForm((current) => ({ ...current, vehicleId }))
+                        const vehicle = lookups.vehicles.find((item) => item.id === vehicleId)
+                        setForm((current) => ({
+                          ...current,
+                          vehicleId,
+                          parts: current.parts.filter((part) => {
+                            const option = lookups.parts.find((item) => item.id === part.partId)
+                            return !vehicle || option?.ownerId === vehicle.ownerId
+                          }),
+                        }))
                       }}
                       disabled={Boolean(selectedTrip)}
                     >
@@ -349,7 +373,7 @@ export function ExpenseDialog({
 
           {form.category === 'Peças' ? (
             <PartUsageEditor
-              options={lookups.parts}
+              options={compatibleParts}
               value={form.parts}
               onChange={(parts) => setForm((current) => ({ ...current, parts }))}
               description="Selecione itens do estoque usados diretamente no veículo. O preço pode ser ajustado neste lançamento e o saldo será debitado ao salvar."

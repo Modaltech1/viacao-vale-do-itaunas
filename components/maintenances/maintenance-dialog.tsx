@@ -139,6 +139,11 @@ export function MaintenanceDialog({
         : 0
     )
   }, 0)
+  const selectedVehicle = options.vehicles.find((vehicle) => vehicle.id === form.vehicleId) ?? null
+  const compatibleParts = options.parts.filter((part) => (
+    !selectedVehicle
+    || part.ownerId === selectedVehicle.ownerId
+  ))
 
   function updateField(field: 'cause' | 'openedAt' | 'completedAt' | 'vehicleKm' | 'notes') {
     return (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -167,6 +172,10 @@ export function MaintenanceDialog({
       ...current,
       vehicleId,
       vehicleKm: vehicle ? kmInputValue(vehicle.currentKm) : current.vehicleKm,
+      parts: current.parts.filter((part) => {
+        const option = options.parts.find((item) => item.id === part.partId)
+        return !vehicle || option?.ownerId === vehicle.ownerId
+      }),
     }))
   }
 
@@ -315,7 +324,7 @@ export function MaintenanceDialog({
           />
 
           <PartUsageEditor
-            options={options.parts}
+            options={compatibleParts}
             value={form.parts}
             onChange={(parts) => setForm((current) => ({ ...current, parts }))}
             description="O preço padrão vem do estoque e pode ser ajustado nesta manutenção. O saldo é debitado ao salvar."

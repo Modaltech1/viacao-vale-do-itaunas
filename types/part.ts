@@ -17,6 +17,7 @@ export type PartUnit = (typeof partUnits)[number]
 
 export type PartListItem = {
   id: string
+  ownerId: string | null
   code: string
   name: string
   category: PartCategory
@@ -46,6 +47,7 @@ export type PartFormValues = {
 
 export type PartUsageOption = {
   id: string
+  ownerId?: string | null
   code: string
   name: string
   unit: string

@@ -757,6 +757,7 @@ create index if not exists manutencao_servicos_servico_idx on public.manutencao_
 
 create table if not exists public.pecas (
   id uuid primary key default gen_random_uuid(),
+  admin_responsavel_id uuid references public.perfis(id) on delete set null,
   codigo text not null,
   codigo_normalizado text generated always as (public.normalizar_texto(codigo)) stored,
   nome text not null,
@@ -780,8 +781,8 @@ create table if not exists public.pecas (
   constraint pecas_valor_check check (valor_unitario >= 0)
 );
 
-create unique index if not exists pecas_codigo_normalizado_uniq
-  on public.pecas(codigo_normalizado)
+create unique index if not exists pecas_admin_codigo_normalizado_uniq
+  on public.pecas(coalesce(admin_responsavel_id, '00000000-0000-0000-0000-000000000000'::uuid), codigo_normalizado)
   where excluido_em is null;
 
 create table if not exists public.manutencao_pecas (
@@ -2103,11 +2104,12 @@ begin
   if p_peca_id is null then
     insert into public.pecas (
       codigo, nome, categoria, unidade_medida, quantidade_estoque,
-      estoque_minimo, valor_unitario, descricao, ativo, criado_por, atualizado_por
+      estoque_minimo, valor_unitario, descricao, ativo, admin_responsavel_id,
+      criado_por, atualizado_por
     ) values (
       upper(trim(p_codigo)), trim(p_nome), p_categoria, p_unidade_medida,
       p_quantidade_estoque, p_estoque_minimo, p_valor_unitario,
-      nullif(trim(p_descricao), ''), p_ativo, auth.uid(), auth.uid()
+      nullif(trim(p_descricao), ''), p_ativo, auth.uid(), auth.uid(), auth.uid()
     ) returning id into v_id;
 
     if p_quantidade_estoque > 0 then
@@ -2127,6 +2129,9 @@ begin
   where id = p_peca_id and excluido_em is null
   for update;
   if not found then raise exception 'Peça não encontrada'; end if;
+  if not public.admin_pode_acessar_peca(p_peca_id) then
+    raise exception 'Peça fora da responsabilidade do administrador';
+  end if;
 
   v_diferenca := p_quantidade_estoque - v_peca.quantidade_estoque;
   update public.pecas
@@ -2314,6 +2319,9 @@ begin
     where id = v_peca_id and ativo = true and excluido_em is null
     for update;
     if not found then raise exception 'Peça não encontrada ou inativa'; end if;
+    if not public.peca_compativel_com_veiculo(v_peca.id, v_veiculo_id) then
+      raise exception 'Peça fora da responsabilidade do veículo';
+    end if;
     if v_peca.unidade_medida not in ('litro', 'metro') and v_quantidade <> trunc(v_quantidade) then
       raise exception 'A quantidade da peça % deve ser um número inteiro', v_peca.nome;
     end if;
@@ -2562,6 +2570,9 @@ begin
     select * into v_peca from public.pecas
     where id = v_peca_id and ativo = true and excluido_em is null for update;
     if not found then raise exception 'Peça não encontrada ou inativa'; end if;
+    if not public.peca_compativel_com_veiculo(v_peca.id, p_veiculo_id) then
+      raise exception 'Peça fora da responsabilidade do veículo';
+    end if;
     if v_peca.unidade_medida not in ('litro', 'metro') and v_quantidade <> trunc(v_quantidade) then
       raise exception 'A quantidade da peça % deve ser um número inteiro', v_peca.nome;
     end if;
@@ -2798,6 +2809,9 @@ begin
     for update;
     if not found then
       raise exception 'Peça não encontrada ou inativa';
+    end if;
+    if not public.peca_compativel_com_veiculo(v_peca.id, p_veiculo_id) then
+      raise exception 'Peça fora da responsabilidade do veículo';
     end if;
     if v_peca.unidade_medida not in ('litro', 'metro')
       and v_quantidade <> trunc(v_quantidade) then
@@ -3090,6 +3104,9 @@ begin
     where id = v_peca_id and ativo = true and excluido_em is null
     for update;
     if not found then raise exception 'Peça não encontrada ou inativa'; end if;
+    if not public.peca_compativel_com_veiculo(v_peca.id, p_veiculo_id) then
+      raise exception 'Peça fora da responsabilidade do veículo';
+    end if;
     if v_peca.unidade_medida not in ('litro', 'metro')
       and v_quantidade <> trunc(v_quantidade) then
       raise exception 'A quantidade da peça % deve ser um número inteiro', v_peca.nome;
@@ -3740,8 +3757,21 @@ begin
     'gasto_manutencao', coalesce((select sum(valor_realizado) from manutencoes_filtradas),0),
     'gasto_despesas', coalesce((select sum(valor) from despesas_filtradas),0),
     'gasto_total', coalesce((select sum(coalesce(valor_total,0)) from abastecimentos_filtrados),0) + coalesce((select sum(valor_realizado) from manutencoes_filtradas),0) + coalesce((select sum(valor) from despesas_filtradas),0),
-    'pecas_estoque_baixo', (select count(*) from public.pecas where ativo and excluido_em is null and quantidade_estoque <= estoque_minimo),
-    'valor_estoque_pecas', (select coalesce(sum(quantidade_estoque * valor_unitario),0) from public.pecas where ativo and excluido_em is null)
+    'pecas_estoque_baixo', (
+      select count(*)
+      from public.pecas
+      where ativo
+        and excluido_em is null
+        and quantidade_estoque <= estoque_minimo
+        and public.admin_pode_acessar_peca(id)
+    ),
+    'valor_estoque_pecas', (
+      select coalesce(sum(quantidade_estoque * valor_unitario),0)
+      from public.pecas
+      where ativo
+        and excluido_em is null
+        and public.admin_pode_acessar_peca(id)
+    )
   ) into result;
 
   return result;
@@ -3799,6 +3829,9 @@ create index if not exists motoristas_admin_responsavel_idx
 create index if not exists pendencias_admin_responsavel_idx
   on public.pendencias_manuais(admin_responsavel_id)
   where status = 'aberta';
+create index if not exists pecas_admin_responsavel_idx
+  on public.pecas(admin_responsavel_id)
+  where excluido_em is null;
 
 create or replace function public.admin_pode_acessar_veiculo(p_veiculo_id uuid)
 returns boolean
@@ -3838,6 +3871,47 @@ as $$
           and m.admin_responsavel_id = auth.uid()
       )
     )
+$$;
+
+create or replace function public.admin_pode_acessar_peca(p_peca_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select public.eh_admin()
+    and (
+      public.eh_admin_global()
+      or exists (
+        select 1
+        from public.pecas p
+        where p.id = p_peca_id
+          and p.excluido_em is null
+          and p.admin_responsavel_id = auth.uid()
+      )
+    )
+$$;
+
+create or replace function public.peca_compativel_com_veiculo(
+  p_peca_id uuid,
+  p_veiculo_id uuid
+)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1
+    from public.pecas p
+    join public.veiculos v on v.id = p_veiculo_id
+    where p.id = p_peca_id
+      and p.excluido_em is null
+      and v.excluido_em is null
+      and p.admin_responsavel_id is not distinct from v.admin_responsavel_id
+  )
 $$;
 
 create or replace function public.perfil_visivel_para_usuario(p_perfil_id uuid)
@@ -3900,6 +3974,38 @@ begin
 end;
 $$;
 
+create or replace function public.validar_escopo_peca()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_admin public.perfis%rowtype;
+begin
+  if public.eh_admin() and not public.eh_admin_global() then
+    if tg_op = 'UPDATE' and old.admin_responsavel_id is distinct from auth.uid() then
+      raise exception 'Peça fora da responsabilidade do administrador';
+    end if;
+    new.admin_responsavel_id := auth.uid();
+  end if;
+
+  if new.admin_responsavel_id is not null then
+    select * into v_admin
+    from public.perfis
+    where id = new.admin_responsavel_id
+      and papel = 'admin'
+      and ativo = true;
+
+    if not found then
+      raise exception 'Administrador responsavel invalido ou inativo';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
 drop trigger if exists veiculos_preparar_admin_responsavel_trg on public.veiculos;
 create trigger veiculos_preparar_admin_responsavel_trg
   before insert or update of admin_responsavel_id on public.veiculos
@@ -3914,6 +4020,11 @@ drop trigger if exists pendencias_preparar_admin_responsavel_trg on public.pende
 create trigger pendencias_preparar_admin_responsavel_trg
   before insert or update of admin_responsavel_id on public.pendencias_manuais
   for each row execute function public.preparar_admin_responsavel();
+
+drop trigger if exists pecas_preparar_admin_responsavel_trg on public.pecas;
+create trigger pecas_preparar_admin_responsavel_trg
+  before insert or update on public.pecas
+  for each row execute function public.validar_escopo_peca();
 
 create or replace function public.validar_escopo_vinculo_motorista()
 returns trigger
@@ -4001,6 +4112,47 @@ drop trigger if exists manutencoes_validar_escopo_trg on public.manutencoes;
 create trigger manutencoes_validar_escopo_trg
   before insert or update of veiculo_id on public.manutencoes
   for each row execute function public.validar_escopo_operacao_veiculo();
+
+create or replace function public.validar_escopo_consumo_peca()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_veiculo_id uuid;
+begin
+  if tg_table_name = 'manutencao_pecas' then
+    select m.veiculo_id into v_veiculo_id
+    from public.manutencoes m
+    where m.id = new.manutencao_id;
+  elsif tg_table_name = 'despesa_pecas' then
+    select d.veiculo_id into v_veiculo_id
+    from public.despesas_viagem d
+    where d.id = new.despesa_id;
+  end if;
+
+  if v_veiculo_id is null then
+    raise exception 'Veículo da movimentação de peça não encontrado';
+  end if;
+
+  if not public.peca_compativel_com_veiculo(new.peca_id, v_veiculo_id) then
+    raise exception 'Peça fora da responsabilidade do veículo';
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists manutencao_pecas_validar_escopo_trg on public.manutencao_pecas;
+create trigger manutencao_pecas_validar_escopo_trg
+  before insert or update of manutencao_id, peca_id on public.manutencao_pecas
+  for each row execute function public.validar_escopo_consumo_peca();
+
+drop trigger if exists despesa_pecas_validar_escopo_trg on public.despesa_pecas;
+create trigger despesa_pecas_validar_escopo_trg
+  before insert or update of despesa_id, peca_id on public.despesa_pecas
+  for each row execute function public.validar_escopo_consumo_peca();
 
 -- =========================================================
 -- 15. RLS
@@ -4242,13 +4394,16 @@ create policy manutencao_servicos_update_admin_mecanico on public.manutencao_ser
   using (public.eh_admin() or public.eh_mecanico())
   with check (public.eh_admin() or public.eh_mecanico());
 
-create policy pecas_select_admin_mecanico on public.pecas
+create policy pecas_select_contexto on public.pecas
   for select to authenticated
-  using (public.eh_admin() or public.eh_mecanico());
-create policy pecas_admin_write on public.pecas
+  using (
+    public.eh_mecanico()
+    or public.admin_pode_acessar_responsavel(admin_responsavel_id)
+  );
+create policy pecas_admin_write_contexto on public.pecas
   for all to authenticated
-  using (public.eh_admin())
-  with check (public.eh_admin());
+  using (public.admin_pode_acessar_responsavel(admin_responsavel_id))
+  with check (public.admin_pode_acessar_responsavel(admin_responsavel_id));
 
 create policy manutencao_pecas_select_admin_mecanico on public.manutencao_pecas
   for select to authenticated
@@ -4258,9 +4413,16 @@ create policy despesa_pecas_select_admin_mecanico on public.despesa_pecas
   for select to authenticated
   using (public.eh_admin() or public.eh_mecanico());
 
-create policy estoque_movimentacoes_select_admin_mecanico on public.estoque_movimentacoes
+create policy estoque_movimentacoes_select_contexto on public.estoque_movimentacoes
   for select to authenticated
-  using (public.eh_admin() or public.eh_mecanico());
+  using (
+    public.eh_mecanico()
+    or exists (
+      select 1 from public.pecas p
+      where p.id = estoque_movimentacoes.peca_id
+        and public.admin_pode_acessar_peca(p.id)
+    )
+  );
 
 -- PENDÊNCIAS E AUDITORIA
 create policy pendencias_manuais_select_operacional on public.pendencias_manuais
@@ -4298,7 +4460,7 @@ create policy auditoria_insert_admin on public.auditoria_eventos
   with check (public.eh_admin());
 
 -- Escopo administrativo aplicado depois das regras operacionais globais.
--- Mecanicos, servicos, pecas e rotas permanecem compartilhados.
+-- Mecanicos, servicos e rotas permanecem compartilhados. Pecas seguem carteira administrativa.
 do $$
 declare
   pol record;
@@ -4875,12 +5037,14 @@ begin
       where ativo
         and excluido_em is null
         and quantidade_estoque <= estoque_minimo
+        and public.admin_pode_acessar_peca(id)
     ),
     'valor_estoque_pecas', (
       select coalesce(sum(quantidade_estoque * valor_unitario), 0)
       from public.pecas
       where ativo
         and excluido_em is null
+        and public.admin_pode_acessar_peca(id)
     )
   ) into result;
 
@@ -4901,12 +5065,13 @@ as $$
 declare
   v_veiculo_ids uuid[] := '{}'::uuid[];
   v_motorista_ids uuid[] := '{}'::uuid[];
+  v_peca_ids uuid[] := '{}'::uuid[];
 begin
   if not public.eh_admin_global() then
     raise exception 'Somente administradores globais podem transferir responsabilidades';
   end if;
 
-  if p_tipo not in ('vehicle', 'driver') then
+  if p_tipo not in ('vehicle', 'driver', 'part') then
     raise exception 'Tipo de recurso invalido';
   end if;
 
@@ -4948,6 +5113,17 @@ begin
     raise exception 'Motorista nao encontrado';
   end if;
 
+  if p_tipo = 'part'
+    and not exists (
+      select 1
+      from public.pecas p
+      where p.id = p_recurso_id
+        and p.excluido_em is null
+    )
+  then
+    raise exception 'Peca nao encontrada';
+  end if;
+
   with recursive componentes(tipo, id) as (
     select p_tipo, p_recurso_id
 
@@ -4985,6 +5161,10 @@ begin
   into v_veiculo_ids, v_motorista_ids
   from componentes;
 
+  if p_tipo = 'part' then
+    v_peca_ids := array[p_recurso_id];
+  end if;
+
   update public.veiculos
   set
     admin_responsavel_id = p_admin_responsavel_id,
@@ -4997,6 +5177,13 @@ begin
     admin_responsavel_id = p_admin_responsavel_id,
     atualizado_por = auth.uid()
   where id = any(v_motorista_ids)
+    and excluido_em is null;
+
+  update public.pecas
+  set
+    admin_responsavel_id = p_admin_responsavel_id,
+    atualizado_por = auth.uid()
+  where id = any(v_peca_ids)
     and excluido_em is null;
 
   update public.pendencias_manuais pm
@@ -5015,7 +5202,8 @@ begin
 
   return jsonb_build_object(
     'vehicles', cardinality(v_veiculo_ids),
-    'drivers', cardinality(v_motorista_ids)
+    'drivers', cardinality(v_motorista_ids),
+    'parts', cardinality(v_peca_ids)
   );
 end;
 $$;
@@ -5050,6 +5238,8 @@ revoke execute on function public.eh_admin_global() from public, anon;
 revoke execute on function public.admin_pode_acessar_responsavel(uuid) from public, anon;
 revoke execute on function public.admin_pode_acessar_veiculo(uuid) from public, anon;
 revoke execute on function public.admin_pode_acessar_motorista(uuid) from public, anon;
+revoke execute on function public.admin_pode_acessar_peca(uuid) from public, anon;
+revoke execute on function public.peca_compativel_com_veiculo(uuid, uuid) from public, anon;
 revoke execute on function public.fn_transferir_responsabilidade_admin(text, uuid, uuid) from public, anon;
 
 grant execute on function public.fn_iniciar_viagem(uuid, uuid, uuid, text, text, timestamptz, numeric, text, boolean) to authenticated;
@@ -5074,6 +5264,8 @@ grant execute on function public.eh_admin_global() to authenticated;
 grant execute on function public.admin_pode_acessar_responsavel(uuid) to authenticated;
 grant execute on function public.admin_pode_acessar_veiculo(uuid) to authenticated;
 grant execute on function public.admin_pode_acessar_motorista(uuid) to authenticated;
+grant execute on function public.admin_pode_acessar_peca(uuid) to authenticated;
+grant execute on function public.peca_compativel_com_veiculo(uuid, uuid) to authenticated;
 grant execute on function public.fn_transferir_responsabilidade_admin(text, uuid, uuid) to authenticated;
 
 -- =========================================================

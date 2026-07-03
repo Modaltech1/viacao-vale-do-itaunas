@@ -10,7 +10,7 @@ export async function listParts(client: SupabaseClient): Promise<PartListItem[]>
     queryRows(
       client
         .from('pecas')
-        .select('id,codigo,nome,categoria,unidade_medida,quantidade_estoque,estoque_minimo,valor_unitario,descricao,ativo')
+        .select('id,admin_responsavel_id,codigo,nome,categoria,unidade_medida,quantidade_estoque,estoque_minimo,valor_unitario,descricao,ativo')
         .is('excluido_em', null)
         .order('nome'),
     ),
@@ -39,6 +39,7 @@ export async function listParts(client: SupabaseClient): Promise<PartListItem[]>
 
     return {
       id: part.id,
+      ownerId: part.admin_responsavel_id ?? null,
       code: part.codigo,
       name: part.nome,
       category: part.categoria,

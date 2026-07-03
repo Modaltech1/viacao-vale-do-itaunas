@@ -9,6 +9,7 @@ export type AdminListItem = {
   active: boolean
   vehiclesCount: number
   driversCount: number
+  partsCount: number
   current: boolean
 }
 
@@ -24,6 +25,7 @@ export type AdminManagementData = {
   admins: AdminListItem[]
   vehicles: AdminOwnedResource[]
   drivers: AdminOwnedResource[]
+  parts: AdminOwnedResource[]
 }
 
 export type AdminFormValues = {
@@ -35,4 +37,4 @@ export type AdminFormValues = {
   level: AdminLevel
 }
 
-export type AdminResourceType = 'vehicle' | 'driver'
+export type AdminResourceType = 'vehicle' | 'driver' | 'part'

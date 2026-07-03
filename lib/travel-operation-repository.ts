@@ -13,7 +13,7 @@ export async function getTravelOperationLookups(
     queryRows(
       supabase
         .from('veiculos')
-        .select('id,codigo_frota,placa,marca,modelo,km_atual,status_operacional')
+        .select('id,admin_responsavel_id,codigo_frota,placa,marca,modelo,km_atual,status_operacional')
         .is('excluido_em', null)
         .order('codigo_frota', { ascending: true }),
     ),
@@ -50,6 +50,7 @@ export async function getTravelOperationLookups(
   return {
     vehicles: vehicles.map((vehicle) => ({
       id: vehicle.id,
+      ownerId: vehicle.admin_responsavel_id ?? null,
       fleetCode: vehicleFleetCode(vehicle),
       label: vehicleLabel(vehicle),
       currentKm: toNumber(vehicle.km_atual),

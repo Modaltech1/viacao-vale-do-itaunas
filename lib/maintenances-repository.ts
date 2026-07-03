@@ -108,7 +108,7 @@ export async function listMaintenanceFormOptions(
     queryRows(
       client
         .from('veiculos')
-        .select('id,codigo_frota,placa,marca,modelo,km_atual,status_operacional')
+        .select('id,admin_responsavel_id,codigo_frota,placa,marca,modelo,km_atual,status_operacional')
         .is('excluido_em', null)
         .order('codigo_frota', { ascending: true }),
     ),
@@ -130,7 +130,7 @@ export async function listMaintenanceFormOptions(
     queryRows(
       client
         .from('pecas')
-        .select('id,codigo,nome,unidade_medida,quantidade_estoque,valor_unitario')
+        .select('id,admin_responsavel_id,codigo,nome,unidade_medida,quantidade_estoque,valor_unitario')
         .eq('ativo', true)
         .is('excluido_em', null)
         .order('nome', { ascending: true }),
@@ -152,6 +152,7 @@ export async function listMaintenanceFormOptions(
   return {
     vehicles: vehicles.map((vehicle) => ({
       id: vehicle.id,
+      ownerId: vehicle.admin_responsavel_id ?? null,
       label: vehicleLabel(vehicle),
       currentKm: toNumber(vehicle.km_atual),
       status: vehicle.status_operacional,
@@ -165,6 +166,7 @@ export async function listMaintenanceFormOptions(
     })),
     parts: parts.map((part) => ({
       id: part.id,
+      ownerId: part.admin_responsavel_id ?? null,
       code: part.codigo,
       name: part.nome,
       unit: part.unidade_medida,

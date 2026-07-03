@@ -34,6 +34,14 @@ type DriverRow = {
   admin_responsavel_id: string | null
 }
 
+type PartRow = {
+  id: string
+  codigo: string
+  nome: string
+  categoria: string
+  admin_responsavel_id: string | null
+}
+
 export async function getAdminManagementData(
   service: SupabaseClient,
   currentAdminId: string,
@@ -42,6 +50,7 @@ export async function getAdminManagementData(
     { data: adminRows, error: adminsError },
     { data: vehicleRows, error: vehiclesError },
     { data: driverRows, error: driversError },
+    { data: partRows, error: partsError },
   ] = await Promise.all([
     service
       .from('perfis')
@@ -58,15 +67,22 @@ export async function getAdminManagementData(
       .select('id,perfil_id,numero_habilitacao,admin_responsavel_id')
       .is('excluido_em', null)
       .order('criado_em'),
+    service
+      .from('pecas')
+      .select('id,codigo,nome,categoria,admin_responsavel_id')
+      .is('excluido_em', null)
+      .order('nome'),
   ])
 
   if (adminsError) throw adminsError
   if (vehiclesError) throw vehiclesError
   if (driversError) throw driversError
+  if (partsError) throw partsError
 
   const admins = (adminRows ?? []) as ProfileRow[]
   const vehicles = (vehicleRows ?? []) as VehicleRow[]
   const drivers = (driverRows ?? []) as DriverRow[]
+  const parts = (partRows ?? []) as PartRow[]
   const driverProfileIds = drivers
     .map((driver) => driver.perfil_id)
     .filter((id): id is string => Boolean(id))
@@ -94,6 +110,7 @@ export async function getAdminManagementData(
     active: admin.ativo,
     vehiclesCount: vehicles.filter((vehicle) => vehicle.admin_responsavel_id === admin.id).length,
     driversCount: drivers.filter((driver) => driver.admin_responsavel_id === admin.id).length,
+    partsCount: parts.filter((part) => part.admin_responsavel_id === admin.id).length,
     current: admin.id === currentAdminId,
   }))
 
@@ -121,9 +138,20 @@ export async function getAdminManagementData(
       : null,
   }))
 
+  const partItems: AdminOwnedResource[] = parts.map((part) => ({
+    id: part.id,
+    label: part.nome,
+    detail: `${part.codigo} · ${part.categoria}`,
+    ownerId: part.admin_responsavel_id,
+    ownerName: part.admin_responsavel_id
+      ? adminNames.get(part.admin_responsavel_id) ?? null
+      : null,
+  }))
+
   return {
     admins: adminItems,
     vehicles: vehicleItems,
     drivers: driverItems,
+    parts: partItems,
   }
 }

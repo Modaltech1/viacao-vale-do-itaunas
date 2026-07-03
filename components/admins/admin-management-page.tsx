@@ -19,6 +19,7 @@ import {
 } from '@prodexy/ui'
 import {
   Bus,
+  Package,
   Pencil,
   Plus,
   ShieldCheck,
@@ -45,6 +46,13 @@ const emptyData: AdminManagementData = {
   admins: [],
   vehicles: [],
   drivers: [],
+  parts: [],
+}
+
+function resourceLabel(resourceType: AdminResourceType) {
+  if (resourceType === 'vehicle') return 'Veículo'
+  if (resourceType === 'driver') return 'Motorista'
+  return 'Peça'
 }
 
 function ResourceTable({
@@ -83,7 +91,7 @@ function ResourceTable({
         <TableHeader>
           <TableRow>
             <TableHead>
-              {resourceType === 'vehicle' ? 'Veículo' : 'Motorista'}
+              {resourceLabel(resourceType)}
             </TableHead>
             <TableHead>Responsável</TableHead>
           </TableRow>
@@ -144,6 +152,7 @@ export function AdminManagementPage() {
   const [adminSearch, setAdminSearch] = useState('')
   const [vehicleSearch, setVehicleSearch] = useState('')
   const [driverSearch, setDriverSearch] = useState('')
+  const [partSearch, setPartSearch] = useState('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingAdmin, setEditingAdmin] = useState<AdminListItem | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
@@ -226,12 +235,13 @@ export function AdminManagementPage() {
 
   const assignedVehicles = data.vehicles.filter((item) => item.ownerId).length
   const assignedDrivers = data.drivers.filter((item) => item.ownerId).length
+  const assignedParts = data.parts.filter((item) => item.ownerId).length
 
   return (
     <>
       <PageHeader
         title="Administradores"
-        description="Controle níveis de acesso e distribua veículos e motoristas entre os responsáveis."
+        description="Controle níveis de acesso e distribua veículos, motoristas e peças entre os responsáveis."
       >
         <Button className="gap-2" onClick={openNewAdmin}>
           <Plus className="size-4" />
@@ -239,7 +249,7 @@ export function AdminManagementPage() {
         </Button>
       </PageHeader>
 
-      <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         <MetricCard
           title="Administradores ativos"
           value={data.admins.filter((admin) => admin.active).length}
@@ -260,6 +270,11 @@ export function AdminManagementPage() {
           title="Motoristas atribuídos"
           value={`${assignedDrivers}/${data.drivers.length}`}
           icon={UserRoundCog}
+        />
+        <MetricCard
+          title="Peças atribuídas"
+          value={`${assignedParts}/${data.parts.length}`}
+          icon={Package}
         />
       </div>
 
@@ -293,6 +308,7 @@ export function AdminManagementPage() {
                   <TableHead>Nível</TableHead>
                   <TableHead>Veículos</TableHead>
                   <TableHead>Motoristas</TableHead>
+                  <TableHead>Peças</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead />
                 </TableRow>
@@ -300,7 +316,7 @@ export function AdminManagementPage() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                       Carregando administradores...
                     </TableCell>
                   </TableRow>
@@ -327,6 +343,7 @@ export function AdminManagementPage() {
                       </TableCell>
                       <TableCell>{admin.vehiclesCount}</TableCell>
                       <TableCell>{admin.driversCount}</TableCell>
+                      <TableCell>{admin.partsCount}</TableCell>
                       <TableCell>
                         <StatusBadge
                           type="raw"
@@ -348,7 +365,7 @@ export function AdminManagementPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                       Nenhum administrador encontrado.
                     </TableCell>
                   </TableRow>
@@ -359,7 +376,7 @@ export function AdminManagementPage() {
           </CardContent>
         </Card>
 
-        <div className="grid items-start gap-5 xl:grid-cols-2">
+        <div className="grid items-start gap-5 xl:grid-cols-3">
           <Card>
             <CardContent className="space-y-4 p-4">
               <div>
@@ -402,6 +419,30 @@ export function AdminManagementPage() {
                 items={data.drivers}
                 resourceType="driver"
                 search={driverSearch}
+                savingId={savingId}
+                onAssign={assignResource}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="space-y-4 p-4">
+              <div>
+                <h2 className="font-semibold">Responsabilidade por peça</h2>
+                <p className="text-sm text-muted-foreground">
+                  Estoque e consumo de peças ficam isolados por responsável administrativo.
+                </p>
+              </div>
+              <FilterInput
+                placeholder="Buscar peça ou responsável..."
+                value={partSearch}
+                onChange={(event) => setPartSearch(event.target.value)}
+              />
+              <ResourceTable
+                admins={data.admins}
+                items={data.parts}
+                resourceType="part"
+                search={partSearch}
                 savingId={savingId}
                 onAssign={assignResource}
               />

@@ -208,6 +208,22 @@ test('transferência administrativa usa RPC transacional para todo o grafo ativo
     },
   ]])
 
+  const partService = transferRpcService()
+  await transferAdminResource(
+    partService,
+    'part',
+    'part-1',
+    'admin-b',
+  )
+  assert.deepEqual(partService.calls, [[
+    'fn_transferir_responsabilidade_admin',
+    {
+      p_tipo: 'part',
+      p_recurso_id: 'part-1',
+      p_admin_responsavel_id: 'admin-b',
+    },
+  ]])
+
   await assert.rejects(
     transferAdminResource(
       transferRpcService({ error: new Error('rpc failed') }),

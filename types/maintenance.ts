@@ -46,6 +46,7 @@ export type MaintenanceDetails = MaintenanceListItem
 
 export type MaintenanceVehicleOption = {
   id: string
+  ownerId: string | null
   label: string
   currentKm: number
   status: VehicleStatus

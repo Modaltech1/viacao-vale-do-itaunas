@@ -66,6 +66,11 @@ const genericRules: UserFacingErrorRule[] = [
     status: 401,
   },
   {
+    includes: ['peca fora da responsabilidade', 'peça fora da responsabilidade'],
+    message: 'A peça selecionada não pertence ao responsável deste veículo.',
+    status: 403,
+  },
+  {
     includes: ['sem permissao', 'sem permissão', 'fora da responsabilidade', 'permission denied', 'row-level security'],
     message: 'Você não tem permissão para fazer esta ação.',
     status: 403,

@@ -113,7 +113,7 @@ export async function transferAdminResource(
   targetAdminId: string | null,
 ) {
   if (!resourceId) throw badRequest('Recurso inválido.')
-  if (!['vehicle', 'driver'].includes(resourceType)) {
+  if (!['vehicle', 'driver', 'part'].includes(resourceType)) {
     throw badRequest('Tipo de recurso inválido.')
   }
 
@@ -127,7 +127,7 @@ export async function transferAdminResource(
   )
 
   if (error) throw error
-  return data as { vehicles: number; drivers: number } | null
+  return data as { vehicles: number; drivers: number; parts?: number } | null
 }
 
 export function adminManagementErrorResponse(

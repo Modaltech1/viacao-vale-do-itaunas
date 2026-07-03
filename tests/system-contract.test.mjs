@@ -273,7 +273,13 @@ test('schema contém as invariantes centrais dos fluxos operacionais', async () 
     'eh_admin_global',
     'admin_pode_acessar_veiculo',
     'admin_pode_acessar_motorista',
+    'admin_pode_acessar_peca',
+    'peca_compativel_com_veiculo',
     'validar_escopo_operacao_veiculo',
+    'validar_escopo_peca',
+    'validar_escopo_consumo_peca',
+    'pecas_admin_responsavel_idx',
+    'pecas_admin_codigo_normalizado_uniq',
     'fn_transferir_responsabilidade_admin',
     'veiculos_permitidos',
     'motoristas_permitidos',
@@ -570,6 +576,35 @@ test('migration permite codigo de frota repetido mantendo indice de busca', asyn
     /create\s+unique\s+index[^\r\n]*(?:\r?\n\s+[^\r\n]*){0,2}\r?\n\s+on public\.veiculos\(codigo_frota_normalizado\)/i,
     'Nova regra nao pode recriar unicidade de frota',
   )
+})
+
+test('migration de peças aplica carteira administrativa e compatibilidade operacional', async () => {
+  const migration = await readFile(
+    path.join(
+      root,
+      'database',
+      'migrations',
+      '20260703_parts_admin_ownership.sql',
+    ),
+    'utf8',
+  )
+  const requiredFragments = [
+    'admin_responsavel_id uuid references public.perfis',
+    'pecas_admin_codigo_normalizado_uniq',
+    'admin_pode_acessar_peca',
+    'peca_compativel_com_veiculo',
+    'validar_escopo_peca',
+    'validar_escopo_consumo_peca',
+    'pecas_select_contexto',
+    'estoque_movimentacoes_select_contexto',
+    "p_tipo not in ('vehicle', 'driver', 'part')",
+    "'parts', cardinality(v_peca_ids)",
+    'public.admin_pode_acessar_peca(id)',
+  ]
+
+  for (const fragment of requiredFragments) {
+    assert.ok(migration.includes(fragment), `Migration sem ${fragment}`)
+  }
 })
 
 test('migration de correcao de km de viagem preserva invariantes operacionais', async () => {
