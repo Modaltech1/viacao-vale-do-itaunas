@@ -1205,16 +1205,27 @@ with (security_invoker = true)
 as
 select
   d.*,
-  v.codigo_frota as veiculo_codigo_frota,
   v.placa as veiculo_placa,
   t.codigo as tipo_codigo,
   t.nome as tipo_nome,
   public.calcular_status_vencimento(d.vencimento_em, t.dias_alerta) as status_calculado,
-  public.calcular_severidade_vencimento(d.vencimento_em, t.dias_alerta) as severidade_calculada
+  public.calcular_severidade_vencimento(d.vencimento_em, t.dias_alerta) as severidade_calculada,
+  v.codigo_frota as veiculo_codigo_frota
 from public.veiculo_documentos d
 join public.tipos_documento_veiculo t on t.id = d.tipo_documento_id
 join public.veiculos v on v.id = d.veiculo_id
-where d.status_operacional = 'ativo' and d.excluido_em is null;
+where d.status_operacional = 'ativo'
+  and d.excluido_em is null
+  and t.ativo = true;
+
+comment on view public.vw_documentos_veiculo_status is
+  'Documentos ativos e aplicaveis por veiculo, usados para vencimentos e pendencias calculadas.';
+comment on table public.tipos_documento_veiculo is
+  'Catalogo de tipos de documentos que podem ser selecionados individualmente em cada veiculo.';
+comment on table public.veiculo_documentos is
+  'Historico de documentos aplicados ao veiculo; somente registros ativos indicam documentos vigentes.';
+comment on column public.veiculo_documentos.status_operacional is
+  'ativo = documento vigente do veiculo; substituido/cancelado = historico sem gerar pendencias.';
 
 create or replace view public.vw_pendencias_calculadas
 with (security_invoker = true)

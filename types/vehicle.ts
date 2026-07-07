@@ -48,6 +48,13 @@ export type VehicleDocument = {
   severity: Severity
 }
 
+export type VehicleDocumentTypeOption = {
+  id: string
+  code: string
+  name: string
+  alertDays: number
+}
+
 export type VehicleListItem = {
   id: string
   type: string
@@ -140,6 +147,7 @@ export type VehicleDetails = VehicleListItem & {
 export type VehicleFormOptions = {
   routes: VehicleRoute[]
   drivers: VehicleDriverOption[]
+  documentTypes: VehicleDocumentTypeOption[]
 }
 
 export type VehicleFormValues = {
@@ -159,10 +167,11 @@ export type VehicleFormValues = {
   newRouteDestination: string
   newRouteEstimatedKm: string
   newRouteNotes: string
-  documentationDueDate: string
-  tachographDueDate: string
-  ceturbDueDate: string
-  aetDueDate: string
+  documents: Record<string, string>
+  documentationDueDate?: string
+  tachographDueDate?: string
+  ceturbDueDate?: string
+  aetDueDate?: string
   driverIds: string[]
   principalDriverId: string
 }

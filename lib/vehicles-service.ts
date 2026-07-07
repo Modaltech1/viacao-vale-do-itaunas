@@ -5,8 +5,7 @@ import { normalizeOptionalText } from '@/lib/driver-utils'
 import { apiErrorResponse } from '@/lib/error-response'
 import { parseKmValue, parseOptionalKmValue } from '@/lib/km'
 import {
-  vehicleDocumentCodes,
-  vehicleDocumentDefinitions,
+  legacyVehicleDocumentFields,
   type VehicleDocumentCode,
 } from '@/lib/vehicle-documents'
 import type { VehicleStatus } from '@/types/fleet'
@@ -43,6 +42,32 @@ export type VehiclePayload = {
   principalDriverId: string | null
 }
 
+function parseVehicleDocumentDates(body: Record<string, unknown>): Record<VehicleDocumentCode, string> {
+  const sourceDocuments = Array.isArray(body.documents)
+    ? body.documents
+    : legacyVehicleDocumentFields.flatMap(({ code, formField }) => {
+        const dueDate = String(body[formField] ?? '').trim()
+        return dueDate ? [{ code, dueDate }] : []
+      })
+
+  const documentDates = new Map<string, string>()
+
+  for (const item of sourceDocuments) {
+    if (!item || typeof item !== 'object') continue
+    const row = item as Record<string, unknown>
+    const code = String(row.code ?? '').trim()
+    const dueDate = String(row.dueDate ?? '').trim()
+
+    if (!code) throw new Error('Documento do veículo inválido.')
+    if (documentDates.has(code)) throw new Error('O mesmo documento não pode ser informado mais de uma vez.')
+    if (!dueDate) throw new Error('Informe o vencimento dos documentos selecionados.')
+
+    documentDates.set(code, dueDate)
+  }
+
+  return Object.fromEntries(documentDates) as Record<VehicleDocumentCode, string>
+}
+
 export function parseVehiclePayload(body: Record<string, unknown>): VehiclePayload {
   const yearText = String(body.year ?? '').trim()
   const routeIdText = String(body.routeId ?? '').trim()
@@ -72,12 +97,7 @@ export function parseVehiclePayload(body: Record<string, unknown>): VehiclePaylo
           notes: normalizeOptionalText(body.newRouteNotes),
         }
       : null,
-    documentDates: Object.fromEntries(
-      vehicleDocumentDefinitions.map(({ code, formField }) => [
-        code,
-        String(body[formField] ?? '').trim(),
-      ]),
-    ) as Record<VehicleDocumentCode, string>,
+    documentDates: parseVehicleDocumentDates(body),
     driverIds,
     principalDriverId,
   }
@@ -118,7 +138,7 @@ function validateVehiclePayload(payload: VehiclePayload) {
   }
 
   if (Object.values(payload.documentDates).some((date) => !date)) {
-    throw new Error('Os vencimentos de documentação, tacógrafo, CETURB e AET são obrigatórios.')
+    throw new Error('Informe o vencimento dos documentos selecionados.')
   }
 
   if (payload.principalDriverId && !payload.driverIds.includes(payload.principalDriverId)) {
@@ -267,20 +287,23 @@ export async function createVehicleDocuments(
   dates: VehiclePayload['documentDates'],
   adminId: string,
 ) {
+  const selectedCodes = Object.keys(dates).filter((code) => dates[code])
+  if (!selectedCodes.length) return
+
   const { data: types, error: typesError } = await service
     .from('tipos_documento_veiculo')
     .select('id,codigo')
-    .in('codigo', vehicleDocumentCodes)
+    .in('codigo', selectedCodes)
     .eq('ativo', true)
 
   if (typesError) throw typesError
-  if ((types?.length ?? 0) !== vehicleDocumentCodes.length) {
-    throw new Error('Os tipos de documento padrão não estão configurados no banco.')
+  if ((types?.length ?? 0) !== selectedCodes.length) {
+    throw new Error('Um ou mais documentos selecionados não estão configurados no banco.')
   }
 
   const typeByCode = new Map((types ?? []).map((type) => [type.codigo, type.id]))
   const { error } = await service.from('veiculo_documentos').insert(
-    vehicleDocumentCodes.map((code) => ({
+    selectedCodes.map((code) => ({
       veiculo_id: vehicleId,
       tipo_documento_id: typeByCode.get(code),
       vencimento_em: dates[code],
@@ -306,28 +329,53 @@ export async function renewChangedVehicleDocuments(
 
   if (error) throw error
 
+  const selectedCodes = Object.keys(dates).filter((code) => dates[code])
+  const selectedCodeSet = new Set(selectedCodes)
+  const currentActiveDocuments = currentDocuments ?? []
+  const currentByCode = new Map(currentActiveDocuments.map((document) => [document.tipo_codigo, document]))
   const changed: Array<{ oldId: string; newId: string }> = []
   const inserted: string[] = []
+  const cancelled: string[] = []
+
+  const { data: selectedTypes, error: typeError } = selectedCodes.length
+    ? await service
+        .from('tipos_documento_veiculo')
+        .select('id,codigo')
+        .in('codigo', selectedCodes)
+        .eq('ativo', true)
+    : { data: [], error: null }
+
+  if (typeError) throw typeError
+  if ((selectedTypes?.length ?? 0) !== selectedCodes.length) {
+    throw new Error('Um ou mais documentos selecionados não estão configurados no banco.')
+  }
+
+  const typeByCode = new Map((selectedTypes ?? []).map((type) => [type.codigo, type.id]))
 
   try {
-    for (const code of vehicleDocumentCodes) {
-      const current = currentDocuments?.find((document) => document.tipo_codigo === code)
+    for (const current of currentActiveDocuments) {
+      if (selectedCodeSet.has(current.tipo_codigo)) continue
+
+      const { error: cancelError } = await service
+        .from('veiculo_documentos')
+        .update({ status_operacional: 'cancelado', atualizado_por: adminId })
+        .eq('id', current.id)
+
+      if (cancelError) throw cancelError
+      cancelled.push(current.id)
+    }
+
+    for (const code of selectedCodes) {
+      const current = currentByCode.get(code)
+      const dueDate = dates[code]
+
       if (!current) {
-        const { data: type, error: typeError } = await service
-          .from('tipos_documento_veiculo')
-          .select('id')
-          .eq('codigo', code)
-          .eq('ativo', true)
-          .single<{ id: string }>()
-
-        if (typeError || !type) throw typeError ?? new Error(`Tipo de documento ${code} não encontrado.`)
-
         const { data: created, error: createError } = await service
           .from('veiculo_documentos')
           .insert({
             veiculo_id: vehicleId,
-            tipo_documento_id: type.id,
-            vencimento_em: dates[code],
+            tipo_documento_id: typeByCode.get(code),
+            vencimento_em: dueDate,
             status_operacional: 'ativo',
             criado_por: adminId,
             atualizado_por: adminId,
@@ -340,7 +388,7 @@ export async function renewChangedVehicleDocuments(
         continue
       }
 
-      if (current.vencimento_em === dates[code]) continue
+      if (current.vencimento_em === dueDate) continue
 
       const { error: replaceError } = await service
         .from('veiculo_documentos')
@@ -354,7 +402,7 @@ export async function renewChangedVehicleDocuments(
         .insert({
           veiculo_id: vehicleId,
           tipo_documento_id: current.tipo_documento_id,
-          vencimento_em: dates[code],
+          vencimento_em: dueDate,
           status_operacional: 'ativo',
           criado_por: adminId,
           atualizado_por: adminId,
@@ -395,6 +443,12 @@ export async function renewChangedVehicleDocuments(
         .eq('id', document.oldId)
     }
     if (inserted.length) await service.from('veiculo_documentos').delete().in('id', inserted)
+    if (cancelled.length) {
+      await service
+        .from('veiculo_documentos')
+        .update({ status_operacional: 'ativo', atualizado_por: adminId })
+        .in('id', cancelled)
+    }
     throw renewError
   }
 }

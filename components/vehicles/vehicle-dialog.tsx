@@ -28,7 +28,6 @@ import type {
 import type { VehicleStatus } from '@/types/fleet'
 import { KmInput } from '@/components/shared/km-input'
 import { kmInputValue } from '@/lib/km'
-import { vehicleDocumentDefinitions } from '@/lib/vehicle-documents'
 
 type EditableVehicle = VehicleListItem | VehicleDetails
 
@@ -57,17 +56,11 @@ const emptyForm: VehicleFormValues = {
   newRouteDestination: '',
   newRouteEstimatedKm: '',
   newRouteNotes: '',
-  documentationDueDate: '',
-  tachographDueDate: '',
-  ceturbDueDate: '',
-  aetDueDate: '',
+  documents: {},
   driverIds: [],
   principalDriverId: '',
 }
 
-function documentDate(vehicle: EditableVehicle, code: string) {
-  return vehicle.documents.find((document) => document.code === code)?.dueDate ?? ''
-}
 
 function formFromVehicle(vehicle?: EditableVehicle | null): VehicleFormValues {
   if (!vehicle) return emptyForm
@@ -89,10 +82,9 @@ function formFromVehicle(vehicle?: EditableVehicle | null): VehicleFormValues {
     newRouteDestination: '',
     newRouteEstimatedKm: '',
     newRouteNotes: '',
-    documentationDueDate: documentDate(vehicle, 'documentacao'),
-    tachographDueDate: documentDate(vehicle, 'tacografo'),
-    ceturbDueDate: documentDate(vehicle, 'ceturb'),
-    aetDueDate: documentDate(vehicle, 'aet'),
+    documents: Object.fromEntries(
+      vehicle.documents.map((document) => [document.code, document.dueDate]),
+    ),
     driverIds: vehicle.drivers.map((driver) => driver.id),
     principalDriverId: vehicle.drivers.find((driver) => driver.principal)?.id ?? '',
   }
@@ -141,6 +133,29 @@ export function VehicleDialog({
     })
   }
 
+  function toggleDocument(code: string, checked: boolean) {
+    setForm((current) => {
+      const documents = { ...current.documents }
+      if (checked) {
+        documents[code] = documents[code] ?? ''
+      } else {
+        delete documents[code]
+      }
+
+      return { ...current, documents }
+    })
+  }
+
+  function updateDocumentDate(code: string, dueDate: string) {
+    setForm((current) => ({
+      ...current,
+      documents: {
+        ...current.documents,
+        [code]: dueDate,
+      },
+    }))
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSaving(true)
@@ -150,7 +165,10 @@ export function VehicleDialog({
       const response = await fetch(vehicle ? `/api/admin/veiculos/${vehicle.id}` : '/api/admin/veiculos', {
         method: vehicle ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          documents: Object.entries(form.documents).map(([code, dueDate]) => ({ code, dueDate })),
+        }),
       })
       const result = await response.json()
 
@@ -386,26 +404,55 @@ export function VehicleDialog({
 
           <section className="space-y-4 border-t pt-5">
             <div>
-              <h3 className="font-semibold">Vencimentos</h3>
+              <h3 className="font-semibold">Documentos do veículo</h3>
               <p className="text-sm text-muted-foreground">
-                Datas ativas usadas no cálculo automático de pendências.
+                Selecione apenas os documentos aplicáveis a este veículo. Documentos desmarcados não geram pendências.
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {vehicleDocumentDefinitions.map(({ code, label, formField }) => (
-                <div key={code} className="space-y-2">
-                  <Label htmlFor={`vehicle-${code}`}>{label}</Label>
-                  <Input
-                    id={`vehicle-${code}`}
-                    type="date"
-                    value={form[formField]}
-                    onChange={updateField(formField)}
-                    required
-                  />
-                </div>
-              ))}
-            </div>
+            {options.documentTypes.length ? (
+              <div className="space-y-3">
+                {options.documentTypes.map((documentType) => {
+                  const checked = Object.prototype.hasOwnProperty.call(form.documents, documentType.code)
+
+                  return (
+                    <div key={documentType.code} className="grid gap-3 rounded-md border p-3 sm:grid-cols-[minmax(180px,1fr)_220px] sm:items-end">
+                      <label className="flex cursor-pointer items-start gap-3">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value: boolean | 'indeterminate') => {
+                            toggleDocument(documentType.code, value === true)
+                          }}
+                        />
+                        <span>
+                          <span className="block font-medium">{documentType.name}</span>
+                          <span className="block text-xs text-muted-foreground">
+                            Alerta {documentType.alertDays} dias antes do vencimento.
+                          </span>
+                        </span>
+                      </label>
+
+                      {checked ? (
+                        <div className="space-y-2">
+                          <Label htmlFor={`vehicle-document-${documentType.code}`}>Vencimento</Label>
+                          <Input
+                            id={`vehicle-document-${documentType.code}`}
+                            type="date"
+                            value={form.documents[documentType.code] ?? ''}
+                            onChange={(event) => updateDocumentDate(documentType.code, event.target.value)}
+                            required
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="rounded-md border px-3 py-4 text-sm text-muted-foreground">
+                Nenhum tipo de documento ativo foi encontrado.
+              </p>
+            )}
           </section>
 
           {!vehicle ? (

@@ -30,11 +30,10 @@ import { VehicleDialog, VehicleDriversDialog } from '@/components/vehicles/vehic
 import { brl, dateTime, number } from '@/lib/format'
 import { formatKm } from '@/lib/km'
 import { vehicleStatusLabel } from '@/lib/status'
-import { vehicleDocumentDefinitions } from '@/lib/vehicle-documents'
 import { sinisterStatusLabel, sinisterTypeLabel } from '@/types/sinister'
 import type { VehicleDetails, VehicleFormOptions } from '@/types/vehicle'
 
-const emptyOptions: VehicleFormOptions = { routes: [], drivers: [] }
+const emptyOptions: VehicleFormOptions = { routes: [], drivers: [], documentTypes: [] }
 
 function formatDateOnly(value?: string | null) {
   if (!value) return 'Não informado'
@@ -268,21 +267,17 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
                 <CardTitle>Vencimentos</CardTitle>
               </CardHeader>
               <CardContent className="divide-y text-sm">
-                {vehicleDocumentDefinitions.map(({ code, label }) => {
-                  const document = vehicle.documents.find((item) => item.code === code)
-
-                  return (
-                    <div key={code} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                      <span>
-                        <span className="block font-medium">{document?.name ?? label}</span>
-                        <span className="text-muted-foreground">{formatDateOnly(document?.dueDate)}</span>
-                      </span>
-                      {document
-                        ? <StatusBadge type="document" value={document.status} />
-                        : <span className="text-muted-foreground">Não cadastrado</span>}
-                    </div>
-                  )
-                })}
+                {vehicle.documents.length ? vehicle.documents.map((document) => (
+                  <div key={document.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                    <span>
+                      <span className="block font-medium">{document.name}</span>
+                      <span className="text-muted-foreground">{formatDateOnly(document.dueDate)}</span>
+                    </span>
+                    <StatusBadge type="document" value={document.status} />
+                  </div>
+                )) : (
+                  <p className="py-3 text-muted-foreground">Nenhum documento ativo para este veículo.</p>
+                )}
               </CardContent>
             </Card>
           </div>

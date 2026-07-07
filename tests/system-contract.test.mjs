@@ -484,10 +484,31 @@ test('AET integra o catálogo documental, formulário e alertas operacionais', a
   assert.match(migration, /on conflict \(codigo\) do update/)
   assert.match(definitions, /code: 'aet'/)
   assert.match(definitions, /formField: 'aetDueDate'/)
-  assert.match(vehicleDialog, /vehicleDocumentDefinitions\.map/)
-  assert.match(vehicleDetails, /vehicleDocumentDefinitions\.map/)
+  assert.match(vehicleDialog, /options\.documentTypes\.map/)
+  assert.doesNotMatch(vehicleDialog, /vehicleDocumentDefinitions\.map/)
+  assert.match(vehicleDetails, /vehicle\.documents\.length/)
+  assert.doesNotMatch(vehicleDetails, /vehicleDocumentDefinitions\.map/)
   assert.match(reports, /vehicleDocumentLabel\(value\)/)
   assert.match(pendings, /vehicleDocumentLabel\(type\)/)
+})
+
+test('documentos de veículo são opcionais por veículo e limpam CETURB legado', async () => {
+  const [migration, vehicleDialog, vehiclesPage, service] = await Promise.all([
+    readFile(path.join(root, 'database', 'migrations', '20260706_optional_vehicle_documents.sql'), 'utf8'),
+    readFile(path.join(root, 'components', 'vehicles', 'vehicle-dialog.tsx'), 'utf8'),
+    readFile(path.join(root, 'components', 'vehicles', 'vehicles-page.tsx'), 'utf8'),
+    readFile(path.join(root, 'lib', 'vehicles-service.ts'), 'utf8'),
+  ])
+
+  assert.match(migration, /t\.ativo = true/)
+  assert.match(migration, /v\.placa as veiculo_placa,[\s\S]*v\.codigo_frota as veiculo_codigo_frota/)
+  assert.match(migration, /t\.codigo = 'ceturb'/)
+  assert.match(migration, /not ilike '%nibus%'/)
+  assert.match(vehicleDialog, /options.documentTypes.map/)
+  assert.match(vehicleDialog, /Documentos desmarcados não geram pendências/)
+  assert.match(vehiclesPage, /Documentos/)
+  assert.doesNotMatch(vehiclesPage, /CETURB vencida/)
+  assert.match(service, /status_operacional: 'cancelado'/)
 })
 
 test('tabelas operacionais identificam veículos pela frota', async () => {

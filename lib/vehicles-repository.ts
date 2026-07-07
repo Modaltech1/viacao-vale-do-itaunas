@@ -170,7 +170,7 @@ export async function listVehicles(service: SupabaseClient): Promise<VehicleList
 }
 
 export async function listVehicleFormOptions(service: SupabaseClient): Promise<VehicleFormOptions> {
-  const [routes, drivers, profiles, principalAssignments, vehicles] = await Promise.all([
+  const [routes, drivers, profiles, principalAssignments, vehicles, documentTypes] = await Promise.all([
     queryRows(
       service
         .from('rotas')
@@ -207,6 +207,13 @@ export async function listVehicleFormOptions(service: SupabaseClient): Promise<V
         .is('excluido_em', null)
         .order('codigo_frota', { ascending: true }),
     ),
+    queryRows(
+      service
+        .from('tipos_documento_veiculo')
+        .select('id,codigo,nome,dias_alerta')
+        .eq('ativo', true)
+        .order('nome', { ascending: true }),
+    ),
   ])
 
   const profileById = new Map(profiles.map((profile) => [profile.id, profile]))
@@ -238,6 +245,12 @@ export async function listVehicleFormOptions(service: SupabaseClient): Promise<V
   return {
     routes: routes.map((route) => normalizeRoute(route) as VehicleRoute),
     drivers: driverOptions.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
+    documentTypes: documentTypes.map((type) => ({
+      id: type.id,
+      code: type.codigo,
+      name: type.nome,
+      alertDays: toNumber(type.dias_alerta),
+    })),
   }
 }
 

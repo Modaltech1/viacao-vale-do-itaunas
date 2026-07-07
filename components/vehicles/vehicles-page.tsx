@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@prodexy/ui'
-import { BadgeAlert, Bus, CircleCheckBig, Plus, TriangleAlert, Wrench } from 'lucide-react'
+import { Bus, CircleCheckBig, FileWarning, Plus, TriangleAlert, Wrench } from 'lucide-react'
 import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
@@ -25,7 +25,42 @@ import type { VehicleFormOptions, VehicleListItem } from '@/types/vehicle'
 
 type VehiclePageMode = 'admin' | 'mechanic'
 
-const emptyOptions: VehicleFormOptions = { routes: [], drivers: [] }
+const emptyOptions: VehicleFormOptions = { routes: [], drivers: [], documentTypes: [] }
+
+function pluralize(count: number, singular: string, plural: string) {
+  return count === 1 ? singular : plural
+}
+
+function getVehicleDocumentSummary(vehicle: VehicleListItem) {
+  const documents = vehicle.documents
+  if (!documents.length) {
+    return { status: null, label: 'Sem documentos', subtitle: 'Nenhum documento ativo' }
+  }
+
+  const expired = documents.filter((document) => document.status === 'vencido').length
+  if (expired) {
+    return {
+      status: 'vencido' as const,
+      label: String(expired) + ' ' + pluralize(expired, 'vencido', 'vencidos'),
+      subtitle: String(documents.length) + ' ' + pluralize(documents.length, 'documento', 'documentos'),
+    }
+  }
+
+  const expiring = documents.filter((document) => document.status === 'proximo').length
+  if (expiring) {
+    return {
+      status: 'proximo' as const,
+      label: String(expiring) + ' ' + pluralize(expiring, 'próximo', 'próximos'),
+      subtitle: String(documents.length) + ' ' + pluralize(documents.length, 'documento', 'documentos'),
+    }
+  }
+
+  return {
+    status: 'em_dia' as const,
+    label: 'Em dia',
+    subtitle: String(documents.length) + ' ' + pluralize(documents.length, 'documento', 'documentos'),
+  }
+}
 
 export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
   const [vehicles, setVehicles] = useState<VehicleListItem[]>([])
@@ -93,8 +128,12 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
     `${search}|${status}|${type}|${driverId}`,
   )
 
-  const ceturbExpired = vehicles.filter((vehicle) => (
-    vehicle.documents.some((document) => document.code === 'ceturb' && document.status === 'vencido')
+  const documentsExpired = vehicles.filter((vehicle) => (
+    vehicle.documents.some((document) => document.status === 'vencido')
+  )).length
+  const documentsExpiring = vehicles.filter((vehicle) => (
+    !vehicle.documents.some((document) => document.status === 'vencido')
+    && vehicle.documents.some((document) => document.status === 'proximo')
   )).length
   const vehiclesWithPendings = vehicles.filter((vehicle) => vehicle.pendingCount > 0).length
 
@@ -129,7 +168,13 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
           tone="warning"
         />
         {isAdmin ? (
-          <MetricCard title="CETURB vencida" value={ceturbExpired} icon={BadgeAlert} tone="danger" />
+          <MetricCard
+            title="Docs vencidos"
+            value={documentsExpired}
+            subtitle={String(documentsExpiring) + ' próximos'}
+            icon={FileWarning}
+            tone={documentsExpired ? 'danger' : documentsExpiring ? 'warning' : 'success'}
+          />
         ) : (
           <MetricCard
             title="Com pendências"
@@ -193,7 +238,7 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
                   <TableHead className="w-[16%]">Rota fixa</TableHead>
                   {isAdmin ? <TableHead className="w-[22%]">Motoristas</TableHead> : null}
                   <TableHead className="w-[10%]">KM atual</TableHead>
-                  <TableHead className="w-[9%]">{isAdmin ? 'CETURB' : 'Pendências'}</TableHead>
+                  <TableHead className="w-[9%]">{isAdmin ? 'Documentos' : 'Pendências'}</TableHead>
                   <TableHead className="w-[11%]">Status</TableHead>
                   <TableHead className="w-[5%]" />
                 </TableRow>
@@ -207,7 +252,7 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
                   </TableRow>
                 ) : filteredVehicles.length ? (
                   vehiclePagination.pageItems.map((vehicle) => {
-                    const ceturb = vehicle.documents.find((document) => document.code === 'ceturb')
+                    const documentSummary = getVehicleDocumentSummary(vehicle)
 
                     return (
                       <TableRow key={vehicle.id}>
@@ -264,9 +309,17 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
                         <TableCell className="align-top tabular-nums">{formatKm(vehicle.currentKm)}</TableCell>
                         <TableCell className="align-top">
                           {isAdmin ? (
-                            ceturb
-                              ? <StatusBadge type="document" value={ceturb.status} />
-                              : <span className="text-sm text-muted-foreground">Não cadastrado</span>
+                            <div className="space-y-1">
+                              {documentSummary.status ? (
+                                <StatusBadge type="document" value={documentSummary.status} />
+                              ) : (
+                                <span className="text-sm text-muted-foreground">{documentSummary.label}</span>
+                              )}
+                              {documentSummary.status && documentSummary.status !== 'em_dia' ? (
+                                <p className="text-xs text-muted-foreground">{documentSummary.label}</p>
+                              ) : null}
+                              <p className="text-xs text-muted-foreground">{documentSummary.subtitle}</p>
+                            </div>
                           ) : (
                             <span className={vehicle.criticalPendingCount ? 'font-semibold text-destructive' : ''}>
                               {vehicle.pendingCount}

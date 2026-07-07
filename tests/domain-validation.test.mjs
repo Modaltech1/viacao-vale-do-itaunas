@@ -211,8 +211,8 @@ test('quilometragem usa ponto decimal sem separador de milhar', () => {
   throwsMessage(() => parseKmValue('1000.25', 'KM'), 'uma casa decimal')
 })
 
-test('veículo aceita múltiplos motoristas e valida o principal', () => {
-  const payload = parseVehiclePayload({
+test('veículo aceita múltiplos motoristas e documentos opcionais', () => {
+  const baseVehicleBody = {
     type: 'Caminhão',
     brand: 'Scania',
     model: 'R 450',
@@ -221,44 +221,53 @@ test('veículo aceita múltiplos motoristas e valida o principal', () => {
     year: '2024',
     status: 'ativo',
     currentKm: '12500.0',
-    documentationDueDate: '2027-01-01',
-    tachographDueDate: '2027-01-01',
-    ceturbDueDate: '2027-01-01',
-    aetDueDate: '2027-01-01',
+    documents: [
+      { code: 'documentacao', dueDate: '2027-01-01' },
+      { code: 'tacografo', dueDate: '2027-02-01' },
+    ],
     driverIds: ['driver-a', 'driver-b', 'driver-a'],
     principalDriverId: 'driver-b',
-  })
+  }
+
+  const payload = parseVehiclePayload(baseVehicleBody)
 
   assert.equal(payload.fleetCode, 'FROTA-07')
   assert.equal(payload.plate, 'ABC-1D23')
   assert.deepEqual(payload.driverIds, ['driver-a', 'driver-b'])
   assert.equal(payload.principalDriverId, 'driver-b')
-  assert.equal(payload.documentDates.aet, '2027-01-01')
+  assert.equal(payload.documentDates.documentacao, '2027-01-01')
+  assert.equal(payload.documentDates.tacografo, '2027-02-01')
+  assert.equal(payload.documentDates.ceturb, undefined)
+
   throwsMessage(() => parseVehiclePayload({
-    ...payload,
-    currentKm: kmInputValue(payload.currentKm),
-    documentationDueDate: '2027-01-01',
-    tachographDueDate: '2027-01-01',
-    ceturbDueDate: '2027-01-01',
-    aetDueDate: '2027-01-01',
+    ...baseVehicleBody,
     driverIds: ['driver-a'],
     principalDriverId: 'driver-b',
   }), 'motorista principal')
 
   throwsMessage(() => parseVehiclePayload({
-    type: 'Ônibus',
-    brand: 'Mercedes',
-    model: 'Apache VIP',
-    fleetCode: 'FROTA-08',
-    plate: 'DEF-4G56',
-    status: 'ativo',
-    currentKm: '1000.0',
-    documentationDueDate: '2027-01-01',
-    tachographDueDate: '2027-01-01',
-    ceturbDueDate: '2027-01-01',
-  }), 'AET')
-})
+    ...baseVehicleBody,
+    documents: [
+      { code: 'documentacao', dueDate: '2027-01-01' },
+      { code: 'documentacao', dueDate: '2027-02-01' },
+    ],
+  }), 'mesmo documento')
 
+  throwsMessage(() => parseVehiclePayload({
+    ...baseVehicleBody,
+    documents: [{ code: 'documentacao', dueDate: '' }],
+  }), 'vencimento')
+
+  const legacyPayload = parseVehiclePayload({
+    ...baseVehicleBody,
+    documents: undefined,
+    documentationDueDate: '2027-01-01',
+    aetDueDate: '2027-03-01',
+  })
+
+  assert.equal(legacyPayload.documentDates.documentacao, '2027-01-01')
+  assert.equal(legacyPayload.documentDates.aet, '2027-03-01')
+})
 test('serviço converte periodicidade para o formato persistido', () => {
   const payload = parseServicePayload({
     name: 'Troca de óleo',
