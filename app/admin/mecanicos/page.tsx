@@ -21,6 +21,7 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { TableDetailsButton } from '@/components/shared/table-details-button'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl } from '@/lib/format'
+import { compareByTextPtBr, compareTextPtBr } from '@/lib/sorting'
 import type { MechanicListItem } from '@/types/mechanic'
 
 export default function MechanicsPage() {
@@ -55,7 +56,7 @@ export default function MechanicsPage() {
   }, [loadMechanics])
 
   const specialties = useMemo(
-    () => [...new Set(mechanics.map((mechanic) => mechanic.specialty).filter(Boolean))].sort(),
+    () => [...new Set(mechanics.map((mechanic) => mechanic.specialty).filter(Boolean))].sort(compareTextPtBr),
     [mechanics],
   )
 
@@ -73,7 +74,7 @@ export default function MechanicsPage() {
       const matchesSpecialty = specialty === 'todas' || mechanic.specialty === specialty
 
       return matchesSearch && matchesStatus && matchesSpecialty
-    })
+    }).sort((a, b) => compareByTextPtBr(a, b, (mechanic) => mechanic.name, (mechanic) => mechanic.email))
   }, [mechanics, search, specialty, status])
   const mechanicPagination = useTablePagination(
     filteredMechanics,

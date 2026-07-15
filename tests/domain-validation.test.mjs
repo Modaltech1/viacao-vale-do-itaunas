@@ -49,6 +49,7 @@ import {
 } from '@/lib/trips-service'
 import { parseVehiclePayload } from '@/lib/vehicles-service'
 import { vehicleFleetCode, vehicleLabel } from '@/lib/vehicle-label'
+import { compareByTextPtBr, compareTextPtBr } from '@/lib/sorting'
 import {
   parseEndTripPayload,
   parseExpensePayload as parseDriverExpense,
@@ -59,6 +60,23 @@ import {
 function throwsMessage(callback, message) {
   assert.throws(callback, (error) => error instanceof Error && error.message.includes(message))
 }
+
+test('ordenacao textual compartilhada usa pt-BR e numeros naturais', () => {
+  assert.deepEqual(['Frota 10', 'Frota 2', 'Frota 1'].sort(compareTextPtBr), [
+    'Frota 1',
+    'Frota 2',
+    'Frota 10',
+  ])
+  assert.equal(compareTextPtBr('Alvaro', 'Bruno') < 0, true)
+
+  const items = [
+    { name: 'Carlos', email: 'c@teste.com' },
+    { name: 'Ana', email: 'a@teste.com' },
+    { name: 'Ana', email: 'b@teste.com' },
+  ].sort((a, b) => compareByTextPtBr(a, b, (item) => item.name, (item) => item.email))
+
+  assert.deepEqual(items.map((item) => item.email), ['a@teste.com', 'b@teste.com', 'c@teste.com'])
+})
 
 test('autorização direciona e restringe cada papel', () => {
   assert.equal(isUserRole('admin'), true)

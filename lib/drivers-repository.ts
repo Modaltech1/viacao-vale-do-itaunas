@@ -3,6 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getDriverLicenseStatus, toNumber } from '@/lib/driver-utils'
 import { queryRows, type DatabaseRow } from '@/lib/supabase-query'
+import { compareByTextPtBr } from '@/lib/sorting'
 import { vehicleLabel } from '@/lib/vehicle-label'
 import type {
   DriverDetails,
@@ -159,7 +160,7 @@ export async function listDrivers(service: SupabaseClient): Promise<DriverListIt
         .filter((expense) => expense.motorista_id === driver.id)
         .reduce((total, expense) => total + toNumber(expense.valor), 0),
     }
-  })
+  }).sort((a, b) => compareByTextPtBr(a, b, (driver) => driver.name, (driver) => driver.email))
 }
 
 export async function getDriverDetails(service: SupabaseClient, driverId: string): Promise<DriverDetails | null> {

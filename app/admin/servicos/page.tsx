@@ -21,6 +21,7 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, number } from '@/lib/format'
 import { formatKm } from '@/lib/km'
+import { compareByTextPtBr } from '@/lib/sorting'
 import { serviceCategories, type ServiceListItem } from '@/types/service'
 
 function periodicityLabel(service: ServiceListItem) {
@@ -77,7 +78,7 @@ export default function ServicesPage() {
         maintenanceType === 'todos' || service.suggestedMaintenanceType === maintenanceType
 
       return matchesSearch && matchesCategory && matchesPeriodicity && matchesMaintenanceType
-    })
+    }).sort((a, b) => compareByTextPtBr(a, b, (service) => service.name, (service) => service.category))
   }, [category, maintenanceType, periodicity, search, services])
   const servicePagination = useTablePagination(
     filteredServices,

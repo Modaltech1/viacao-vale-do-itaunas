@@ -22,6 +22,7 @@ import { TableDetailsButton } from '@/components/shared/table-details-button'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { number } from '@/lib/format'
 import { formatKm } from '@/lib/km'
+import { compareByTextPtBr } from '@/lib/sorting'
 import type { DriverListItem, DriverVehicleOption } from '@/types/driver'
 
 export default function DriversPage() {
@@ -74,7 +75,7 @@ export default function DriversPage() {
       const matchesLicense = licenseStatus === 'todos' || driver.licenseStatus === licenseStatus
 
       return matchesSearch && matchesStatus && matchesLicense
-    })
+    }).sort((a, b) => compareByTextPtBr(a, b, (driver) => driver.name, (driver) => driver.email))
   }, [drivers, licenseStatus, search, status])
   const driverPagination = useTablePagination(
     filteredDrivers,

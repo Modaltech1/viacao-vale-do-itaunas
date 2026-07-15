@@ -23,7 +23,7 @@ function BrandBlock({ compact = false, subtitle }: { compact?: boolean; subtitle
         <img src={brand.logoUrl} alt={brand.appName} className="h-full w-full object-cover" />
       </div>
       <div className="min-w-0">
-        <p className={cn('truncate font-semibold leading-tight', compact ? 'text-sm' : 'text-lg')}>{compact ? brand.shortName : brand.appName}</p>
+        <p className={cn('truncate font-semibold leading-tight', compact ? 'text-sm' : 'text-lg')}>{brand.appName}</p>
         <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
       </div>
     </div>

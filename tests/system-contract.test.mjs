@@ -22,7 +22,6 @@ test('todas as APIs privadas usam o guard do respectivo perfil', async () => {
     const source = await readFile(route, 'utf8')
     const relative = path.relative(apiRoot, route).replaceAll('\\', '/')
     const expectedGuard = relative.startsWith('admin/administradores')
-      || relative.startsWith('admin/relatorios')
       ? 'requireGlobalAdmin'
       : relative.startsWith('admin/')
         ? 'requireAdmin'
@@ -83,21 +82,27 @@ test('gestão de administradores é exclusiva do global e aparece condicionalmen
   assert.doesNotMatch(assignmentRoute, /createSupabaseServiceClient/)
 })
 
-test('relatórios são exclusivos do administrador global em menu, página e API', async () => {
-  const [navigation, page, route] = await Promise.all([
+test('relatórios ficam disponíveis para admins e respeitam escopo restrito', async () => {
+  const [navigation, page, route, repository] = await Promise.all([
     readFile(path.join(root, 'components', 'layout', 'navigation-items.ts'), 'utf8'),
     readFile(path.join(root, 'app', 'admin', 'relatorios', 'page.tsx'), 'utf8'),
     readFile(path.join(root, 'app', 'api', 'admin', 'relatorios', 'route.ts'), 'utf8'),
+    readFile(path.join(root, 'lib', 'reports-repository.ts'), 'utf8'),
   ])
 
-  assert.match(
+  assert.match(navigation, /item\('reports', '\/admin\/relatorios'\)/)
+  assert.doesNotMatch(
     navigation,
     /\.\.\.item\('reports', '\/admin\/relatorios'\),\s*globalOnly:\s*true/s,
   )
-  assert.match(page, /requireGlobalAdmin\(\)/)
-  assert.match(page, /redirect\('\/admin\/dashboard'\)/)
-  assert.match(route, /requireGlobalAdmin\(\)/)
-  assert.doesNotMatch(route, /\brequireAdmin\b/)
+  assert.match(page, /requireAdmin\(\)/)
+  assert.doesNotMatch(page, /requireGlobalAdmin/)
+  assert.match(route, /requireAdmin\(\)/)
+  assert.match(route, /getReportData\(auth\.supabase,\s*auth\.admin,/)
+  assert.doesNotMatch(route, /requireGlobalAdmin/)
+  assert.match(repository, /access:\s*AdminAccess/)
+  assert.match(repository, /admin_responsavel_id/)
+  assert.match(repository, /access\.isGlobal/)
 })
 
 test('middleware não converte erros JSON das APIs em redirect HTML', async () => {
@@ -163,6 +168,25 @@ test('todas as páginas de detalhe oferecem navegação contextual de retorno', 
     const source = await readFile(path.join(root, file), 'utf8')
     assert.match(source, /\bbackHref=/, `${file} sem navegação de retorno`)
     assert.match(source, /\bbackLabel=/, `${file} sem rótulo contextual de retorno`)
+  }
+})
+
+test('tabelas cadastrais mantem ordenacao alfabetica apos filtros', async () => {
+  const files = [
+    'app/admin/motoristas/page.tsx',
+    'app/admin/mecanicos/page.tsx',
+    'components/vehicles/vehicles-page.tsx',
+    'app/admin/servicos/page.tsx',
+    'app/mechanic/servicos/page.tsx',
+    'components/parts/parts-page.tsx',
+    'components/admins/admin-management-page.tsx',
+    'lib/drivers-repository.ts',
+    'lib/mechanics-repository.ts',
+  ]
+
+  for (const file of files) {
+    const source = await readFile(path.join(root, file), 'utf8')
+    assert.match(source, /compareByTextPtBr/, `${file} sem ordenacao textual compartilhada`)
   }
 })
 

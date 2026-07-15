@@ -31,6 +31,7 @@ import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import { compareByTextPtBr } from '@/lib/sorting'
 import {
   TablePagination,
   useTablePagination,
@@ -75,9 +76,16 @@ function ResourceTable({
   ) => void
 }) {
   const filtered = useMemo(() => {
+    const orderedItems = [...items].sort((a, b) => compareByTextPtBr(
+      a,
+      b,
+      (item) => item.label,
+      (item) => item.detail,
+      (item) => item.ownerName,
+    ))
     const term = search.trim().toLocaleLowerCase('pt-BR')
-    if (!term) return items
-    return items.filter((item) => (
+    if (!term) return orderedItems
+    return orderedItems.filter((item) => (
       item.label.toLocaleLowerCase('pt-BR').includes(term)
       || item.detail.toLocaleLowerCase('pt-BR').includes(term)
       || item.ownerName?.toLocaleLowerCase('pt-BR').includes(term)
@@ -185,9 +193,15 @@ export function AdminManagementPage() {
   }, [loadData])
 
   const filteredAdmins = useMemo(() => {
+    const orderedAdmins = [...data.admins].sort((a, b) => compareByTextPtBr(
+      a,
+      b,
+      (admin) => admin.name,
+      (admin) => admin.email,
+    ))
     const term = adminSearch.trim().toLocaleLowerCase('pt-BR')
-    if (!term) return data.admins
-    return data.admins.filter((admin) => (
+    if (!term) return orderedAdmins
+    return orderedAdmins.filter((admin) => (
       admin.name.toLocaleLowerCase('pt-BR').includes(term)
       || admin.email.toLocaleLowerCase('pt-BR').includes(term)
     ))

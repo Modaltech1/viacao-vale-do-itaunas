@@ -19,6 +19,7 @@ import { MetricCard } from '@/components/shared/metric-card'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, number } from '@/lib/format'
 import { formatKm } from '@/lib/km'
+import { compareByTextPtBr } from '@/lib/sorting'
 import {
   serviceCategories,
   type ServiceListItem,
@@ -76,7 +77,7 @@ export default function MechanicServicesPage() {
           || service.suggestedMaintenanceType === maintenanceType
         )
       )
-    })
+    }).sort((a, b) => compareByTextPtBr(a, b, (service) => service.name, (service) => service.category))
   }, [category, maintenanceType, search, services])
   const servicePagination = useTablePagination(
     filteredServices,

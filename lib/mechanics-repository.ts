@@ -3,6 +3,7 @@ import 'server-only'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { toNumber } from '@/lib/driver-utils'
 import { queryRows, type DatabaseRow } from '@/lib/supabase-query'
+import { compareByTextPtBr } from '@/lib/sorting'
 import { vehicleLabel } from '@/lib/vehicle-label'
 import type {
   MechanicDetails,
@@ -112,7 +113,7 @@ export async function listMechanics(service: SupabaseClient): Promise<MechanicLi
         0,
       ),
     }
-  })
+  }).sort((a, b) => compareByTextPtBr(a, b, (mechanic) => mechanic.name, (mechanic) => mechanic.email))
 }
 
 export async function getMechanicDetails(

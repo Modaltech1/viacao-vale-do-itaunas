@@ -20,6 +20,7 @@ import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, quantity } from '@/lib/format'
+import { compareByTextPtBr } from '@/lib/sorting'
 import { partCategories, type PartListItem } from '@/types/part'
 
 export function PartsPage({ mode }: { mode: 'admin' | 'mechanic' }) {
@@ -65,7 +66,7 @@ export function PartsPage({ mode }: { mode: 'admin' | 'mechanic' }) {
         || (stock === 'zerado' && part.stockQuantity === 0)
         || (stock === 'normal' && part.stockQuantity > part.minimumStock)
       return matchesSearch && matchesCategory && matchesStock
-    })
+    }).sort((a, b) => compareByTextPtBr(a, b, (part) => part.name, (part) => part.code))
   }, [category, items, search, stock])
   const partPagination = useTablePagination(
     filteredItems,

@@ -21,6 +21,7 @@ import { TableDetailsButton } from '@/components/shared/table-details-button'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { VehicleDialog } from '@/components/vehicles/vehicle-dialog'
 import { formatKm } from '@/lib/km'
+import { compareByTextPtBr, compareTextPtBr } from '@/lib/sorting'
 import type { VehicleFormOptions, VehicleListItem } from '@/types/vehicle'
 
 type VehiclePageMode = 'admin' | 'mechanic'
@@ -101,7 +102,7 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
   }, [loadVehicles])
 
   const vehicleTypes = useMemo(
-    () => [...new Set(vehicles.map((vehicle) => vehicle.type).filter(Boolean))].sort(),
+    () => [...new Set(vehicles.map((vehicle) => vehicle.type).filter(Boolean))].sort(compareTextPtBr),
     [vehicles],
   )
 
@@ -121,7 +122,14 @@ export function VehiclesPage({ mode }: { mode: VehiclePageMode }) {
         driverId === 'todos' || vehicle.drivers.some((driver) => driver.id === driverId)
 
       return matchesSearch && matchesStatus && matchesType && matchesDriver
-    })
+    }).sort((a, b) => compareByTextPtBr(
+      a,
+      b,
+      (vehicle) => vehicle.fleetCode,
+      (vehicle) => vehicle.brand,
+      (vehicle) => vehicle.model,
+      (vehicle) => vehicle.plate,
+    ))
   }, [driverId, search, status, type, vehicles])
   const vehiclePagination = useTablePagination(
     filteredVehicles,

@@ -1,7 +1,7 @@
 export const brand = {
   appName: 'Vale do Itaunas',
   shortName: 'Valedoitaunas',
-  description: 'Sistema Prodexy para gestão de frota, viagens, manutenção, consumo e custos da Viação Valedoitaunas.',
+  description: 'Sistema Prodexy para gestão de frota, viagens, manutenção, consumo e custos da Viação Vale do Itaunas.',
   logoUrl: '/icon.png',
   faviconUrl: '/icon.png',
   locale: 'pt-BR',

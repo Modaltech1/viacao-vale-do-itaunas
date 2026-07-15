@@ -1,6 +1,7 @@
 import 'server-only'
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { AdminAccess } from '@/lib/admin-scope'
 import { toNumber } from '@/lib/driver-utils'
 import { queryRows, type DatabaseRow } from '@/lib/supabase-query'
 import { vehicleLabel } from '@/lib/vehicle-label'
@@ -226,6 +227,7 @@ function createInsights(
 
 export async function getReportData(
   client: SupabaseClient,
+  access: AdminAccess,
   filters: ReportFilters,
 ): Promise<ReportData> {
   const start = new Date(`${filters.startDate}T00:00:00.000Z`)
@@ -237,6 +239,52 @@ export async function getReportData(
   const totalPeriod = { start: previousStart, endExclusive }
   const currentPeriod = { start, endExclusive }
   const previousPeriod = { start: previousStart, endExclusive: previousEndExclusive }
+
+  const vehicleQuery = access.isGlobal
+    ? client
+        .from('veiculos')
+        .select('id,admin_responsavel_id,codigo_frota,placa,marca,modelo,status_operacional')
+        .is('excluido_em', null)
+        .order('codigo_frota')
+    : client
+        .from('veiculos')
+        .select('id,admin_responsavel_id,codigo_frota,placa,marca,modelo,status_operacional')
+        .is('excluido_em', null)
+        .eq('admin_responsavel_id', access.userId)
+        .order('codigo_frota')
+
+  const driverQuery = access.isGlobal
+    ? client
+        .from('motoristas')
+        .select('id,perfil_id,status_profissional,admin_responsavel_id')
+        .is('excluido_em', null)
+    : client
+        .from('motoristas')
+        .select('id,perfil_id,status_profissional,admin_responsavel_id')
+        .is('excluido_em', null)
+        .eq('admin_responsavel_id', access.userId)
+
+  const partQuery = access.isGlobal
+    ? client
+        .from('pecas')
+        .select('id,admin_responsavel_id,nome,unidade_medida,quantidade_estoque,estoque_minimo,valor_unitario,ativo')
+        .is('excluido_em', null)
+    : client
+        .from('pecas')
+        .select('id,admin_responsavel_id,nome,unidade_medida,quantidade_estoque,estoque_minimo,valor_unitario,ativo')
+        .is('excluido_em', null)
+        .eq('admin_responsavel_id', access.userId)
+
+  const manualPendingQuery = access.isGlobal
+    ? client
+        .from('pendencias_manuais')
+        .select('id')
+        .eq('status', 'aberta')
+    : client
+        .from('pendencias_manuais')
+        .select('id')
+        .eq('status', 'aberta')
+        .eq('admin_responsavel_id', access.userId)
 
   const [
     vehicleRows,
@@ -251,20 +299,10 @@ export async function getReportData(
     pendingRows,
     partRows,
     expensePartRows,
+    manualPendingRows,
   ] = await Promise.all([
-    queryRows(
-      client
-        .from('veiculos')
-        .select('id,codigo_frota,placa,marca,modelo,status_operacional')
-        .is('excluido_em', null)
-        .order('codigo_frota'),
-    ),
-    queryRows(
-      client
-        .from('motoristas')
-        .select('id,perfil_id,status_profissional')
-        .is('excluido_em', null),
-    ),
+    queryRows(vehicleQuery),
+    queryRows(driverQuery),
     queryRows(client.from('perfis').select('id,nome,ativo').eq('papel', 'motorista')),
     queryRows(
       client
@@ -319,20 +357,25 @@ export async function getReportData(
         .select('chave,severidade,tipo,veiculo_id,motorista_id,servico_id,status')
         .eq('status', 'aberta'),
     ),
-    queryRows(
-      client
-        .from('pecas')
-        .select('id,nome,unidade_medida,quantidade_estoque,estoque_minimo,valor_unitario,ativo')
-        .is('excluido_em', null),
-    ),
+    queryRows(partQuery),
     queryRows(
       client
         .from('despesa_pecas')
         .select('despesa_id,peca_id,nome_snapshot,quantidade,valor_total,estoque_devolvido_em'),
     ),
+    queryRows(manualPendingQuery),
   ])
 
   const profileById = new Map(profileRows.map((profile) => [profile.id, profile]))
+  const allowedDriverIds = new Set(
+    driverRows
+      .filter((driver) => !filters.driverId || driver.id === filters.driverId)
+      .map((driver) => driver.id),
+  )
+  const allowedManualPendingKeys = new Set(
+    manualPendingRows.map((pending) => `manual:${pending.id}`),
+  )
+  const selectedDriverAllowed = !filters.driverId || allowedDriverIds.has(filters.driverId)
   const allowedVehicleIds = new Set(
     vehicleRows
       .filter((vehicle) => !filters.vehicleId || vehicle.id === filters.vehicleId)
@@ -340,15 +383,18 @@ export async function getReportData(
   )
 
   const filterTrip = (trip: DatabaseRow) => (
-    allowedVehicleIds.has(trip.veiculo_id)
+    selectedDriverAllowed
+    && allowedVehicleIds.has(trip.veiculo_id)
     && (!filters.driverId || trip.motorista_id === filters.driverId)
   )
   const filterOperation = (row: DatabaseRow) => (
-    allowedVehicleIds.has(row.veiculo_id)
+    selectedDriverAllowed
+    && allowedVehicleIds.has(row.veiculo_id)
     && (!filters.driverId || row.motorista_id === filters.driverId)
   )
   const filterSinister = (row: DatabaseRow) => (
-    allowedVehicleIds.has(row.veiculo_id)
+    selectedDriverAllowed
+    && allowedVehicleIds.has(row.veiculo_id)
     && (!filters.driverId || row.motorista_id === filters.driverId)
   )
   const filterMaintenance = (maintenance: DatabaseRow) => {
@@ -377,11 +423,18 @@ export async function getReportData(
   const currentSinisters = allSinisters.filter((row) => inPeriod(row.data_ocorrencia, currentPeriod))
   const previousSinisters = allSinisters.filter((row) => inPeriod(row.data_ocorrencia, previousPeriod))
   const filteredVehicles = vehicleRows.filter((vehicle) => allowedVehicleIds.has(vehicle.id))
-  const currentPendings = pendingRows.filter((pending) => (
-    (!pending.veiculo_id || allowedVehicleIds.has(pending.veiculo_id))
-    && (!filters.driverId || pending.motorista_id === filters.driverId)
-    && (!filters.serviceId || pending.servico_id === filters.serviceId)
-  ))
+  const currentPendings = pendingRows.filter((pending) => {
+    const belongsToScope = access.isGlobal
+      || (pending.veiculo_id && allowedVehicleIds.has(pending.veiculo_id))
+      || (pending.motorista_id && allowedDriverIds.has(pending.motorista_id))
+      || (pending.chave && allowedManualPendingKeys.has(pending.chave))
+
+    return Boolean(
+      belongsToScope
+      && (!filters.driverId || pending.motorista_id === filters.driverId)
+      && (!filters.serviceId || pending.servico_id === filters.serviceId)
+    )
+  })
   const criticalPendings = currentPendings.filter((pending) => pending.severidade === 'critica').length
 
   const current = reportMetrics(

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { apiErrorResponse } from '@/lib/error-response'
 import { getReportData } from '@/lib/reports-repository'
-import { requireGlobalAdmin } from '@/lib/supabase-server'
+import { requireAdmin } from '@/lib/supabase-server'
 
 function requiredDate(value: string | null, label: string) {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -11,7 +11,7 @@ function requiredDate(value: string | null, label: string) {
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireGlobalAdmin()
+  const auth = await requireAdmin()
   if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: auth.status })
 
   try {
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     }
 
     const maintenanceType = params.get('tipoManutencao')
-    const report = await getReportData(auth.supabase, {
+    const report = await getReportData(auth.supabase, auth.admin, {
       startDate,
       endDate,
       vehicleId: params.get('veiculo') || null,
