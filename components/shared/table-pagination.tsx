@@ -47,51 +47,52 @@ type TablePaginationProps = Omit<
   'pageItems'
 >
 
-export function TablePagination({
+export function PaginationFooter({
   page,
-  pageSize,
   setPage,
   totalItems,
   totalPages,
   startItem,
   endItem,
 }: TablePaginationProps) {
-  if (totalItems <= pageSize) return null
-
   return (
     <div className="flex min-h-10 flex-col gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
       <p>
-        {startItem}-{endItem} de {totalItems}
+        {totalItems ? `${startItem} - ${endItem} de ${totalItems}` : '0 de 0'}
       </p>
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="size-9 p-0"
-          aria-label="Página anterior"
-          title="Página anterior"
-          disabled={page === 1}
-          onClick={() => setPage(page - 1)}
-        >
-          <ChevronLeft className="size-4" />
-        </Button>
-        <span className="min-w-24 text-center text-foreground">
-          Página {page} de {totalPages}
-        </span>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="size-9 p-0"
-          aria-label="Próxima página"
-          title="Próxima página"
-          disabled={page === totalPages}
-          onClick={() => setPage(page + 1)}
-        >
-          <ChevronRight className="size-4" />
-        </Button>
-      </div>
+      {totalPages > 1 ? (
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="size-9 p-0"
+            aria-label={'P\u00e1gina anterior'}
+            title={'P\u00e1gina anterior'}
+            disabled={page === 1}
+            onClick={() => setPage(page - 1)}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <span className="min-w-24 text-center text-foreground">
+            {'P\u00e1gina '}{page} de {totalPages}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="size-9 p-0"
+            aria-label={'Pr\u00f3xima p\u00e1gina'}
+            title={'Pr\u00f3xima p\u00e1gina'}
+            disabled={page === totalPages}
+            onClick={() => setPage(page + 1)}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
+      ) : null}
     </div>
   )
 }
+
+export const TablePagination = PaginationFooter

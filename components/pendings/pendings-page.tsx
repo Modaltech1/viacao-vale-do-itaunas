@@ -23,6 +23,10 @@ import { PageHeader } from '@/components/layout/page-header'
 import { FilterInput, FilterSelect } from '@/components/shared/filters'
 import { MetricCard } from '@/components/shared/metric-card'
 import { StatusBadge } from '@/components/shared/status-badge'
+import {
+  PaginationFooter,
+  useTablePagination,
+} from '@/components/shared/table-pagination'
 import { date, number } from '@/lib/format'
 import { formatKm } from '@/lib/km'
 import { vehicleDocumentLabel } from '@/lib/vehicle-documents'
@@ -100,6 +104,10 @@ export function PendingsPage({ mode }: { mode: PendingMode }) {
       && (type === 'todos' || item.type === type)
     ))
   }, [items, origin, search, severity, type])
+  const pagination = useTablePagination(
+    filteredItems,
+    `${search}|${severity}|${origin}|${type}`,
+  )
 
   function openAction(item: PendingListItem, nextAction: PendingUiAction) {
     setSelected(item)
@@ -169,13 +177,14 @@ export function PendingsPage({ mode }: { mode: PendingMode }) {
           ) : filteredItems.length ? (
             <div className="border-t">
               {severityGroups.map((group) => {
-                const groupItems = filteredItems.filter((item) => item.severity === group.key)
+                const groupItems = pagination.pageItems.filter((item) => item.severity === group.key)
+                const groupTotal = filteredItems.filter((item) => item.severity === group.key).length
                 if (!groupItems.length) return null
 
                 return (
                   <section key={group.key}>
                     <div className="border-b bg-muted/30 px-3 py-2">
-                      <h2 className="text-sm font-semibold">{group.title} ({groupItems.length})</h2>
+                      <h2 className="text-sm font-semibold">{group.title} ({groupTotal})</h2>
                     </div>
                     <div className="divide-y">
                       {groupItems.map((item) => (
@@ -234,6 +243,8 @@ export function PendingsPage({ mode }: { mode: PendingMode }) {
               Nenhuma pendência encontrada.
             </p>
           )}
+
+          {!error && !loading ? <PaginationFooter {...pagination} /> : null}
         </CardContent>
       </Card>
 

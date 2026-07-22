@@ -196,6 +196,8 @@ test('todas as tabelas usam paginação compartilhada de dez registros', async (
     'utf8',
   )
   assert.match(pagination, /TABLE_PAGE_SIZE\s*=\s*10\b/)
+  assert.doesNotMatch(pagination, /if\s*\(totalItems\s*<=\s*pageSize\)\s*return null/)
+  assert.match(pagination, /totalItems\s*\?[^:]+:\s*'0 de 0'/)
 
   const files = (await Promise.all(
     ['app', 'components'].map((directory) => filesRecursively(path.join(root, directory))),
@@ -213,6 +215,13 @@ test('todas as tabelas usam paginação compartilhada de dez registros', async (
       `${path.relative(root, file)} deve paginar cada tabela`,
     )
   }
+
+  const pendings = await readFile(
+    path.join(root, 'components', 'pendings', 'pendings-page.tsx'),
+    'utf8',
+  )
+  assert.match(pendings, /useTablePagination/)
+  assert.match(pendings, /<PaginationFooter(?:\s|>)/)
 })
 
 test('ações de detalhe em tabelas usam botão iconográfico compartilhado', async () => {
