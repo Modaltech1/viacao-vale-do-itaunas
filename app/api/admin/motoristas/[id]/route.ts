@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { normalizeOptionalText } from '@/lib/driver-utils'
+import { isDriverProfessionalStatus, normalizeOptionalText } from '@/lib/driver-utils'
 import { getDriverDetails, listDriverVehicleOptions } from '@/lib/drivers-repository'
 import { managedUserErrorResponse, updateManagedUser } from '@/lib/managed-users'
 import {
@@ -8,8 +8,6 @@ import {
 } from '@/lib/admin-scope-server'
 import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
 import type { DriverProfessionalStatus } from '@/types/driver'
-
-const professionalStatuses: DriverProfessionalStatus[] = ['ativo', 'inativo', 'afastado']
 
 export async function GET(
   _request: NextRequest,
@@ -54,10 +52,10 @@ export async function PATCH(
   const licenseNumber = String(body.licenseNumber ?? '').trim()
   const licenseCategory = String(body.licenseCategory ?? '').trim()
   const licenseDueDate = String(body.licenseDueDate ?? '').trim()
-  const professionalStatus = String(body.professionalStatus ?? 'ativo') as DriverProfessionalStatus
-  const accessActive = body.accessActive !== false
+  const professionalStatus = String(body.professionalStatus ?? 'ativo')
+  const accessActive = professionalStatus === 'inapto' ? false : body.accessActive !== false
   const notes = normalizeOptionalText(body.notes)
-  const vehicleId = normalizeOptionalText(body.vehicleId)
+  const vehicleId = professionalStatus === 'inapto' ? null : normalizeOptionalText(body.vehicleId)
 
   if (!name || !email || !cpf || !licenseNumber || !licenseDueDate) {
     return NextResponse.json(
@@ -70,7 +68,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'A nova senha deve ter pelo menos 6 caracteres.' }, { status: 400 })
   }
 
-  if (!professionalStatuses.includes(professionalStatus)) {
+  if (!isDriverProfessionalStatus(professionalStatus)) {
     return NextResponse.json({ error: 'Status profissional inválido.' }, { status: 400 })
   }
 
@@ -84,13 +82,20 @@ export async function PATCH(
 
     const { data: currentDriver, error: currentDriverError } = await service
       .from('motoristas')
-      .select('id,perfil_id')
+      .select('id,perfil_id,status_profissional')
       .eq('id', id)
       .is('excluido_em', null)
-      .single<{ id: string; perfil_id: string }>()
+      .single<{ id: string; perfil_id: string; status_profissional: DriverProfessionalStatus }>()
 
     if (currentDriverError || !currentDriver) {
       return NextResponse.json({ error: 'Motorista não encontrado.' }, { status: 404 })
+    }
+
+    if (currentDriver.status_profissional === 'inapto' && professionalStatus !== 'inapto') {
+      return NextResponse.json(
+        { error: 'Motoristas inaptos permanecem bloqueados para preservar o histórico da empresa.' },
+        { status: 409 },
+      )
     }
 
     await updateManagedUser(service, auth.user.id, currentDriver.perfil_id, {

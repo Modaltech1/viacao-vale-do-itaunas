@@ -83,6 +83,8 @@ export function DriverDialog({
   const [form, setForm] = useState<DriverFormValues>(emptyForm)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const statusIsLocked = driver?.professionalStatus === 'inapto'
+  const isUnfit = form.professionalStatus === 'inapto'
 
   useEffect(() => {
     if (!open) return
@@ -141,6 +143,7 @@ export function DriverDialog({
             form={form}
             editing={Boolean(driver)}
             idPrefix="driver"
+            accessDisabled={isUnfit}
             onChange={setForm}
           />
 
@@ -204,8 +207,14 @@ export function DriverDialog({
                 <Select
                   value={form.professionalStatus}
                   onValueChange={(value: DriverProfessionalStatus) => {
-                    setForm((current) => ({ ...current, professionalStatus: value }))
+                    setForm((current) => ({
+                      ...current,
+                      professionalStatus: value,
+                      accessActive: value === 'inapto' ? false : current.accessActive,
+                      vehicleId: value === 'inapto' ? '' : current.vehicleId,
+                    }))
                   }}
+                  disabled={statusIsLocked}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -214,6 +223,7 @@ export function DriverDialog({
                     <SelectItem value="ativo">Ativo</SelectItem>
                     <SelectItem value="afastado">Afastado</SelectItem>
                     <SelectItem value="inativo">Inativo</SelectItem>
+                    <SelectItem value="inapto">Inapto</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -225,6 +235,7 @@ export function DriverDialog({
                   onValueChange={(value: string) => {
                     setForm((current) => ({ ...current, vehicleId: value === 'none' ? '' : value }))
                   }}
+                  disabled={isUnfit}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Sem veículo" />
@@ -240,10 +251,18 @@ export function DriverDialog({
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Um veículo pode ter mais de um motorista ativo.
+                  {isUnfit
+                    ? 'Motoristas inaptos não podem manter vínculos operacionais.'
+                    : 'Um veículo pode ter mais de um motorista ativo.'}
                 </p>
               </div>
             </div>
+
+            {isUnfit ? (
+              <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                O status Inapto é permanente. Ao salvar, o acesso será bloqueado e os vínculos ativos serão encerrados.
+              </p>
+            ) : null}
 
             <div className="space-y-2">
               <Label htmlFor="driver-notes">Observações</Label>

@@ -27,6 +27,7 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { TableDetailsButton } from '@/components/shared/table-details-button'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { VehicleDialog, VehicleDriversDialog } from '@/components/vehicles/vehicle-dialog'
+import { VehicleVideotelemetry } from '@/components/vehicles/vehicle-videotelemetry'
 import { brl, dateTime, number } from '@/lib/format'
 import { formatKm } from '@/lib/km'
 import { vehicleStatusLabel } from '@/lib/status'
@@ -194,92 +195,96 @@ export function VehicleDetailsPage({ vehicleId, mode = 'admin' }: VehicleDetails
         </TabsList>
 
         <TabsContent value="resumo">
-          <div className="grid gap-4 xl:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Dados do veículo</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <p><b>Tipo:</b> {vehicle.type}</p>
-                <p><b>Frota:</b> {vehicle.fleetCode}</p>
-                <p><b>Placa:</b> {vehicle.plate}</p>
-                <p><b>Ano:</b> {vehicle.year ?? 'Não informado'}</p>
-                <p><b>Capacidade:</b> {vehicle.capacity || 'Não informada'}</p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <b>Status:</b>
-                  <StatusBadge type="vehicle" value={vehicle.status} />
-                </div>
-                {isAdmin ? (
-                  <div className="border-t pt-3">
-                    <p className="mb-2 font-semibold">Motoristas vinculados</p>
-                    {vehicle.drivers.length ? (
-                      <div className="space-y-2">
-                        {vehicle.drivers.map((driver) => (
-                          <div key={driver.id} className="flex flex-wrap items-center justify-between gap-2">
-                            <Link className="text-primary" href={`/admin/motoristas/${driver.id}`}>
-                              {driver.name}
-                            </Link>
-                            {driver.principal
-                              ? <StatusBadge type="raw" value="ativo" label="Principal" />
-                              : null}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground">Nenhum motorista vinculado.</p>
-                    )}
+          <div className="space-y-4">
+            <div className="grid gap-4 xl:grid-cols-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Dados do veículo</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <p><b>Tipo:</b> {vehicle.type}</p>
+                  <p><b>Frota:</b> {vehicle.fleetCode}</p>
+                  <p><b>Placa:</b> {vehicle.plate}</p>
+                  <p><b>Ano:</b> {vehicle.year ?? 'Não informado'}</p>
+                  <p><b>Capacidade:</b> {vehicle.capacity || 'Não informada'}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <b>Status:</b>
+                    <StatusBadge type="vehicle" value={vehicle.status} />
                   </div>
-                ) : null}
-                {vehicle.notes ? <p className="border-t pt-3"><b>Observações:</b> {vehicle.notes}</p> : null}
-              </CardContent>
-            </Card>
+                  {isAdmin ? (
+                    <div className="border-t pt-3">
+                      <p className="mb-2 font-semibold">Motoristas vinculados</p>
+                      {vehicle.drivers.length ? (
+                        <div className="space-y-2">
+                          {vehicle.drivers.map((driver) => (
+                            <div key={driver.id} className="flex flex-wrap items-center justify-between gap-2">
+                              <Link className="text-primary" href={`/admin/motoristas/${driver.id}`}>
+                                {driver.name}
+                              </Link>
+                              {driver.principal
+                                ? <StatusBadge type="raw" value="ativo" label="Principal" />
+                                : null}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground">Nenhum motorista vinculado.</p>
+                      )}
+                    </div>
+                  ) : null}
+                  {vehicle.notes ? <p className="border-t pt-3"><b>Observações:</b> {vehicle.notes}</p> : null}
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Rota fixa do veículo</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                {vehicle.route ? (
-                  <>
-                    <p className="text-lg font-semibold">
-                      {vehicle.route.origin} → {vehicle.route.destination}
-                    </p>
-                    <p><b>Nome:</b> {vehicle.route.name}</p>
-                    <p>
-                      <b>KM estimado:</b>{' '}
-                      {vehicle.route.estimatedKm == null
-                        ? 'Não informado'
-                        : `${formatKm(vehicle.route.estimatedKm)} km`}
-                    </p>
-                    {vehicle.route.notes ? <p><b>Observações:</b> {vehicle.route.notes}</p> : null}
-                    <p className="text-muted-foreground">
-                      A viagem mantém um snapshot da rota, preservando o histórico mesmo após alterações.
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-muted-foreground">Nenhuma rota fixa configurada.</p>
-                )}
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Rota fixa do veículo</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  {vehicle.route ? (
+                    <>
+                      <p className="text-lg font-semibold">
+                        {vehicle.route.origin} → {vehicle.route.destination}
+                      </p>
+                      <p><b>Nome:</b> {vehicle.route.name}</p>
+                      <p>
+                        <b>KM estimado:</b>{' '}
+                        {vehicle.route.estimatedKm == null
+                          ? 'Não informado'
+                          : `${formatKm(vehicle.route.estimatedKm)} km`}
+                      </p>
+                      {vehicle.route.notes ? <p><b>Observações:</b> {vehicle.route.notes}</p> : null}
+                      <p className="text-muted-foreground">
+                        A viagem mantém um snapshot da rota, preservando o histórico mesmo após alterações.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-muted-foreground">Nenhuma rota fixa configurada.</p>
+                  )}
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Vencimentos</CardTitle>
-              </CardHeader>
-              <CardContent className="divide-y text-sm">
-                {vehicle.documents.length ? vehicle.documents.map((document) => (
-                  <div key={document.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-                    <span>
-                      <span className="block font-medium">{document.name}</span>
-                      <span className="text-muted-foreground">{formatDateOnly(document.dueDate)}</span>
-                    </span>
-                    <StatusBadge type="document" value={document.status} />
-                  </div>
-                )) : (
-                  <p className="py-3 text-muted-foreground">Nenhum documento ativo para este veículo.</p>
-                )}
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Vencimentos</CardTitle>
+                </CardHeader>
+                <CardContent className="divide-y text-sm">
+                  {vehicle.documents.length ? vehicle.documents.map((document) => (
+                    <div key={document.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                      <span>
+                        <span className="block font-medium">{document.name}</span>
+                        <span className="text-muted-foreground">{formatDateOnly(document.dueDate)}</span>
+                      </span>
+                      <StatusBadge type="document" value={document.status} />
+                    </div>
+                  )) : (
+                    <p className="py-3 text-muted-foreground">Nenhum documento ativo para este veículo.</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {isAdmin ? <VehicleVideotelemetry vehicleId={vehicle.id} /> : null}
           </div>
         </TabsContent>
 

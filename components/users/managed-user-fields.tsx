@@ -8,6 +8,7 @@ type Props<T extends ManagedUserFormValues> = {
   form: T
   editing: boolean
   idPrefix: string
+  accessDisabled?: boolean
   onChange: (values: T) => void
 }
 
@@ -15,6 +16,7 @@ export function ManagedUserFields<T extends ManagedUserFormValues>({
   form,
   editing,
   idPrefix,
+  accessDisabled = false,
   onChange,
 }: Props<T>) {
   function updateText(field: keyof Pick<ManagedUserFormValues, 'name' | 'email' | 'password' | 'phone'>) {
@@ -78,6 +80,7 @@ export function ManagedUserFields<T extends ManagedUserFormValues>({
         <Checkbox
           id={`${idPrefix}-access`}
           checked={form.accessActive}
+          disabled={accessDisabled}
           onCheckedChange={(checked: boolean | 'indeterminate') => {
             onChange({ ...form, accessActive: checked === true })
           }}

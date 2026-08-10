@@ -3,6 +3,7 @@ import {
   Fragment,
   isValidElement,
   type ButtonHTMLAttributes,
+  type HTMLAttributes,
   type InputHTMLAttributes,
   type LabelHTMLAttributes,
   type ReactNode,
@@ -22,6 +23,27 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
 
 export function Label(props: LabelHTMLAttributes<HTMLLabelElement>) {
   return <label {...props} />
+}
+
+export function Card(props: HTMLAttributes<HTMLDivElement>) {
+  return <div {...props} />
+}
+
+export function CardHeader(props: HTMLAttributes<HTMLDivElement>) {
+  return <div {...props} />
+}
+
+export function CardTitle(props: HTMLAttributes<HTMLHeadingElement>) {
+  return <h2 {...props} />
+}
+
+export function CardContent(props: HTMLAttributes<HTMLDivElement>) {
+  return <div {...props} />
+}
+
+export function Badge(props: HTMLAttributes<HTMLSpanElement> & { variant?: string }) {
+  const { variant: _variant, ...badgeProps } = props
+  return <span {...badgeProps} />
 }
 
 type SelectItemProps = {

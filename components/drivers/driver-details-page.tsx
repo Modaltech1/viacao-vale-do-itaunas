@@ -28,6 +28,7 @@ import { StatusBadge } from '@/components/shared/status-badge'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { brl, dateTime, maskCpf, number } from '@/lib/format'
 import { formatKm } from '@/lib/km'
+import { driverProfessionalStatusLabel } from '@/lib/driver-utils'
 import type { DriverDetails, DriverVehicleOption } from '@/types/driver'
 
 function formatDateOnly(value: string) {
@@ -115,7 +116,7 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
           <Edit3 className="size-4" />
           Editar motorista
         </Button>
-        <Button className="gap-2" onClick={() => setVehicleOpen(true)}>
+        <Button className="gap-2" onClick={() => setVehicleOpen(true)} disabled={driver.professionalStatus === 'inapto'}>
           <CarFront className="size-4" />
           Alterar veículo
         </Button>
@@ -163,13 +164,7 @@ export function DriverDetailsPage({ driverId }: { driverId: string }) {
               <span>{formatDateOnly(driver.licenseDueDate)}</span>
               <StatusBadge type="document" value={driver.licenseStatus} />
             </div>
-            <p><b>Status profissional:</b> {
-              driver.professionalStatus === 'ativo'
-                ? 'Ativo'
-                : driver.professionalStatus === 'afastado'
-                  ? 'Afastado'
-                  : 'Inativo'
-            }</p>
+            <p><b>Status profissional:</b> {driverProfessionalStatusLabel[driver.professionalStatus]}</p>
             {driver.notes ? <p><b>Observações:</b> {driver.notes}</p> : null}
           </CardContent>
         </Card>

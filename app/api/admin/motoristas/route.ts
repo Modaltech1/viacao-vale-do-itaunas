@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { normalizeOptionalText } from '@/lib/driver-utils'
+import { isDriverProfessionalStatus, normalizeOptionalText } from '@/lib/driver-utils'
 import { listDrivers, listDriverVehicleOptions } from '@/lib/drivers-repository'
 import {
   createManagedUser,
@@ -9,9 +9,6 @@ import {
 import { resolveAdminOwnerId } from '@/lib/admin-scope'
 import { assertAdminVehicleAccess } from '@/lib/admin-scope-server'
 import { createSupabaseServiceClient, requireAdmin } from '@/lib/supabase-server'
-import type { DriverProfessionalStatus } from '@/types/driver'
-
-const professionalStatuses: DriverProfessionalStatus[] = ['ativo', 'inativo', 'afastado']
 
 async function insertVehicleAssignment(
   service: ReturnType<typeof createSupabaseServiceClient>,
@@ -73,8 +70,8 @@ export async function POST(request: NextRequest) {
   const licenseNumber = String(body.licenseNumber ?? '').trim()
   const licenseCategory = String(body.licenseCategory ?? '').trim()
   const licenseDueDate = String(body.licenseDueDate ?? '').trim()
-  const professionalStatus = String(body.professionalStatus ?? 'ativo') as DriverProfessionalStatus
-  const accessActive = body.accessActive !== false
+  const professionalStatus = String(body.professionalStatus ?? 'ativo')
+  const accessActive = professionalStatus === 'inapto' ? false : body.accessActive !== false
   const notes = normalizeOptionalText(body.notes)
   const vehicleId = normalizeOptionalText(body.vehicleId)
 
@@ -89,7 +86,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'A senha deve ter pelo menos 6 caracteres.' }, { status: 400 })
   }
 
-  if (!professionalStatuses.includes(professionalStatus)) {
+  if (!isDriverProfessionalStatus(professionalStatus)) {
     return NextResponse.json({ error: 'Status profissional inválido.' }, { status: 400 })
   }
 
@@ -98,7 +95,7 @@ export async function POST(request: NextRequest) {
   let driverId: string | null = null
 
   try {
-    if (vehicleId) {
+    if (vehicleId && professionalStatus !== 'inapto') {
       await assertAdminVehicleAccess(auth.supabase, auth.admin, vehicleId)
     }
 
@@ -133,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     driverId = driver.id
 
-    if (vehicleId) {
+    if (vehicleId && professionalStatus !== 'inapto') {
       await insertVehicleAssignment(service, driverId, vehicleId, auth.user.id)
     }
 

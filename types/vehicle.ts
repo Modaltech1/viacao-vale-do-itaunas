@@ -8,6 +8,7 @@ import type {
 } from '@/types/fleet'
 import type { VehicleDocumentCode } from '@/lib/vehicle-documents'
 import type { SinisterListItem } from '@/types/sinister'
+import type { DriverProfessionalStatus } from '@/types/driver'
 
 export type VehicleRoute = {
   id: string
@@ -31,7 +32,7 @@ export type VehicleDriverOption = {
   id: string
   name: string
   email: string
-  professionalStatus: 'ativo' | 'inativo' | 'afastado'
+  professionalStatus: DriverProfessionalStatus
   accessActive: boolean
   principalVehicleId: string | null
   principalVehicleLabel: string | null

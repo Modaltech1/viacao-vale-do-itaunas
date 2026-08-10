@@ -1,4 +1,17 @@
-import type { DriverLicenseStatus } from '@/types/driver'
+import type { DriverLicenseStatus, DriverProfessionalStatus } from '@/types/driver'
+
+export const driverProfessionalStatuses = ['ativo', 'inativo', 'afastado', 'inapto'] as const satisfies readonly DriverProfessionalStatus[]
+
+export const driverProfessionalStatusLabel: Record<DriverProfessionalStatus, string> = {
+  ativo: 'Ativo',
+  inativo: 'Inativo',
+  afastado: 'Afastado',
+  inapto: 'Inapto',
+}
+
+export function isDriverProfessionalStatus(value: string): value is DriverProfessionalStatus {
+  return driverProfessionalStatuses.some((status) => status === value)
+}
 
 export function getDriverLicenseStatus(dueDate?: string | null): DriverLicenseStatus {
   if (!dueDate) return 'vencido'

@@ -9,7 +9,9 @@ import {
 } from '@/lib/admin-scope'
 import { parseAdminPayload } from '@/lib/admin-management-service'
 import {
+  driverProfessionalStatusLabel,
   getDriverLicenseStatus,
+  isDriverProfessionalStatus,
   normalizeOptionalText,
   toNumber,
 } from '@/lib/driver-utils'
@@ -579,4 +581,9 @@ test('pendência manual exige título, severidade e vínculo operacional', () =>
     title: 'Sem vínculo',
     severity: 'atencao',
   }), 'pelo menos um registro')
+})
+test('status inapto faz parte do domínio profissional do motorista', () => {
+  assert.equal(isDriverProfessionalStatus('inapto'), true)
+  assert.equal(driverProfessionalStatusLabel.inapto, 'Inapto')
+  assert.equal(isDriverProfessionalStatus('bloqueado'), false)
 })

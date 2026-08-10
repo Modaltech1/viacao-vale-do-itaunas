@@ -763,3 +763,98 @@ test('migration de código de frota preserva compatibilidade e troca labels oper
     assert.ok(migration.includes(fragment), `Migration sem ${fragment}`)
   }
 })
+
+
+test('videotelemetria preserva escopo administrativo e segredos no servidor', async () => {
+  const [
+    migration,
+    gateway,
+    service,
+    deviceRoute,
+    statusRoute,
+    liveRoute,
+    component,
+    vehicleDetails,
+    documentation,
+  ] = await Promise.all([
+    readFile(path.join(root, 'database', 'migrations', '20260726_videotelemetria_dispositivos.sql'), 'utf8'),
+    readFile(path.join(root, 'lib', 'videotelemetry-gateway.ts'), 'utf8'),
+    readFile(path.join(root, 'lib', 'videotelemetry-service.ts'), 'utf8'),
+    readFile(path.join(root, 'app', 'api', 'admin', 'veiculos', '[id]', 'videotelemetria', 'route.ts'), 'utf8'),
+    readFile(path.join(root, 'app', 'api', 'admin', 'veiculos', '[id]', 'videotelemetria', 'status', 'route.ts'), 'utf8'),
+    readFile(path.join(root, 'app', 'api', 'admin', 'veiculos', '[id]', 'videotelemetria', 'live', 'route.ts'), 'utf8'),
+    readFile(path.join(root, 'components', 'vehicles', 'vehicle-videotelemetry.tsx'), 'utf8'),
+    readFile(path.join(root, 'components', 'vehicles', 'vehicle-details-page.tsx'), 'utf8'),
+    readFile(path.join(root, 'docs', 'videotelemetry-poc.md'), 'utf8'),
+  ])
+
+  for (const fragment of [
+    'dispositivos_videotelemetria',
+    'admin_pode_acessar_veiculo(veiculo_id)',
+    'enable row level security',
+    'revoke all',
+  ]) {
+    assert.ok(migration.includes(fragment), `Migration de videotelemetria sem ${fragment}`)
+  }
+
+  assert.match(gateway, /import 'server-only'/)
+  assert.ok(gateway.includes('Authorization: `Bearer ${normalizedApiKey}`'))
+  assert.match(gateway, /cache: 'no-store'/)
+  assert.ok(gateway.includes('new AbortController()'))
+  assert.match(gateway, /PRODEXY_GATEWAY_BASE_URL/)
+  assert.match(gateway, /PRODEXY_GATEWAY_API_KEY/)
+  assert.match(gateway, /PRODEXY_GATEWAY_POC_TERMINAL_ID/)
+  assert.doesNotMatch(gateway, /console\.(?:log|error|warn)/)
+
+  assert.match(service, /assertAdminVehicleAccess/)
+  assert.match(service, /getGatewayPocTerminalId/)
+  assert.ok(deviceRoute.includes('requireAdmin()'))
+  assert.ok(statusRoute.includes('requireAdmin()'))
+  assert.ok(liveRoute.includes('requireAdmin()'))
+  assert.match(liveRoute, /assertVideotelemetryChannel/)
+
+  assert.match(component, /window\.open/)
+  assert.doesNotMatch(component, /<iframe/i)
+  assert.doesNotMatch(component, /PRODEXY_GATEWAY_API_KEY|Authorization:\s*['"]Bearer/)
+  assert.ok(vehicleDetails.includes('isAdmin ? <VehicleVideotelemetry'))
+
+  for (const variable of [
+    'PRODEXY_GATEWAY_BASE_URL',
+    'PRODEXY_GATEWAY_API_KEY',
+    'PRODEXY_GATEWAY_POC_TERMINAL_ID',
+  ]) {
+    assert.match(documentation, new RegExp(`^${variable}=`, 'm'))
+    assert.doesNotMatch(documentation, new RegExp(`NEXT_PUBLIC_${variable}`))
+  }
+  assert.doesNotMatch(documentation, /32\.196\.8\.246|628072026338/)
+})
+
+test('motorista inapto é permanente, perde acesso e não recebe novos vínculos', async () => {
+  const [migration, schema, createRoute, updateRoute, dialog, listPage] = await Promise.all([
+    readFile(path.join(root, 'database', 'migrations', '20260810_add_unfit_driver_status.sql'), 'utf8'),
+    readFile(path.join(root, 'database', 'schema.sql'), 'utf8'),
+    readFile(path.join(root, 'app', 'api', 'admin', 'motoristas', 'route.ts'), 'utf8'),
+    readFile(path.join(root, 'app', 'api', 'admin', 'motoristas', '[id]', 'route.ts'), 'utf8'),
+    readFile(path.join(root, 'components', 'drivers', 'driver-dialog.tsx'), 'utf8'),
+    readFile(path.join(root, 'app', 'admin', 'motoristas', 'page.tsx'), 'utf8'),
+  ])
+
+  for (const fragment of [
+    "'ativo', 'inativo', 'afastado', 'inapto'",
+    'proteger_status_inapto_motorista',
+    'bloquear_operacao_motorista_inapto',
+    'validar_motorista_apto_para_vinculo',
+    'set ativo = false',
+    'principal = false',
+  ]) {
+    assert.ok(migration.includes(fragment), `Migration de motorista inapto sem ${fragment}`)
+    assert.ok(schema.includes(fragment), `Schema de motorista inapto sem ${fragment}`)
+  }
+
+  assert.match(createRoute, /professionalStatus === 'inapto' \? false/)
+  assert.match(updateRoute, /status_profissional === 'inapto'/)
+  assert.match(updateRoute, /professionalStatus === 'inapto' \? null/)
+  assert.match(dialog, /O status Inapto é permanente/)
+  assert.match(dialog, /accessDisabled=\{isUnfit\}/)
+  assert.match(listPage, /value="inapto">Inaptos/)
+})

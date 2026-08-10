@@ -36,7 +36,7 @@ export const severityLabel: Record<Severity, string> = {
 export const badgeClassByStatus = (status: string) => {
   if (['ativo', 'em_dia', 'concluida', 'baixa'].includes(status)) return 'border-emerald-200 bg-emerald-50 text-emerald-700'
   if (['proximo', 'em_manutencao', 'em_andamento', 'atencao', 'reservado', 'aberta'].includes(status)) return 'border-yellow-300 bg-yellow-50 text-yellow-800'
-  if (['critica'].includes(status)) return 'border-red-300 bg-red-50 text-red-700'
+  if (['critica', 'inapto'].includes(status)) return 'border-red-300 bg-red-50 text-red-700'
   if (['vencido', 'inativo', 'indisponivel', 'cancelada'].includes(status)) return 'border-orange-300 bg-orange-50 text-orange-800'
   return 'border-border bg-muted text-muted-foreground'
 }

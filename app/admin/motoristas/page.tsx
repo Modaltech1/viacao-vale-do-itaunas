@@ -22,6 +22,7 @@ import { TableDetailsButton } from '@/components/shared/table-details-button'
 import { TablePagination, useTablePagination } from '@/components/shared/table-pagination'
 import { number } from '@/lib/format'
 import { formatKm } from '@/lib/km'
+import { driverProfessionalStatusLabel } from '@/lib/driver-utils'
 import { compareByTextPtBr } from '@/lib/sorting'
 import type { DriverListItem, DriverVehicleOption } from '@/types/driver'
 
@@ -126,6 +127,7 @@ export default function DriversPage() {
               <option value="ativo">Ativos</option>
               <option value="afastado">Afastados</option>
               <option value="inativo">Inativos</option>
+              <option value="inapto">Inaptos</option>
             </FilterSelect>
             <FilterSelect value={licenseStatus} onValueChange={setLicenseStatus}>
               <option value="todos">Todas as CNHs</option>
@@ -184,15 +186,17 @@ export default function DriversPage() {
                       <TableCell>
                         <StatusBadge
                           type="raw"
-                          value={driver.accessActive ? driver.professionalStatus : 'inativo'}
+                          value={driver.professionalStatus === 'inapto'
+                            ? 'inapto'
+                            : driver.accessActive
+                              ? driver.professionalStatus
+                              : 'inativo'}
                           label={
-                            !driver.accessActive
-                              ? 'Acesso inativo'
-                              : driver.professionalStatus === 'ativo'
-                                ? 'Ativo'
-                                : driver.professionalStatus === 'afastado'
-                                  ? 'Afastado'
-                                  : 'Inativo'
+                            driver.professionalStatus === 'inapto'
+                              ? 'Inapto'
+                              : !driver.accessActive
+                                ? 'Acesso inativo'
+                                : driverProfessionalStatusLabel[driver.professionalStatus]
                           }
                         />
                       </TableCell>

@@ -1,7 +1,7 @@
 import type { VehicleStatus } from '@/types/fleet'
 import type { ManagedUserFormValues } from '@/types/managed-user'
 
-export type DriverProfessionalStatus = 'ativo' | 'inativo' | 'afastado'
+export type DriverProfessionalStatus = 'ativo' | 'inativo' | 'afastado' | 'inapto'
 export type DriverLicenseStatus = 'em_dia' | 'proximo' | 'vencido'
 export type DriverTripStatus = 'em_andamento' | 'concluida' | 'cancelada'
 
