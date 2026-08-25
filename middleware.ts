@@ -2,10 +2,15 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { canAccessPath, getRoleHome, isUserRole, type AuthProfile } from '@/lib/auth'
 
-const publicPaths = ['/login']
+const loginPath = '/login'
+const publicPaths = ['/politica-de-privacidade']
 
 function isPublicPath(pathname: string) {
   return publicPaths.some((path) => pathname === path || pathname.startsWith(`${path}/`))
+}
+
+function isLoginPath(pathname: string) {
+  return pathname === loginPath || pathname.startsWith(`${loginPath}/`)
 }
 
 export async function middleware(request: NextRequest) {
@@ -55,15 +60,19 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!user || !profile || !profile.ativo || !isUserRole(profile.papel)) {
-    if (isPublicPath(request.nextUrl.pathname)) return response
-    return redirect('/login')
+    if (isLoginPath(request.nextUrl.pathname) || isPublicPath(request.nextUrl.pathname)) {
+      return response
+    }
+    return redirect(loginPath)
   }
 
   const home = getRoleHome(profile.papel)
 
-  if (request.nextUrl.pathname === '/' || isPublicPath(request.nextUrl.pathname)) {
+  if (request.nextUrl.pathname === '/' || isLoginPath(request.nextUrl.pathname)) {
     return redirect(home)
   }
+
+  if (isPublicPath(request.nextUrl.pathname)) return response
 
   if (!canAccessPath(profile.papel, request.nextUrl.pathname)) {
     return redirect(home)

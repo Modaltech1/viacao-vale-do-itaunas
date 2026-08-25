@@ -1,6 +1,7 @@
 'use client'
 
 import { ChangeEvent, FormEvent, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   Button,
@@ -119,6 +120,15 @@ export default function LoginPage() {
               {isSubmitting ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
+
+          <div className="mt-5 border-t border-border pt-4 text-center">
+            <Link
+              href="/politica-de-privacidade"
+              className="text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Política de Privacidade
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </main>

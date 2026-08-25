@@ -110,6 +110,19 @@ test('middleware não converte erros JSON das APIs em redirect HTML', async () =
   assert.match(middleware, /\(\?!api\|/, 'O matcher deve deixar autenticação das APIs para os guards.')
 })
 
+test('política de privacidade permanece pública com ou sem sessão', async () => {
+  const [middleware, page] = await Promise.all([
+    readFile(path.join(root, 'middleware.ts'), 'utf8'),
+    readFile(path.join(root, 'app', 'politica-de-privacidade', 'page.tsx'), 'utf8'),
+  ])
+
+  assert.match(middleware, /publicPaths\s*=\s*\[['"]\/politica-de-privacidade['"]\]/)
+  assert.match(middleware, /if \(isPublicPath\(request\.nextUrl\.pathname\)\) return response/)
+  assert.match(page, /Política de Privacidade/)
+  assert.match(page, /com\.prodexylabs\.valedoitaunas\.motoristas/)
+  assert.match(page, /não solicita acesso à localização precisa, câmera, microfone ou lista de contatos/)
+})
+
 test('PWA mantém instalação global sem armazenar dados privados', async () => {
   const [manifest, layout, serviceWorker, nextConfig] = await Promise.all([
     readFile(path.join(root, 'app', 'manifest.ts'), 'utf8'),
