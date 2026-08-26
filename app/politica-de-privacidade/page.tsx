@@ -12,7 +12,7 @@ import {
   UserRoundCheck,
 } from 'lucide-react'
 
-const privacyEmail = 'manutencao@viacaovaledoitaunas.com.br'
+const privacyEmail = 'prodexy.labs@gmail.com'
 
 export const metadata: Metadata = {
   title: 'Política de Privacidade | Vale do Itaúnas: Motoristas',
@@ -132,10 +132,7 @@ export default function PrivacyPolicyPage() {
           <article className="space-y-8 rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-10">
             <Section number="1" title="Quem é responsável pelos dados">
               <p>
-                A <strong className="font-semibold text-foreground">Viação Vale do Itaúnas</strong> é responsável pelas decisões sobre o uso dos dados no contexto de suas operações. A <strong className="font-semibold text-foreground">ProdeXy Labs</strong> fornece e mantém a solução tecnológica, tratando dados somente para prestar suporte, manter o sistema e viabilizar seu funcionamento.
-              </p>
-              <p>
-                Esta política se aplica ao aplicativo Android identificado pelo pacote <span className="break-all font-mono text-sm text-foreground">com.prodexylabs.valedoitaunas.motoristas</span> e às áreas correspondentes do sistema web.
+                A <strong className="font-semibold text-foreground">Viação Vale do Itaúnas</strong> é responsável pelas decisões sobre o uso dos dados no contexto de suas operações. A <strong className="font-semibold text-foreground">Prodexy Labs</strong> fornece e mantém a solução tecnológica, tratando dados somente para prestar suporte, manter o sistema e viabilizar seu funcionamento.
               </p>
             </Section>
 
@@ -148,7 +145,7 @@ export default function PrivacyPolicyPage() {
                 <li><strong className="font-semibold text-foreground">Dados técnicos:</strong> sessão de acesso, estado de conexão, registros necessários à segurança e informações locais usadas para sincronização offline.</li>
               </ul>
               <p>
-                O aplicativo Android não solicita acesso à localização precisa, câmera, microfone ou lista de contatos do dispositivo. Caso isso mude, esta política e as declarações nas lojas serão atualizadas antes da utilização desses recursos.
+                Caso isso mude, esta política e as declarações nas lojas serão atualizadas antes da utilização desses recursos.
               </p>
             </Section>
 
@@ -180,7 +177,7 @@ export default function PrivacyPolicyPage() {
               <p>Os dados podem ser acessados apenas quando necessário por:</p>
               <ul className="list-disc space-y-2 pl-5 marker:text-primary">
                 <li>profissionais autorizados da Viação Vale do Itaúnas;</li>
-                <li>ProdeXy Labs, para desenvolvimento, manutenção e suporte técnico;</li>
+                <li>Prodexy Labs, para desenvolvimento, manutenção e suporte técnico;</li>
                 <li>Supabase, utilizado para autenticação, banco de dados e infraestrutura de nuvem;</li>
                 <li>Vercel, utilizada para hospedagem do sistema web e desta página pública;</li>
                 <li>autoridades públicas, quando houver obrigação legal ou ordem válida.</li>
@@ -234,20 +231,8 @@ export default function PrivacyPolicyPage() {
             </Section>
           </article>
 
-          <aside className="mt-8 flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-5 text-sm leading-6 text-muted-foreground">
-            <FileCheck2 aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
-            <p>
-              Esta página é pública e pode ser consultada sem criar conta ou entrar no sistema. Para acessar o aplicativo, o usuário precisa ser previamente cadastrado pela empresa.
-            </p>
-          </aside>
-
           <footer className="mt-10 flex flex-col items-center gap-3 text-center text-sm text-muted-foreground">
-            <UserRoundCheck aria-hidden="true" className="size-5 text-primary" />
-            <p>© 2026 Viação Vale do Itaúnas. Tecnologia ProdeXy Labs.</p>
-            <div className="flex items-center gap-2">
-              <Cloud aria-hidden="true" className="size-4" />
-              <span>Página pública de privacidade</span>
-            </div>
+            <p>© 2026 Viação Vale do Itaúnas. Tecnologia Prodexy Labs.</p>
           </footer>
         </div>
       </div>
