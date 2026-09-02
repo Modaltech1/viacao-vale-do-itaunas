@@ -105,10 +105,6 @@ export default function PrivacyPolicyPage() {
       <div className="mx-auto max-w-5xl px-5 py-10 sm:px-8 sm:py-16">
         <div className="mx-auto max-w-3xl">
           <div className="mb-10 text-center sm:mb-14">
-            <div className="mx-auto mb-5 flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-              <LockKeyhole aria-hidden="true" className="size-6" />
-            </div>
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.16em] text-primary">Privacidade e proteção de dados</p>
             <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-5xl">
               Política de Privacidade
             </h1>
